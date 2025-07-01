@@ -2763,7 +2763,7 @@
 
             // Listen for incoming media calls (screen share)
             state.peer.on('call', call => {
-                call.answer(); // Answer the call
+                call.answer(state.localScreenStream); // Answer with our own stream if we have one (for future audio/video chat)
                 state.activeCall = call; // Store the call object
                 call.on('stream', remoteStream => {
                     // Find the live share card and pipe the stream into it
@@ -2916,6 +2916,16 @@
                 case 'typing_stop':
                     broadcastPayload = { ...data, from: fromPeerId };
                     break;
+                // --- Screen Share Host Actions ---
+                case 'request_start_share':
+                    const sharerInfo = state.peerInfo.get(fromPeerId);
+                    if (sharerInfo) {
+                        broadcastPayload = { type: 'screen_share_started', peerId: fromPeerId, info: sharerInfo };
+                    }
+                    break;
+                case 'request_stop_share':
+                    broadcastPayload = { type: 'screen_share_ended', peerId: fromPeerId };
+                    break;
             }
             if (broadcastPayload) {
                 if (broadcastPayload.type.includes('note')) {
@@ -2925,16 +2935,17 @@
                 if (broadcastPayload.type === 'chat_message') {
                     displayChatBubble(broadcastPayload);
                     renderChatLog();
-                } else if (broadcastPayload.type === 'typing_start') {
-                    showTypingIndicator(broadcastPayload.from, true);
-                } else if (broadcastPayload.type === 'typing_stop') {
-                    showTypingIndicator(broadcastPayload.from, false);
+                } else if (broadcastPayload.type === 'typing_start' || broadcastPayload.type === 'typing_stop') {
+                    // Host doesn't need to see its own typing indicators
+                } else {
+                    // Handle the host's own UI changes for screen sharing
+                    handleReceivedData(broadcastPayload, fromPeerId);
                 }
             }
         }
 
         function handleReceivedData(data, fromPeerId) {
-            if (state.isHost) {
+            if (state.isHost && data.type.startsWith('request_')) {
                 handleHostAction(data, fromPeerId);
                 return;
             }
@@ -2992,6 +3003,16 @@
                     addLiveShareCardToGrid(data.peerId, data.info);
                     DOMElements.startShareBtn.disabled = true;
                     DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
+                    
+                    // If I am the one who is starting the share, now I can call everyone.
+                    if (data.peerId === state.peer.id && state.localScreenStream) {
+                        for (const peerId of state.peerInfo.keys()) {
+                            if (peerId !== state.peer.id) {
+                                console.log(`Calling peer: ${peerId}`);
+                                state.peer.call(peerId, state.localScreenStream);
+                            }
+                        }
+                    }
                     break;
                 case 'screen_share_ended':
                     removeLiveShareCardFromGrid(data.peerId);
@@ -3136,7 +3157,7 @@
         // --- Screen Share Implementation ---
 
         async function startScreenShare() {
-            if (state.localScreenStream) { // If already sharing, stop it
+            if (state.localScreenStream) {
                 stopScreenShare(true);
                 return;
             }
@@ -3145,25 +3166,19 @@
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 state.localScreenStream = stream;
 
-                // Handle when user clicks the native "Stop sharing" button
                 stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
 
-                // Add the live card for our own view
-                addLiveShareCardToGrid(state.peer.id, state.peerInfo.get(state.peer.id));
-                const localVideo = document.getElementById(`live-share-${state.peer.id}`).querySelector('video');
-                localVideo.srcObject = stream;
-                localVideo.play();
-
-                // Tell everyone else we started sharing
-                broadcastData({
-                    type: 'screen_share_started',
-                    peerId: state.peer.id,
-                    info: state.peerInfo.get(state.peer.id)
-                });
-                
-                // Call every connected peer and send them the stream
-                for (const conn of state.connections.values()) {
-                    state.peer.call(conn.peer, stream);
+                const request = { type: 'request_start_share' };
+                if (state.isHost) {
+                    handleHostAction(request, state.peer.id);
+                } else {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send(request);
+                    } else {
+                        showNotification("Cannot start share: not connected to host.", "error");
+                        stopScreenShare(true); // Clean up local stream
+                    }
                 }
 
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
@@ -3179,8 +3194,17 @@
             if (isLocalInitiated && state.localScreenStream) {
                 state.localScreenStream.getTracks().forEach(track => track.stop());
                 state.localScreenStream = null;
-                broadcastData({ type: 'screen_share_ended', peerId: state.peer.id });
-                removeLiveShareCardFromGrid(state.peer.id);
+
+                const request = { type: 'request_stop_share' };
+                if (state.isHost) {
+                    handleHostAction(request, state.peer.id);
+                } else {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send(request);
+                    }
+                }
+                
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>`;
                 DOMElements.startShareBtn.title = "Share Screen";
             }
@@ -3195,7 +3219,6 @@
         }
 
         function addLiveShareCardToGrid(peerId, info) {
-            // Remove any existing card for this peer first to avoid duplicates
             removeLiveShareCardFromGrid(peerId);
 
             const card = document.createElement('div');
