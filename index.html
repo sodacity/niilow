@@ -323,9 +323,7 @@
             <div class="mt-auto"> <!-- Wrapper to push both logo and footer to the bottom -->
                 <!-- Niilow Logo -->
                 <div class="p-2 text-center">
-                    <a href="https://www.niilow.com" target="_blank" rel="noopener noreferrer" title="Visit Niilow.com">
-                        <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto w-20 h-auto transition-transform hover:scale-110" onerror="this.style.display='none'">
-                    </a>
+                    <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto w-20 h-auto transition-transform hover:scale-110" onerror="this.style.display='none'">
                 </div>
                 <div id="sidebar-footer" class="text-center text-xs text-gray-500 pt-2 pb-2"></div>
             </div>
@@ -747,8 +745,11 @@
     <input type="file" id="import-enex-input" class="hidden" accept=".enex">
     
     <footer id="collaboration-footer" class="hidden fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-2 text-sm z-40 flex justify-between items-center px-4">
-        <div>
-            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Click to copy"></span>
+        <div class="flex items-center">
+            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Click to copy Room ID"></span>
+            <button id="copy-collab-link-btn" class="ml-2 p-1 rounded hover:bg-gray-600" title="Copy Invite Link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
         </div>
         <div id="peer-list" class="flex items-center gap-2"></div>
         <button id="leave-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs">Leave</button>
@@ -880,7 +881,9 @@
             collaborationView: document.getElementById('collaboration-view'),
             leaveSessionBtn: document.getElementById('leave-session-btn'),
             peerList: document.getElementById('peer-list'),
-            collaborationNotesGrid: document.getElementById('collaboration-notes-grid'),
+            collaborationFooter: document.getElementById('collaboration-footer'),
+            footerRoomId: document.getElementById('footer-room-id'),
+            copyCollabLinkBtn: document.getElementById('copy-collab-link-btn'),
             collaborationStartModal: document.getElementById('collaboration-start-modal'),
             hostSessionBtn: document.getElementById('host-session-btn'),
             joinSessionBtn: document.getElementById('join-session-btn'),
@@ -889,8 +892,6 @@
             joinRoomIdInput: document.getElementById('join-room-id-input'),
             confirmJoinSessionBtn: document.getElementById('confirm-join-session-btn'),
             cancelJoinSessionBtn: document.getElementById('cancel-join-session-btn'),
-            collaborationFooter: document.getElementById('collaboration-footer'),
-            footerRoomId: document.getElementById('footer-room-id'),
         };
 
         // --- App State ---
@@ -1324,9 +1325,16 @@
             
             const currentUrl = new URL(window.location.href);
             const dataFromUrl = currentUrl.searchParams.get('data');
+            const collabRoomId = currentUrl.searchParams.get('collab');
             const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
 
-            if (dataFromUrl) {
+            if (collabRoomId) {
+                showNotification(`Attempting to join collaboration room: ${collabRoomId}`, 'info');
+                state.isHost = false;
+                state.roomId = collabRoomId;
+                initPeer();
+                history.replaceState({}, document.title, window.location.pathname); 
+            } else if (dataFromUrl) {
                 let password = currentUrl.searchParams.get('sesh-ID');
                 if (requiresSecret) {
                      password = prompt("This note is protected. Please enter the password to view it:");
@@ -1640,6 +1648,7 @@
                     showNotification('Room ID copied to clipboard!', 'success');
                 });
             });
+            DOMElements.copyCollabLinkBtn.addEventListener('click', copyCollabLink);
             DOMElements.confirmJoinSessionBtn.addEventListener('click', joinSession);
             DOMElements.cancelJoinSessionBtn.addEventListener('click', () => closeModal(DOMElements.joinSessionModal));
         }
@@ -2682,6 +2691,17 @@
         }
         
         // --- Collaboration Logic (WebRTC with PeerJS) ---
+
+        function copyCollabLink() {
+            if (!state.roomId) return;
+            const baseUrl = window.location.origin + window.location.pathname;
+            const inviteLink = `${baseUrl}?collab=${state.roomId}`;
+            navigator.clipboard.writeText(inviteLink).then(() => {
+                showNotification('Collaboration invite link copied!', 'success');
+            }, () => {
+                showNotification('Failed to copy link.', 'error');
+            });
+        }
 
         function initPeer() {
             if (state.peer) {
