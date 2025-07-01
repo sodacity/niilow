@@ -234,8 +234,10 @@
             border-radius: 9999px;
             transition: background-color 0.2s;
         }
-        #qr-code-container img {
-            background: white;
+        #qr-code-container, #collab-qr-code-container {
+            display: flex;
+            justify-content: center;
+            background-color: white;
             padding: 1rem;
             border-radius: 0.5rem;
         }
@@ -247,15 +249,6 @@
         }
         #batch-action-bar {
             transition: transform 0.3s ease-in-out;
-        }
-        #collaboration-footer {
-            transition: transform 0.3s ease-in-out;
-            overflow: hidden; /* Prevent content from spilling out */
-        }
-        #peer-list {
-            flex-wrap: nowrap; /* Prevent wrapping */
-            overflow-x: auto; /* Allow horizontal scrolling */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
          @media (min-width: 768px) {
             #edit-note-pane, #chat-log-pane {
@@ -285,11 +278,11 @@
         /* --- New Chat Styles --- */
         #chat-container {
             position: fixed;
-            bottom: 80px; /* Above the footer */
+            bottom: 80px;
             left: 0;
             right: 0;
             height: 300px;
-            pointer-events: none; /* Allows clicks to go through to notes */
+            pointer-events: none;
             z-index: 45;
             display: flex;
             justify-content: center;
@@ -320,7 +313,7 @@
             border-radius: 1.5rem;
             max-width: 250px;
             word-wrap: break-word;
-            font-size: 1.2rem; /* Increased font size */
+            font-size: 1.2rem;
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
@@ -424,7 +417,8 @@
         #fab-add-note {
             right: 0;
             border-radius: 1.5rem 0 0 1.5rem;
-            font-size: 2.5rem; /* Larger plus sign */
+            font-size: 2.5rem;
+            line-height: 1;
         }
         #fab-chat-log {
             left: 0;
@@ -446,10 +440,18 @@
         }
         .fab-peek-btn span {
             font-weight: bold;
-            writing-mode: vertical-rl;
+        }
+        #fab-chat-log span {
+             writing-mode: vertical-rl;
             text-orientation: mixed;
             transform: rotate(180deg);
             letter-spacing: 0.1em;
+        }
+        #session-info-hub details > summary {
+            list-style: none;
+        }
+        #session-info-hub details > summary::-webkit-details-marker {
+            display: none;
         }
     </style>
 </head>
@@ -510,7 +512,6 @@
         </div>
     </div>
 
-    <!-- ADDED custom-scrollbar class -->
     <main id="main-content" class="flex-grow p-6 overflow-y-auto relative custom-scrollbar">
          <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 bg-opacity-50 rounded-full text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -525,8 +526,7 @@
                 <h2 class="text-xl font-semibold mb-4">Recent Notes</h2>
                 <div id="recent-notes-container" class="recent-notes-container"></div>
             </div>
-             <!-- REMOVED Shortcuts Section -->
-        </div>
+             </div>
         <div id="notes-view" class="hidden">
             <div class="flex justify-end items-center mb-4 gap-4">
                  <label class="flex items-center cursor-pointer">
@@ -648,8 +648,7 @@
                 <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                <!-- REMOVED Email Button -->
-            </div>
+                </div>
             <div class="editor-container">
                 <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
                 <div class="drop-zone-overlay">
@@ -703,8 +702,7 @@
                  <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
                  <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                <!-- REMOVED Email Button -->
-            </div>
+                </div>
             <div class="editor-container">
                 <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
                 <div class="drop-zone-overlay">
@@ -821,8 +819,7 @@
                 <div class="flex justify-center gap-2 items-start">
                     <div class="flex flex-col gap-1">
                         <button id="import-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import .nii</button>
-                        <!-- REMOVED Import .enex button -->
-                    </div>
+                        </div>
                     <button id="export-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Export .nii</button>
                 </div>
             </div>
@@ -852,7 +849,6 @@
                     <div class="flex justify-between items-center"><label for="text-input-bg-color-setting" class="font-semibold">Text Input Fields</label><input type="color" id="text-input-bg-color-setting"></div>
                     <div class="flex justify-between items-center"><label for="text-input-font-color-setting" class="font-semibold">Text Input Font Color</label><input type="color" id="text-input-font-color-setting"></div>
                      <hr>
-                    <!-- REMOVED Shortcuts Manager -->
                     <div>
                          <button id="clear-storage-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Clear All Local Data</button>
                     </div>
@@ -863,8 +859,6 @@
             </div>
         </div>
     </div>
-
-    <!-- REMOVED Email Modal -->
 
     <div id="qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
@@ -888,6 +882,17 @@
             </div>
         </div>
     </div>
+    <div id="collab-qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4">Share Session Invite</h2>
+            <div id="collab-qr-code-container"></div>
+            <p class="mt-4 text-sm text-gray-300 break-all hidden" id="collab-invite-link-display"></p>
+            <div class="mt-6 flex justify-center gap-4">
+                <button id="copy-link-from-modal-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Copy Link</button>
+                <button id="close-collab-qr-code-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button>
+            </div>
+        </div>
+    </div>
 
     <button id="fab-add-note" title="New Note" class="fab-peek-btn">
         <span>+</span>
@@ -905,9 +910,9 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
+            <div id="session-info-hub" class="flex-shrink-0 border-b border-gray-700 pb-2 mb-2"></div>
             <div id="chat-log-messages" class="flex-grow overflow-y-auto custom-scrollbar">
-                <!-- Chat messages will be rendered here by JavaScript -->
-            </div>
+                </div>
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
                     <input type="text" id="chat-log-input" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Send a message...">
@@ -922,19 +927,7 @@
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
     <input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
     <input type="file" id="import-file-input" class="hidden" accept=".nii">
-    <!-- REMOVED enex file input -->
-
-    <footer id="collaboration-footer" class="hidden fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-2 text-sm z-40 flex justify-between items-center px-4">
-        <div class="flex items-center flex-shrink-0">
-            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Return to Collaboration View"></span>
-            <button id="copy-collab-link-btn" class="ml-2 p-1 rounded hover:bg-gray-600" title="Copy Invite Link">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-        </div>
-        <div id="peer-list" class="flex items-center gap-4 mx-4"></div>
-        <button id="leave-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs flex-shrink-0">Leave</button>
-    </footer>
-
+    
     <script>
         // --- DOM Elements ---
         const DOMElements = {
@@ -1045,6 +1038,11 @@
             closeQrCodeModalBtn: document.getElementById('close-qr-code-modal'),
             secureSendToggle: document.getElementById('secure-send-toggle'),
             exportNoteBtn: document.getElementById('export-note-btn'),
+            collabQrCodeModal: document.getElementById('collab-qr-code-modal'),
+            collabQrCodeContainer: document.getElementById('collab-qr-code-container'),
+            collabInviteLinkDisplay: document.getElementById('collab-invite-link-display'),
+            copyLinkFromModalBtn: document.getElementById('copy-link-from-modal-btn'),
+            closeCollabQrCodeModalBtn: document.getElementById('close-collab-qr-code-modal'),
             // Collaboration Elements
             collaborationLink: document.getElementById('collaboration-link'),
             collaborationView: document.getElementById('collaboration-view'),
@@ -1052,11 +1050,6 @@
             chatContainer: document.getElementById('chat-container'),
             chatInput: document.getElementById('chat-input'),
             sendChatBtn: document.getElementById('send-chat-btn'),
-            leaveSessionBtn: document.getElementById('leave-session-btn'),
-            peerList: document.getElementById('peer-list'),
-            collaborationFooter: document.getElementById('collaboration-footer'),
-            footerRoomId: document.getElementById('footer-room-id'),
-            copyCollabLinkBtn: document.getElementById('copy-collab-link-btn'),
             collaborationStartModal: document.getElementById('collaboration-start-modal'),
             hostSessionBtn: document.getElementById('host-session-btn'),
             joinSessionBtn: document.getElementById('join-session-btn'),
@@ -1069,6 +1062,7 @@
             fabChatLogBtn: document.getElementById('fab-chat-log'),
             chatLogPane: document.getElementById('chat-log-pane'),
             closeChatLogBtn: document.getElementById('close-chat-log-btn'),
+            sessionInfoHub: document.getElementById('session-info-hub'),
             chatLogMessages: document.getElementById('chat-log-messages'),
             chatLogInput: document.getElementById('chat-log-input'),
             sendChatLogBtn: document.getElementById('send-chat-log-btn'),
@@ -1273,7 +1267,7 @@
             DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
             const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal].forEach(el => {
+            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal].forEach(el => {
                 if (el) {
                     const inner = el.firstElementChild;
                     if (inner && (el.id.includes('-modal'))) {
@@ -1578,6 +1572,13 @@
 
             DOMElements.closeWelcomeModalBtn.addEventListener('click', () => closeModal(DOMElements.welcomeModal));
             DOMElements.closeQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.qrCodeModal));
+            DOMElements.closeCollabQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.collabQrCodeModal));
+            DOMElements.copyLinkFromModalBtn.addEventListener('click', () => {
+                const linkText = DOMElements.collabInviteLinkDisplay.textContent;
+                navigator.clipboard.writeText(linkText).then(() => {
+                    showNotification('Invite link copied to clipboard!', 'success');
+                });
+            });
             DOMElements.shareNoteBtn.addEventListener('click', handleShareNote);
             DOMElements.secureSendToggle.addEventListener('change', generateShareLink);
             DOMElements.exportNoteBtn.addEventListener('click', handleExportSingleNote);
@@ -1788,17 +1789,20 @@
                 openModal(DOMElements.joinSessionModal);
             });
             DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
-            DOMElements.leaveSessionBtn.addEventListener('click', leaveSession);
-            DOMElements.footerRoomId.addEventListener('click', () => { showView('collaboration'); });
-            DOMElements.copyCollabLinkBtn.addEventListener('click', copyCollabLink);
+            
             DOMElements.confirmJoinSessionBtn.addEventListener('click', joinSession);
             DOMElements.cancelJoinSessionBtn.addEventListener('click', () => closeModal(DOMElements.joinSessionModal));
             DOMElements.sendChatBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput));
             DOMElements.chatInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput);
             });
-            // Chat Log Pane Listeners
-            DOMElements.fabChatLogBtn.addEventListener('click', toggleChatLogPane);
+            // Chat Log Pane & Hub Listeners
+            DOMElements.fabChatLogBtn.addEventListener('click', () => {
+                if(DOMElements.collaborationView.classList.contains('hidden')){
+                    showView('collaboration');
+                }
+                toggleChatLogPane();
+            });
             DOMElements.closeChatLogBtn.addEventListener('click', toggleChatLogPane);
             DOMElements.sendChatLogBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput));
             DOMElements.chatLogInput.addEventListener('keyup', (e) => {
@@ -2334,6 +2338,7 @@
         function toggleChatLogPane() {
             state.isChatLogOpen = !state.isChatLogOpen;
             if(state.isChatLogOpen) {
+                renderSessionInfo();
                 DOMElements.chatLogPane.classList.add('is-open');
                 DOMElements.modalOverlay.classList.remove('hidden');
                 setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
@@ -2373,6 +2378,7 @@
                                  !DOMElements.videoHelperModal.classList.contains('hidden') ||
                                  !DOMElements.welcomeModal.classList.contains('hidden') ||
                                  !DOMElements.qrCodeModal.classList.contains('hidden') ||
+                                 !DOMElements.collabQrCodeModal.classList.contains('hidden') ||
                                  !DOMElements.confirmClearModal.classList.contains('hidden') ||
                                  !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
                                  !DOMElements.joinSessionModal.classList.contains('hidden') ||
@@ -2408,6 +2414,7 @@
             closeModal(DOMElements.welcomeModal);
             closeModal(DOMElements.confirmClearModal);
             closeModal(DOMElements.qrCodeModal);
+            closeModal(DOMElements.collabQrCodeModal);
             closeModal(DOMElements.batchDeleteConfirmModal);
             closeModal(DOMElements.joinSessionModal);
             closeModal(DOMElements.collaborationStartModal);
@@ -2473,7 +2480,8 @@
             });
             DOMElements[viewName + 'View'].classList.remove('hidden');
 
-            DOMElements.fabChatLogBtn.classList.toggle('hidden', viewName !== 'collaboration');
+            const inCollab = !!state.peer;
+            DOMElements.fabChatLogBtn.classList.toggle('hidden', !inCollab);
         }
 
         function renderCalendar() {
@@ -2638,24 +2646,23 @@
 
         // --- Collaboration Logic (WebRTC with PeerJS) ---
 
-        function copyCollabLink() {
+        function generateCollabQrCode() {
             if (!state.roomId) return;
             const baseUrl = window.location.origin + window.location.pathname;
             const inviteLink = `${baseUrl}?collab=${state.roomId}`;
-            navigator.clipboard.writeText(inviteLink).then(() => {
-                showNotification('Collaboration invite link copied!', 'success');
-            }, () => {
-                showNotification('Failed to copy link.', 'error');
-            });
-        }
 
-        function setCollaborationFooterVisible(visible) {
-            if (visible) {
-                DOMElements.collaborationFooter.classList.remove('hidden');
-                DOMElements.mainContent.style.paddingBottom = '60px';
+            DOMElements.collabInviteLinkDisplay.textContent = inviteLink;
+            DOMElements.collabQrCodeContainer.innerHTML = '';
+            const qr = qrcode(0, 'M');
+            qr.addData(inviteLink);
+            qr.make();
+            DOMElements.collabQrCodeContainer.innerHTML = qr.createImgTag(5, 10);
+            
+            if (state.isChatLogOpen) {
+                toggleChatLogPane();
+                setTimeout(() => openModal(DOMElements.collabQrCodeModal), 400);
             } else {
-                DOMElements.collaborationFooter.classList.add('hidden');
-                DOMElements.mainContent.style.paddingBottom = '';
+                openModal(DOMElements.collabQrCodeModal);
             }
         }
 
@@ -2673,9 +2680,8 @@
 
                 if (state.isHost) {
                     state.roomId = id;
-                    DOMElements.footerRoomId.textContent = id;
+                    renderSessionInfo();
                     showNotification('Session hosted! Share the Room ID.', 'success');
-                    updatePeerList();
                 } else {
                     if (state.roomId) {
                         const conn = state.peer.connect(state.roomId, {
@@ -2710,7 +2716,7 @@
             state.isHost = true;
             initPeer();
             showView('collaboration');
-            setCollaborationFooterVisible(true);
+            DOMElements.mainContent.style.paddingBottom = '60px'; // Space for chat input
             renderCollaborationNotesGrid();
         }
 
@@ -2737,9 +2743,8 @@
             state.chatLog = [];
 
             showView('dashboard');
-            setCollaborationFooterVisible(false);
+            DOMElements.mainContent.style.paddingBottom = '';
             DOMElements.collaborationNotesGrid.innerHTML = '';
-            DOMElements.peerList.innerHTML = '';
             showNotification('You have left the session.', 'info');
         }
 
@@ -2751,7 +2756,7 @@
 
                 if (state.isHost) {
                     state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: conn.metadata.avatar });
-                    updatePeerList();
+                    renderSessionInfo();
                     conn.send({
                         type: 'full_sync',
                         notes: state.collaborationNotes,
@@ -2776,7 +2781,7 @@
                 state.connections.delete(peerId);
                 state.peerInfo.delete(peerId);
                 if (state.isHost) { broadcastData({ type: 'peer_left', peerId }); }
-                updatePeerList();
+                renderSessionInfo();
             });
 
             conn.on('error', (err) => {
@@ -2842,10 +2847,9 @@
                     state.peerInfo = new Map(Object.entries(data.peerInfo));
                     renderCollaborationNotesGrid();
                     renderChatLog();
-                    updatePeerList();
+                    renderSessionInfo();
                     showView('collaboration');
-                    DOMElements.footerRoomId.textContent = state.roomId;
-                    setCollaborationFooterVisible(true);
+                    DOMElements.mainContent.style.paddingBottom = '60px'; // Space for chat input
                     showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                     break;
                 case 'add_note':
@@ -2863,11 +2867,11 @@
                     break;
                 case 'peer_joined':
                     state.peerInfo.set(data.peerId, data.info);
-                    updatePeerList();
+                    renderSessionInfo();
                     break;
                 case 'peer_left':
                     state.peerInfo.delete(data.peerId);
-                    updatePeerList();
+                    renderSessionInfo();
                     break;
                 case 'chat_message':
                     state.chatLog.push(data);
@@ -2902,26 +2906,42 @@
                 });
             }
         }
+        
+        function renderSessionInfo() {
+            if (!state.peer) return;
+            const hub = DOMElements.sessionInfoHub;
+            hub.innerHTML = `
+                <details>
+                    <summary class="cursor-pointer font-semibold p-2 rounded hover:bg-gray-700 flex justify-between items-center">
+                        <span>Session Info (${state.peerInfo.size})</span>
+                        <svg class="w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    </summary>
+                    <div class="p-2 space-y-3">
+                        <div id="hub-peer-list" class="space-y-1"></div>
+                        <div class="flex items-center text-sm">
+                            <span class="mr-2">Room:</span>
+                            <span class="font-mono p-1 bg-gray-700 rounded">${state.roomId || '...'}</span>
+                            <button id="hub-invite-btn" class="ml-2 p-1 rounded hover:bg-gray-600" title="Get Invite Link/QR Code">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                            </button>
+                        </div>
+                        <button id="hub-leave-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">Leave Session</button>
+                    </div>
+                </details>
+            `;
 
-        function updatePeerList() {
-            DOMElements.peerList.innerHTML = '';
+            const peerListContainer = hub.querySelector('#hub-peer-list');
             for (const [peerId, info] of state.peerInfo.entries()) {
                 const isSelf = peerId === state.peer.id;
-                const peerEl = document.createElement('div');
-                peerEl.id = `peer-icon-${peerId}`;
-                peerEl.className = `relative flex items-center gap-2 px-3 py-1 rounded-full ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-600'}`;
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = isSelf ? `${info.name} (You)` : info.name;
-                
-                const typingIndicator = document.createElement('div');
-                typingIndicator.className = 'typing-indicator';
-                typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-
-                peerEl.appendChild(nameSpan);
-                peerEl.appendChild(typingIndicator);
-                DOMElements.peerList.appendChild(peerEl);
+                const peerName = isSelf ? `${info.name} (You)` : info.name;
+                const hubPeerEl = document.createElement('div');
+                hubPeerEl.className = 'flex items-center gap-2';
+                hubPeerEl.innerHTML = `<img src="${info.avatar || 'https://www.niilow.com/logo.png'}" class="w-6 h-6 rounded-full"><span>${peerName}</span>`;
+                peerListContainer.appendChild(hubPeerEl);
             }
+
+            hub.querySelector('#hub-invite-btn').addEventListener('click', generateCollabQrCode);
+            hub.querySelector('#hub-leave-btn').addEventListener('click', leaveSession);
         }
 
         function sendChatMessage(message, inputElement) {
