@@ -2685,7 +2685,7 @@
                 } else {
                     if (state.roomId) {
                         const conn = state.peer.connect(state.roomId, {
-                            metadata: { userName: state.settings.userName, avatar: state.settings.userAvatar },
+                            metadata: { userName: state.settings.userName /* DO NOT SEND AVATAR HERE */ },
                             reliable: true
                         });
                         setupConnection(conn);
@@ -2756,7 +2756,7 @@
 
                 if (state.isHost) {
                     const existingPeerInfo = Object.fromEntries(state.peerInfo);
-                    state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: conn.metadata.avatar });
+                    state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: null }); // Set avatar to null initially
                     renderSessionInfo();
                     
                     conn.send({
@@ -2766,8 +2766,15 @@
                         peerInfo: existingPeerInfo,
                         hostName: state.settings.userName
                     });
-                    
-                    broadcastData({ type: 'peer_joined', peerId: conn.peer, info: state.peerInfo.get(conn.peer) });
+                } else {
+                    // This is a client connecting. After connection is open, send our info.
+                    conn.send({ 
+                        type: 'client_info', 
+                        info: { 
+                            name: state.settings.userName, 
+                            avatar: state.settings.userAvatar 
+                        } 
+                    });
                 }
                 showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
             });
@@ -2796,6 +2803,11 @@
         function handleHostAction(data, fromPeerId) {
             let broadcastPayload = null;
             switch(data.type) {
+                case 'client_info':
+                    state.peerInfo.set(fromPeerId, data.info);
+                    renderSessionInfo();
+                    broadcastPayload = { type: 'peer_joined', peerId: fromPeerId, info: data.info };
+                    break;
                 case 'request_add_note':
                     state.collaborationNotes.push(data.note);
                     broadcastPayload = { type: 'add_note', note: data.note };
