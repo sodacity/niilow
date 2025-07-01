@@ -2755,15 +2755,18 @@
                 state.connections.set(conn.peer, conn);
 
                 if (state.isHost) {
+                    const existingPeerInfo = Object.fromEntries(state.peerInfo);
                     state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: conn.metadata.avatar });
                     renderSessionInfo();
+                    
                     conn.send({
                         type: 'full_sync',
                         notes: state.collaborationNotes,
                         chatLog: state.chatLog,
-                        peerInfo: Object.fromEntries(state.peerInfo),
+                        peerInfo: existingPeerInfo,
                         hostName: state.settings.userName
                     });
+                    
                     broadcastData({ type: 'peer_joined', peerId: conn.peer, info: state.peerInfo.get(conn.peer) });
                 }
                 showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
