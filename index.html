@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niilow</title>
+
+    <meta name="theme-color" content="#3c6d5e">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 50 50'%3e%3crect width='50' height='50' rx='10' fill='%233c6d5e'/%3e%3ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='28' font-weight='bold' fill='white'%3eN%3c/text%3e%3c/svg%3e">
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTmlpbG93IC0gTXkgSW50ZXJwcmV0ZXIiLCJzaG9ydF9uYW1lIjoiTmlpbG93IiwiZGVzY3JpcHRpb24iOiJZb3VyIHNpbXBsZSwgc2VjdXJlIG5vdGUtdGFraW5nIGFwcGxpY2F0aW9uLiIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMWYyOTM3IiwidGhlbWVfY29sb3IiOiIjM2M2ZDVlIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCUzY3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxOTInIGhlaWdodD0nMTkyJyB2aWV3Qm94PScwIDAgNTAgNTAnJTNFJTNDcmVjdCB3aWR0aD0nNTAnIGhlaWdodD0nNTAnIHJ4PScxMCcgZmlsbD0nJTIzM2M2ZDVlJy8lM0UlNUN0ZXh0IHg9JzUwJSUyNScgeT0nNTIlMjUnIGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJyBmb250LXNpemU9JzI4JyBmb250LXdlaWdodD0nYm9sZCcgZmlsbD0nd2hpdGUnJTNFTiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9LHsic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sJTNjdnZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIHZpZXdCb3g9JzAgMCA1MCA1MCclM0UlM0NyZWN0IHdpZHRoPSc1MCcgaGVpZ2h0PSc1MCcgcng9JzEwJyBmaWxsPSclMjMzYzZkNWUnLz4lM0N0ZXh0IHg9JzUwJSUyNScgeT0nNTIlMjUnIGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJyBmb250LXNpemU9JzI4JyBmb250LXdlaWdodD0nYm9sZCcgZmlsbD0nd2hpdGUnJTNFTiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9XX0=">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <!-- PeerJS for WebRTC -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        #sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -2.5px;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 10;
+        }
+        #notification {
+            transition: opacity 0.5s, transform 0.5s;
+            z-index: 10000; /* Ensure it's on top of everything */
+        }
+        .editor-container {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* CRITICAL FIX for flexbox scrolling */
+        }
+        .editor {
+            flex-grow: 1;
+            overflow-y: auto;
+            outline: none;
+            transition: background-color 0.3s;
+            padding: 1rem;
+            border-radius: 0 0 0.5rem 0.5rem;
+            color: inherit;
+        }
+        .editor img, .editor video { max-width: 100%; height: auto; border-radius: 8px; }
+        .editor iframe { max-width: 100%; border-radius: 8px; }
+        .editor ul, .editor ol { padding-left: 2rem; }
+        .editor ul { list-style: disc; }
+        .editor ol { list-style: decimal; }
+        .drop-zone-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 150, 255, 0.2);
+            border: 2px dashed #0096ff;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .drop-zone-active .drop-zone-overlay {
+            display: flex;
+        }
+        #global-drop-zone {
+            transition: opacity 0.2s;
+        }
+        .toolbar-btn {
+            background-color: transparent; border: 1px solid #4a5568; border-radius: 4px;
+            color: white; padding: 0.25rem 0.75rem; transition: background-color 0.2s;
+            font-size: 1rem; width: 38px; height: 38px;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .toolbar-btn:hover { background-color: #4a5568; }
+        .toolbar-btn.active { background-color: #4A90E2; }
+        input[type="color"] { width: 38px; height: 38px; border: 1px solid #4a5568; border-radius: 4px; padding: 4px; background-color: #2d3748; cursor: pointer; }
+        .modal { transition: opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.3s; }
+        #notes-grid, #collaboration-notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .note-card {
+            border: 2px solid transparent; /* Changed border to 2px for selection state */
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            height: 300px; /* Increased height */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, transform 0.2s, border-color 0.2s, opacity 0.2s;
+        }
+        .note-card.is-archived {
+            opacity: 0.6;
+            border-style: dashed;
+        }
+        .note-card.selected {
+            border-color: #4A90E2;
+            transform: scale(0.95);
+        }
+        .in-select-mode .note-card:hover {
+            transform: scale(1.02); /* Different hover effect in select mode */
+        }
+        .note-card:not(.in-select-mode):hover { transform: translateY(-5px); }
+        .note-card-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .note-card-content { flex-grow: 1; overflow: hidden; font-size: 0.9rem; }
+        .note-card-content * { color: inherit; }
+        
+        /* --- Checklist Styles --- */
+        .editor ul li.task-item {
+            list-style-type: none; /* Hide the default bullet point */
+            position: relative;
+            padding-left: 28px; /* Make room for our custom checkbox */
+            margin-left: -28px; /* Pull it back in line with other text */
+        }
+
+        .editor ul li.task-item::before {
+            content: '☐'; /* The empty checkbox character */
+            position: absolute;
+            left: 0;
+            top: 2px;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #9ca3af; /* A nice gray color for the box */
+        }
+
+        .editor ul li.task-item.checked {
+            text-decoration: line-through;
+            color: #718096; /* Gray out the text when checked */
+        }
+
+        .editor ul li.task-item.checked::before {
+            content: '☑'; /* The checked checkbox character */
+            color: #4A90E2; /* A nice blue to show it's completed */
+        }
+
+        .sidebar-icon-btn { color: #9ca3af; transition: color 0.2s; }
+        .sidebar-icon-btn:hover { color: white; }
+        #edit-note-pane, #new-note-pane {
+            position: fixed;
+            z-index: 50;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.3s;
+        }
+        #edit-note-pane {
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            transform: translateX(100%);
+        }
+        #side-pane-resize-handle {
+            position: absolute;
+            top: 0;
+            left: -2.5px;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 10;
+        }
+        #edit-note-pane.is-open {
+            transform: translateX(0);
+        }
+         #new-note-pane {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transform: translateY(100%);
+            height: 90vh;
+        }
+        #new-note-pane.is-open {
+            transform: translateY(0);
+        }
+        .text-input-field {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .recent-notes-container {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+        .recent-note-card {
+            flex: 0 0 220px;
+            height: 250px; /* Increased height */
+        }
+        .search-container {
+            position: relative;
+        }
+        .search-container svg {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+        .search-container input {
+            padding-left: 2.5rem;
+        }
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+        }
+        #qr-code-container img {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        .toggle-bg:checked ~ .dot {
+            transform: translateX(1.5rem);
+        }
+         .toggle-bg:checked ~ .block {
+            background-color: #4A90E2;
+        }
+        #batch-action-bar {
+            transition: transform 0.3s ease-in-out;
+        }
+        #collaboration-footer {
+            transition: transform 0.3s ease-in-out;
+        }
+         @media (min-width: 768px) {
+            #edit-note-pane {
+                width: 50%;
+                max-width: 800px;
+            }
+            #new-note-pane {
+                 height: 60vh;
+            }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* gray-700 */
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #718096; /* gray-600 */
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    <div id="notification" class="hidden fixed top-0 left-1/2 transform -translate-x-1/2 -translate-y-full text-white py-2 px-6 rounded-b-lg shadow-lg"></div>
+
+    <div id="global-drop-zone" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+        <div class="text-center text-white border-4 border-dashed border-white rounded-lg p-12">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <h2 class="text-3xl font-bold">Drop .nii file to import</h2>
+        </div>
+    </div>
+    
+    <div id="sidebar" class="sidebar bg-gray-800 p-4 flex flex-col fixed h-full z-40 w-64 md:w-auto md:relative md:translate-x-0 transform -translate-x-full">
+        <div id="sidebar-resize-handle" class="hidden md:block"></div>
+        <div class="flex justify-between items-center mb-4">
+            <h1 id="app-title" class="text-2xl font-bold">Collections</h1>
+            <div class="flex items-center">
+                 <button id="calendar-btn" class="sidebar-icon-btn" title="Calendar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </button>
+                 <button id="settings-btn" class="sidebar-icon-btn ml-2" title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="flex flex-col flex-grow overflow-hidden">
+             <div class="mb-4 search-container">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="filter" placeholder="Search" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+             <div class="mb-4">
+                 <a href="#" id="dashboard-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    Home
+                 </a>
+                 <a href="#" id="all-notes-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Collections
+                 </a>
+                 <a href="#" id="collaboration-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Collaboration
+                 </a>
+            </div>
+            <div class="flex-grow overflow-y-auto">
+                <div id="labels-container"></div>
+                <details class="mt-4" id="archive-section">
+                    <summary class="cursor-pointer text-lg font-semibold">Archived</summary>
+                    <div id="archive-list" class="pt-2"></div>
+                </details>
+            </div>
+            <div id="sidebar-footer" class="text-center text-xs text-gray-500 mt-auto pt-4"></div>
+        </div>
+    </div>
+
+    <main id="main-content" class="flex-grow p-6 overflow-y-auto relative">
+         <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 bg-opacity-50 rounded-full text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <div id="dashboard-view">
+            <div id="greeting-banner" class="p-6 rounded-lg mb-6 text-center">
+                <h1 id="greeting-text" class="text-3xl md:text-4xl font-bold"></h1>
+                <p id="time-display" class="text-md md:text-lg text-gray-300"></p>
+            </div>
+            <div>
+                <h2 class="text-xl font-semibold mb-4">Recent Notes</h2>
+                <div id="recent-notes-container" class="recent-notes-container"></div>
+            </div>
+             <hr class="my-8 border-gray-400">
+             <div>
+                 <h2 class="text-xl font-semibold mb-4">Shortcuts</h2>
+                 <div id="shortcuts-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+             </div>
+        </div>
+        <div id="notes-view" class="hidden">
+            <div class="flex justify-end items-center mb-4 gap-4">
+                 <label class="flex items-center cursor-pointer">
+                    <span class="mr-3 font-semibold">Show Archived</span>
+                    <div class="relative">
+                        <input type="checkbox" id="archive-toggle" class="sr-only toggle-bg peer">
+                        <div class="w-14 h-8 bg-gray-600 rounded-full block peer-checked:bg-blue-500 transition-colors"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform transform peer-checked:translate-x-6"></div>
+                    </div>
+                </label>
+                <button id="select-mode-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Select</button>
+            </div>
+            <div id="notes-grid"></div>
+        </div>
+        
+        <!-- Collaboration View -->
+        <div id="collaboration-view" class="hidden h-full">
+             <div class="h-full">
+                <div id="collaboration-notes-section" class="custom-scrollbar h-full">
+                    <div id="collaboration-notes-grid"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="batch-action-bar" class="fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-4 transform translate-y-full z-40">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <span id="selection-count" class="font-bold"></span>
+            <div class="flex gap-2">
+                <button id="batch-export-btn" class="action-btn bg-green-500 hover:bg-green-600" title="Export Selected">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </button>
+                <button id="batch-archive-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600" title="Archive Selected">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                </button>
+                <button id="batch-delete-btn" class="action-btn bg-red-500 hover:bg-red-600" title="Delete Selected">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-30 transition-opacity duration-300"></div>
+
+    <div id="welcome-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6 text-center">
+            <img src="https://www.makeitmakesense.lol/logo.png" alt="Make It Make Sense Logo" class="mx-auto mb-6" style="max-width: 300px;">
+            <p class="text-lg mb-6">Your simple, secure note-taking application.</p>
+            <div class="text-left space-y-4 mb-8">
+                <p><strong><span class="text-blue-400">Your Personal Interpreter:</span></strong> Niilow helps you capture, organize, and interpret your thoughts and ideas effortlessly.</p>
+                <p><strong><span class="text-green-400">Secure & Private:</span></strong> Your data is stored locally on your device, not on a server. You have full control.</p>
+                <p><strong><span class="text-yellow-400">Securely Export Your Data:</span></strong> You can export all your notes and settings into a secure, encrypted `.nii` file at any time using a password you set.</p>
+            </div>
+            <button id="close-welcome-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Get Started</button>
+        </div>
+    </div>
+    
+    <!-- Collaboration Start Modal -->
+    <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
+            <h2 class="text-2xl font-bold mb-6">Real-Time Collaboration</h2>
+            <div class="flex flex-col gap-4">
+                <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Host a New Session</button>
+                <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Join a Session</button>
+            </div>
+             <button id="cancel-collaboration-start-btn" class="mt-6 text-gray-400 hover:text-white">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Join Session Modal -->
+    <div id="join-session-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Join Collaboration Session</h2>
+            <p class="text-gray-400 mb-4">Enter the Room ID provided by the host.</p>
+            <input type="text" id="join-room-id-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="Room ID">
+            <div class="flex justify-end gap-4">
+                <button id="cancel-join-session-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="confirm-join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="batch-delete-confirm-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
+            <h2 class="text-2xl font-bold mb-4 text-white">Confirm Deletion</h2>
+            <p id="batch-delete-message" class="text-white mb-6"></p>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-batch-delete-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="confirm-batch-delete-action-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Delete Notes</button>
+            </div>
+        </div>
+    </div>
+    <div id="confirm-clear-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
+            <h2 class="text-2xl font-bold mb-4 text-white">Are you sure?</h2>
+            <p class="text-white mb-4">This action is irreversible and will delete all your notes, settings, and shortcuts.</p>
+            <p class="text-gray-300 mb-4">To confirm, please type <strong class="text-red-400 font-mono">DELETE</strong> into the box below.</p>
+            <input type="text" id="delete-confirmation-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="Type DELETE here">
+            <div class="flex justify-end gap-4">
+                <button id="cancel-clear-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="confirm-clear-action-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-not-allowed" disabled>Confirm Deletion</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
+        <div id="side-pane-resize-handle" class="hidden md:block"></div>
+         <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
+            <input type="text" id="edit-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full text-white placeholder-gray-300 mb-4 flex-shrink-0">
+            <div id="edit-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
+                <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
+                <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
+                <button class="toolbar-btn" data-command="underline" title="Underline"><u>U</u></button>
+                <input type="color" class="font-color" data-command="foreColor" title="Font Color">
+                 <button class="toolbar-btn" data-command="insertImage" title="Insert Image"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
+                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bulleted List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+                <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
+                <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
+                <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
+                <button class="toolbar-btn" data-command="email" title="Email Note"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+            </div>
+            <div class="editor-container">
+                <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
+                <div class="drop-zone-overlay">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
+                </div>
+            </div>
+            <div class="mt-auto pt-4 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <label for="edit-note-label" class="font-semibold">Tag:</label>
+                    <input type="text" id="edit-note-label" list="labels-datalist" class="text-input-field p-2 rounded text-white w-1/3 bg-white bg-opacity-20">
+                    <label for="edit-note-card-color-input" class="font-semibold" title="Note Card Color">🎨</label>
+                    <input type="color" id="edit-note-card-color-input">
+                </div>
+                <div class="flex justify-between items-center mt-6">
+                    <div>
+                        <button id="share-note-btn" class="action-btn bg-purple-600 hover:bg-purple-700 text-white" title="Share Note">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="archive-note" class="action-btn text-white" title="Archive">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                        </button>
+                         <button id="delete-note" class="action-btn bg-red-500 hover:bg-red-600 text-white" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                        <button id="cancel-edit-note" class="action-btn bg-gray-600 hover:bg-gray-700 text-white" title="Cancel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                        <button id="save-edit-note" class="action-btn bg-green-500 hover:bg-green-600 text-white" title="Save">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
+        <div id="bottom-resize-handle" class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-2 bg-gray-600 rounded-full cursor-ns-resize hidden md:block"></div>
+        <div class="p-4 md:p-6 pt-8 flex flex-col h-full w-full overflow-hidden">
+            <input type="text" id="new-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full text-white placeholder-gray-300 mb-4 flex-shrink-0">
+            <div id="new-note-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
+                 <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
+                <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
+                <button class="toolbar-btn" data-command="underline" title="Underline"><u>U</u></button>
+                <input type="color" class="font-color" data-command="foreColor" title="Font Color">
+                 <button class="toolbar-btn" data-command="insertImage" title="Insert Image"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
+                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bulleted List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+                 <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
+                <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
+                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
+                <button class="toolbar-btn" data-command="email" title="Email Note"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+            </div>
+            <div class="editor-container">
+                <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
+                <div class="drop-zone-overlay">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
+                </div>
+            </div>
+            <div class="mt-auto pt-4 flex-shrink-0">
+                 <div class="flex items-center gap-4">
+                    <label for="new-note-label" class="font-semibold">Tag:</label>
+                    <input type="text" id="new-note-label" list="labels-datalist" class="text-input-field p-2 rounded text-white w-1/3 bg-white bg-opacity-20">
+                    <label for="new-note-card-color-input" class="font-semibold" title="Note Card Color">🎨</label>
+                    <input type="color" id="new-note-card-color-input">
+                </div>
+                <div class="flex justify-end gap-2 mt-6 items-center">
+                    <button id="cancel-new-note" class="action-btn bg-gray-600 hover:bg-gray-700 text-white" title="Cancel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                    <button id="save-new-note" class="action-btn bg-green-500 hover:bg-green-600 text-white" title="Create Note">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendar-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-lg opacity-0 scale-95">
+         <div class="p-6">
+            <div class="flex justify-between items-center mb-4"><button id="prev-month" class="p-2 rounded-full hover:bg-gray-700">&lt;</button><h2 id="month-year" class="text-xl font-bold"></h2><button id="next-month" class="p-2 rounded-full hover:bg-gray-700">&gt;</button></div>
+            <div class="grid grid-cols-7 gap-2 text-center" id="calendar-grid"></div>
+            <div class="mt-4 max-h-48 overflow-y-auto" id="calendar-notes-list"></div>
+        </div>
+    </div>
+    
+    <div id="embed-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Embed Content</h2>
+                <div class="flex gap-2">
+                    <button id="video-helper-btn" class="p-2 rounded-full hover:bg-gray-700" title="Video Builder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button id="iframe-helper-btn" class="p-2 rounded-full hover:bg-gray-700" title="iFrame Builder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-400 mb-4">Paste your HTML embed code below, or use the iFrame builder.</p>
+            <textarea id="embed-code-input" class="text-input-field w-full p-2 rounded h-32" placeholder="<iframe ...></iframe> or <video ...>...</video>"></textarea>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-embed-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="save-embed-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="iframe-helper-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">iFrame Builder</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="iframe-url" class="block mb-2 font-semibold">URL</label>
+                    <input type="url" id="iframe-url" class="text-input-field w-full p-2 rounded" placeholder="https://example.com">
+                </div>
+                 <div>
+                    <label for="iframe-width" class="block mb-2 font-semibold">Width</label>
+                    <input type="number" id="iframe-width" class="text-input-field w-full p-2 rounded" value="500">
+                </div>
+                 <div>
+                    <label for="iframe-height" class="block mb-2 font-semibold">Height</label>
+                    <input type="number" id="iframe-height" class="text-input-field w-full p-2 rounded" value="500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-iframe-helper-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="add-iframe-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="video-helper-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Video Builder</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="video-url" class="block mb-2 font-semibold">Video URL (.mp4)</label>
+                    <input type="url" id="video-url" class="text-input-field w-full p-2 rounded" placeholder="https://example.com/video.mp4">
+                </div>
+                 <div>
+                    <label for="video-width" class="block mb-2 font-semibold">Width</label>
+                    <input type="number" id="video-width" class="text-input-field w-full p-2 rounded" value="500">
+                </div>
+                 <div>
+                    <label for="video-height" class="block mb-2 font-semibold">Height</label>
+                    <input type="number" id="video-height" class="text-input-field w-full p-2 rounded" value="300">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="video-controls" class="mr-2" checked>
+                    <label for="video-controls" class="font-semibold">Show Controls</label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-video-helper-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="add-video-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Add</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="settings-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-md opacity-0 scale-95">
+        <div class="p-6 flex flex-col max-h-[85vh]">
+            <div class="flex-shrink-0 mb-6">
+                <h2 class="text-2xl font-bold text-center mb-4">Settings</h2>
+                <div class="flex justify-center gap-2 items-start">
+                    <div class="flex flex-col gap-1">
+                        <button id="import-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import .nii</button>
+                        <button id="import-enex-btn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-1 px-4 rounded text-sm">Import .enex</button>
+                    </div>
+                    <button id="export-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Export .nii</button>
+                </div>
+            </div>
+            <div class="flex-grow overflow-y-auto custom-scrollbar pr-4">
+                <div class="space-y-4">
+                    <div><label for="user-name-setting" class="block mb-2 font-semibold">User Name</label><input type="text" id="user-name-setting" class="text-input-field w-full p-2 rounded text-white"></div>
+                    <div><label for="title-setting" class="block mb-2 font-semibold">App Title</label><input type="text" id="title-setting" class="text-input-field w-full p-2 rounded text-white"></div>
+                     <div><label for="footer-text-setting" class="block mb-2 font-semibold">Footer Text</label><input type="text" id="footer-text-setting" class="text-input-field w-full p-2 rounded text-white"></div>
+                     <div><label for="session-password-setting" class="block mb-2 font-semibold">Session Password (for secure export/import)</label><input type="password" id="session-password-setting" class="text-input-field w-full p-2 rounded text-white" placeholder="Set a password to secure backups"></div>
+                     <hr>
+                    <div class="flex justify-between items-center"><label for="bg-color-setting" class="font-semibold">Background Color</label><input type="color" id="bg-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="sidebar-color-setting" class="font-semibold">Sidebar Color</label><input type="color" id="sidebar-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="font-color-setting" class="font-semibold">App Font Color</label><input type="color" id="font-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="fab-color-setting" class="font-semibold">New Note Button Color</label><input type="color" id="fab-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="note-card-color-setting" class="font-semibold">Default Note Card Color</label><input type="color" id="note-card-color-setting"></div>
+                     <div class="flex justify-between items-center"><label for="note-card-opacity-setting" class="font-semibold">Note Card Transparency</label><input type="range" id="note-card-opacity-setting" min="0.1" max="1" step="0.05" class="w-1/2"></div>
+                    <div class="flex justify-between items-center"><label for="modal-bg-color-setting" class="font-semibold">Pop Up Windows</label><input type="color" id="modal-bg-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="modal-opacity-setting" class="font-semibold">Pop Up Transparency</label><input type="range" id="modal-opacity-setting" min="0.5" max="1" step="0.05" class="w-1/2"></div>
+                    <div class="flex justify-between items-center"><label for="text-input-bg-color-setting" class="font-semibold">Text Input Fields</label><input type="color" id="text-input-bg-color-setting"></div>
+                    <div class="flex justify-between items-center"><label for="text-input-font-color-setting" class="font-semibold">Text Input Font Color</label><input type="color" id="text-input-font-color-setting"></div>
+                     <hr>
+                    <h3 class="text-lg font-semibold">Manage Shortcuts</h3>
+                    <div id="shortcuts-manager" class="space-y-2"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-shortcut-name" placeholder="Shortcut Name" class="text-input-field p-2 rounded w-1/2">
+                        <input type="text" id="new-shortcut-url" placeholder="Shortcut URL" class="text-input-field p-2 rounded w-1/2">
+                        <select id="new-shortcut-icon" class="text-input-field p-2 rounded bg-gray-700 text-white"></select>
+                        <button id="add-shortcut-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded">Add</button>
+                    </div>
+                    <hr>
+                    <div>
+                         <button id="clear-storage-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Clear All Local Data</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-shrink-0 pt-6">
+                <div class="flex justify-end"><button id="close-settings" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="email-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-2xl opacity-0 scale-95">
+        <div class="p-6 flex flex-col h-full">
+            <h2 class="text-2xl font-bold mb-4">Compose Email</h2>
+            <div class="space-y-4 flex-grow flex flex-col">
+                <input id="email-to" type="email" placeholder="To:" class="text-input-field p-2 rounded w-full">
+                <input id="email-subject" type="text" placeholder="Subject" class="text-input-field p-2 rounded w-full">
+                <textarea id="email-body" placeholder="Email body..." class="text-input-field p-2 rounded w-full flex-grow min-h-[150px]"></textarea>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="w-full md:w-1/2">
+                        <h3 class="font-semibold mb-2">Canned Responses</h3>
+                        <div id="canned-responses-list" class="max-h-24 overflow-y-auto bg-gray-700 rounded p-2"></div>
+                    </div>
+                    <div class="w-full md:w-1/2">
+                        <h3 class="font-semibold mb-2">Add New Response</h3>
+                        <input type="text" id="new-canned-response-name" placeholder="Response Name" class="text-input-field p-2 rounded w-full mb-2">
+                        <textarea id="new-canned-response-text" placeholder="Response Text..." class="text-input-field p-2 rounded w-full h-16 mb-2"></textarea>
+                        <button id="add-canned-response" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded">Add</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-email" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="send-email" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4">Share Note</h2>
+            <div id="qr-code-container" class="flex justify-center bg-white p-4 rounded-lg"></div>
+            <div id="share-info" class="mt-4 text-sm text-gray-400"></div>
+            <div id="share-password-display" class="mt-2 text-sm"></div>
+             <div class="mt-4">
+                <label class="flex items-center justify-center cursor-pointer">
+                    <span class="mr-3 font-semibold">Require Password on Open</span>
+                    <div class="relative">
+                        <input type="checkbox" id="secure-send-toggle" class="sr-only peer toggle-bg">
+                        <div class="w-14 h-8 bg-gray-600 rounded-full block"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform"></div>
+                    </div>
+                </label>
+            </div>
+            <div class="mt-6 flex justify-center gap-4">
+                <button id="export-note-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Export as .nii</button>
+                <button id="close-qr-code-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <button id="fab-add-note" title="New Note" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+    <datalist id="labels-datalist"></datalist>
+    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+    <input type="file" id="import-file-input" class="hidden" accept=".nii">
+    <input type="file" id="import-enex-input" class="hidden" accept=".enex">
+    
+    <footer id="collaboration-footer" class="hidden fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-2 text-sm z-40 flex justify-between items-center px-4">
+        <div>
+            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Click to copy"></span>
+        </div>
+        <div id="peer-list" class="flex items-center gap-2"></div>
+        <button id="leave-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs">Leave</button>
+    </footer>
+
+    <script>
+        // --- DOM Elements ---
+        const DOMElements = {
+            sidebar: document.getElementById('sidebar'),
+            mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+            sidebarFooter: document.getElementById('sidebar-footer'),
+            sidebarResizeHandle: document.getElementById('sidebar-resize-handle'),
+            mainContent: document.getElementById('main-content'),
+            appTitle: document.getElementById('app-title'),
+            archiveList: document.getElementById('archive-list'),
+            labelsContainer: document.getElementById('labels-container'),
+            notesGrid: document.getElementById('notes-grid'),
+            filterInput: document.getElementById('filter'),
+            notification: document.getElementById('notification'),
+            body: document.querySelector('body'),
+            archiveSection: document.getElementById('archive-section'),
+            archiveToggle: document.getElementById('archive-toggle'),
+            modalOverlay: document.getElementById('modal-overlay'),
+            welcomeModal: document.getElementById('welcome-modal'),
+            closeWelcomeModalBtn: document.getElementById('close-welcome-modal'),
+            confirmClearModal: document.getElementById('confirm-clear-modal'),
+            deleteConfirmationInput: document.getElementById('delete-confirmation-input'),
+            cancelClearBtn: document.getElementById('cancel-clear-btn'),
+            confirmClearActionBtn: document.getElementById('confirm-clear-action-btn'),
+            batchDeleteConfirmModal: document.getElementById('batch-delete-confirm-modal'),
+            batchDeleteMessage: document.getElementById('batch-delete-message'),
+            cancelBatchDeleteBtn: document.getElementById('cancel-batch-delete-btn'),
+            confirmBatchDeleteActionBtn: document.getElementById('confirm-batch-delete-action-btn'),
+            globalDropZone: document.getElementById('global-drop-zone'),
+            // Edit Note Pane
+            editNotePane: document.getElementById('edit-note-pane'),
+            sidePaneResizeHandle: document.getElementById('side-pane-resize-handle'),
+            editNoteTitleInput: document.getElementById('edit-note-title'),
+            editNoteEditor: document.getElementById('edit-note-editor'),
+            editToolbar: document.getElementById('edit-toolbar'),
+            editNoteLabelInput: document.getElementById('edit-note-label'),
+            editNoteCardColorInput: document.getElementById('edit-note-card-color-input'),
+            saveEditNoteBtn: document.getElementById('save-edit-note'),
+            cancelEditNoteBtn: document.getElementById('cancel-edit-note'),
+            deleteNoteBtn: document.getElementById('delete-note'),
+            archiveNoteBtn: document.getElementById('archive-note'),
+            shareNoteBtn: document.getElementById('share-note-btn'),
+            // New Note Pane
+            fabAddNoteBtn: document.getElementById('fab-add-note'),
+            newNotePane: document.getElementById('new-note-pane'),
+            newNoteTitleInput: document.getElementById('new-note-title'),
+            newNoteEditor: document.getElementById('new-note-editor'),
+            newNoteToolbar: document.getElementById('new-note-toolbar'),
+            bottomResizeHandle: document.getElementById('bottom-resize-handle'),
+            newNoteLabelInput: document.getElementById('new-note-label'),
+            newNoteCardColorInput: document.getElementById('new-note-card-color-input'),
+            saveNewNoteBtn: document.getElementById('save-new-note'),
+            cancelNewNoteBtn: document.getElementById('cancel-new-note'),
+            // Calendar & Settings
+            calendarBtn: document.getElementById('calendar-btn'),
+            calendarModal: document.getElementById('calendar-modal'),
+            settingsBtn: document.getElementById('settings-btn'),
+            settingsModal: document.getElementById('settings-modal'),
+            labelsDatalist: document.getElementById('labels-datalist'),
+             // Email Modal
+            emailModal: document.getElementById('email-modal'),
+            emailTo: document.getElementById('email-to'),
+            emailSubject: document.getElementById('email-subject'),
+            emailBody: document.getElementById('email-body'),
+            cannedResponsesList: document.getElementById('canned-responses-list'),
+            newCannedResponseNameInput: document.getElementById('new-canned-response-name'),
+            newCannedResponseTextInput: document.getElementById('new-canned-response-text'),
+            addCannedResponseBtn: document.getElementById('add-canned-response'),
+            sendEmailBtn: document.getElementById('send-email'),
+            cancelEmailBtn: document.getElementById('cancel-email'),
+            // Embed Modals
+            embedModal: document.getElementById('embed-modal'),
+            embedCodeInput: document.getElementById('embed-code-input'),
+            saveEmbedBtn: document.getElementById('save-embed-btn'),
+            cancelEmbedBtn: document.getElementById('cancel-embed-btn'),
+            iframeHelperBtn: document.getElementById('iframe-helper-btn'),
+            iframeHelperModal: document.getElementById('iframe-helper-modal'),
+            iframeUrlInput: document.getElementById('iframe-url'),
+            iframeWidthInput: document.getElementById('iframe-width'),
+            iframeHeightInput: document.getElementById('iframe-height'),
+            addIframeBtn: document.getElementById('add-iframe-btn'),
+            cancelIframeHelperBtn: document.getElementById('cancel-iframe-helper-btn'),
+            videoHelperBtn: document.getElementById('video-helper-btn'),
+            videoHelperModal: document.getElementById('video-helper-modal'),
+            videoUrlInput: document.getElementById('video-url'),
+            videoWidthInput: document.getElementById('video-width'),
+            videoHeightInput: document.getElementById('video-height'),
+            videoControlsCheckbox: document.getElementById('video-controls'),
+            addVideoBtn: document.getElementById('add-video-btn'),
+            cancelVideoHelperBtn: document.getElementById('cancel-video-helper-btn'),
+            // Import/Export & Image
+            importFileInput: document.getElementById('import-file-input'),
+            importEnexBtn: document.getElementById('import-enex-btn'),
+            importEnexInput: document.getElementById('import-enex-input'),
+            imageUploadInput: document.getElementById('image-upload-input'),
+            clearStorageBtn: document.getElementById('clear-storage-btn'),
+            // Dashboard & Notes View
+            dashboardView: document.getElementById('dashboard-view'),
+            notesView: document.getElementById('notes-view'),
+            dashboardLink: document.getElementById('dashboard-link'),
+            allNotesLink: document.getElementById('all-notes-link'),
+            greetingBanner: document.getElementById('greeting-banner'),
+            greetingText: document.getElementById('greeting-text'),
+            timeDisplay: document.getElementById('time-display'),
+            recentNotesContainer: document.getElementById('recent-notes-container'),
+            shortcutsGrid: document.getElementById('shortcuts-grid'),
+            // Batch Actions
+            selectModeBtn: document.getElementById('select-mode-btn'),
+            batchActionBar: document.getElementById('batch-action-bar'),
+            selectionCount: document.getElementById('selection-count'),
+            batchExportBtn: document.getElementById('batch-export-btn'),
+            batchArchiveBtn: document.getElementById('batch-archive-btn'),
+            batchDeleteBtn: document.getElementById('batch-delete-btn'),
+            // QR Code Modal elements
+            qrCodeModal: document.getElementById('qr-code-modal'),
+            qrCodeContainer: document.getElementById('qr-code-container'),
+            shareInfo: document.getElementById('share-info'),
+            sharePasswordDisplay: document.getElementById('share-password-display'),
+            closeQrCodeModalBtn: document.getElementById('close-qr-code-modal'),
+            secureSendToggle: document.getElementById('secure-send-toggle'),
+            exportNoteBtn: document.getElementById('export-note-btn'),
+            // Collaboration Elements
+            collaborationLink: document.getElementById('collaboration-link'),
+            collaborationView: document.getElementById('collaboration-view'),
+            leaveSessionBtn: document.getElementById('leave-session-btn'),
+            peerList: document.getElementById('peer-list'),
+            collaborationNotesGrid: document.getElementById('collaboration-notes-grid'),
+            collaborationStartModal: document.getElementById('collaboration-start-modal'),
+            hostSessionBtn: document.getElementById('host-session-btn'),
+            joinSessionBtn: document.getElementById('join-session-btn'),
+            cancelCollaborationStartBtn: document.getElementById('cancel-collaboration-start-btn'),
+            joinSessionModal: document.getElementById('join-session-modal'),
+            joinRoomIdInput: document.getElementById('join-room-id-input'),
+            confirmJoinSessionBtn: document.getElementById('confirm-join-session-btn'),
+            cancelJoinSessionBtn: document.getElementById('cancel-join-session-btn'),
+            collaborationFooter: document.getElementById('collaboration-footer'),
+            footerRoomId: document.getElementById('footer-room-id'),
+        };
+
+        // --- App State ---
+        let state = { 
+            notes: [], 
+            settings: {}, 
+            cannedResponses: [], 
+            currentNoteId: null, 
+            activeEditor: null, 
+            currentDate: new Date(),
+            selectModeActive: false,
+            selectedNoteIds: new Set(),
+            showArchived: false,
+            // Collaboration State
+            peer: null,
+            connections: new Map(), // Use a Map to store connections by peerId
+            roomId: null,
+            isHost: false,
+            collaborationNotes: [],
+        };
+        const defaultSettings = {
+            title: 'Collections', bgColor: '#3c6d5e', sidebarColor: '#000000', fontColor: '#ffffff',
+            fabColor: '#000000',
+            noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
+            textInputBgColor: '#ffffff', textInputFontColor: '#000000',
+            footerText: 'Niilow 1.0', modalOpacity: 0.95, userName: 'User', customLinks: [],
+            sessionPassword: ''
+        };
+
+        // --- IndexedDB Helper ---
+        const db = {
+            instance: null,
+            init(dbName, version, upgradeCallback) {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(dbName, version);
+                    request.onupgradeneeded = upgradeCallback;
+                    request.onsuccess = (e) => {
+                        this.instance = e.target.result;
+                        resolve();
+                    };
+                    request.onerror = (e) => reject(`IndexedDB error: ${e.target.errorCode}`);
+                });
+            },
+            get(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.instance.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const request = store.get(key);
+                    request.onsuccess = (e) => resolve(e.target.result);
+                    request.onerror = (e) => reject(e.target.error);
+                });
+            },
+            getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.instance.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const request = store.getAll();
+                    request.onsuccess = (e) => resolve(e.target.result);
+                    request.onerror = (e) => reject(e.target.error);
+                });
+            },
+            put(storeName, value, key) {
+                 return new Promise((resolve, reject) => {
+                    const tx = this.instance.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const request = store.put(value, key);
+                    tx.oncomplete = () => resolve(request.result);
+                    tx.onerror = () => reject(tx.error);
+                });
+            },
+            clear(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.instance.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    store.clear();
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+        };
+
+        async function loadFromDB() {
+            try {
+                state.notes = await db.getAll('notes') || [];
+                state.cannedResponses = await db.getAll('cannedResponses') || [];
+                const savedSettings = await db.get('settings', 'appSettings');
+                state.settings = { ...defaultSettings, ...savedSettings };
+            } catch(e) {
+                 console.error("Failed to load data from IndexedDB", e);
+                 state.settings = defaultSettings;
+            }
+        }
+        
+        async function saveData() {
+            // Only save non-collaboration data
+            try {
+                await Promise.all([
+                    db.clear('notes').then(() => Promise.all(state.notes.map(note => db.put('notes', note)))),
+                    db.clear('cannedResponses').then(() => Promise.all(state.cannedResponses.map(res => db.put('cannedResponses', res)))),
+                    db.put('settings', state.settings, 'appSettings')
+                ]);
+            } catch (e) {
+                 showNotification('An error occurred while saving.', 'error');
+                 console.error("Save failed:", e);
+            }
+            renderAll();
+        }
+
+        // --- HTML Sanitizer ---
+        function sanitizeHTML(dirtyHTML) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = dirtyHTML;
+            const allowedTags = [
+                'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'P', 'A', 'UL', 'OL', 'LI', 'B', 'I', 'STRONG', 'EM', 'U', 'BR', 'DIV', 'SPAN', 
+                'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG', 'VIDEO', 'SOURCE', 'IFRAME', 'FONT'
+            ];
+            const allowedAttrs = {
+                '*': ['style', 'class', 'title'],
+                'A': ['href', 'target'],
+                'IMG': ['src', 'alt', 'width', 'height'],
+                'VIDEO': ['src', 'controls', 'width', 'height', 'autoplay', 'muted', 'loop', 'poster'],
+                'SOURCE': ['src', 'type'],
+                'IFRAME': ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading', 'sandbox'],
+                'FONT': ['color']
+            };
+
+            const cleanNode = (node) => {
+                if (node.nodeType === 3) return node.cloneNode();
+                if (node.nodeType !== 1) return null;
+                
+                const tagName = node.tagName.toUpperCase();
+                if (!allowedTags.includes(tagName)) return null;
+
+                const newNode = document.createElement(node.tagName);
+                const universalAttrs = allowedAttrs['*'] || [];
+                const tagSpecificAttrs = allowedAttrs[tagName] || [];
+                const allAllowedAttrs = [...new Set([...universalAttrs, ...tagSpecificAttrs])];
+
+                for (const attr of node.attributes) {
+                    if (allAllowedAttrs.includes(attr.name.toLowerCase()) && !attr.name.startsWith('on')) {
+                         if (attr.name === 'src' || attr.name === 'href') {
+                             if (!attr.value.startsWith('http:') && !attr.value.startsWith('https:') && !attr.value.startsWith('data:')) {
+                                continue;
+                             }
+                         }
+                        newNode.setAttribute(attr.name, attr.value);
+                    }
+                }
+                
+                for(const child of node.childNodes){
+                    const cleanChild = cleanNode(child);
+                    if(cleanChild) newNode.appendChild(cleanChild);
+                }
+
+                return newNode;
+            }
+
+            const fragment = document.createDocumentFragment();
+            for(const child of tempDiv.childNodes) {
+                const cleanChild = cleanNode(child);
+                if (cleanChild) fragment.appendChild(cleanChild);
+            }
+            
+            const cleanDiv = document.createElement('div');
+            cleanDiv.appendChild(fragment);
+            return cleanDiv.innerHTML;
+        }
+
+
+        // --- Rendering & UI ---
+         function hexToRgba(hex, alpha) {
+            let r = 0, g = 0, b = 0;
+            if(!hex) return `rgba(0,0,0,${alpha})`;
+            if (hex.length == 4) {
+                r = "0x" + hex[1] + hex[1];
+                g = "0x" + hex[2] + hex[2];
+                b = "0x" + hex[3] + hex[3];
+            } else if (hex.length == 7) {
+                r = "0x" + hex[1] + hex[2];
+                g = "0x" + hex[3] + hex[4];
+                b = "0x" + hex[5] + hex[6];
+            }
+            return `rgba(${+r},${+g},${+b},${alpha})`;
+        }
+
+        function applySettings() {
+            const { settings } = state;
+            const settingsModal = DOMElements.settingsModal;
+            DOMElements.appTitle.innerText = settings.title;
+            DOMElements.body.style.backgroundColor = settings.bgColor;
+            DOMElements.sidebar.style.backgroundColor = settings.sidebarColor;
+            DOMElements.body.style.color = settings.fontColor;
+            DOMElements.sidebarFooter.innerText = settings.footerText;
+            
+            DOMElements.fabAddNoteBtn.style.backgroundColor = settings.fabColor;
+
+            const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
+            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.emailModal, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal].forEach(el => {
+                if (el) {
+                    const inner = el.firstElementChild;
+                    if (inner && (el.id.includes('-modal'))) {
+                        inner.style.backgroundColor = rgbaModalBg;
+                    } else {
+                        el.style.backgroundColor = rgbaModalBg;
+                    }
+                }
+            });
+
+            const rgbaBannerBg = hexToRgba(settings.noteCardColor, settings.noteCardOpacity);
+            DOMElements.greetingBanner.style.backgroundColor = rgbaBannerBg;
+
+
+            document.querySelectorAll('.text-input-field').forEach(el => {
+                el.style.backgroundColor = settings.textInputBgColor;
+                el.style.color = settings.textInputFontColor;
+                if(el.id === 'edit-note-label' || el.id === 'new-note-label') {
+                    el.style.backgroundColor = hexToRgba(settings.textInputBgColor, 0.75);
+                }
+            });
+
+            if(settingsModal) {
+                settingsModal.querySelector('#user-name-setting').value = settings.userName;
+                settingsModal.querySelector('#title-setting').value = settings.title;
+                settingsModal.querySelector('#footer-text-setting').value = settings.footerText;
+                settingsModal.querySelector('#session-password-setting').value = settings.sessionPassword || '';
+                settingsModal.querySelector('#bg-color-setting').value = settings.bgColor;
+                settingsModal.querySelector('#sidebar-color-setting').value = settings.sidebarColor;
+                settingsModal.querySelector('#font-color-setting').value = settings.fontColor;
+                settingsModal.querySelector('#fab-color-setting').value = settings.fabColor;
+                settingsModal.querySelector('#note-card-color-setting').value = settings.noteCardColor;
+                settingsModal.querySelector('#note-card-opacity-setting').value = settings.noteCardOpacity;
+                settingsModal.querySelector('#modal-bg-color-setting').value = settings.modalBgColor;
+                settingsModal.querySelector('#modal-opacity-setting').value = settings.modalOpacity;
+                settingsModal.querySelector('#text-input-bg-color-setting').value = settings.textInputBgColor;
+                settingsModal.querySelector('#text-input-font-color-setting').value = settings.textInputFontColor;
+            }
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderNoteLists();
+            renderNotesGrid();
+        }
+
+        function renderDashboard() {
+            const hour = new Date().getHours();
+            const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+            DOMElements.greetingText.textContent = `${greeting}, ${state.settings.userName}!`;
+
+            const recentNotes = state.notes.filter(n => !n.archived).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 5);
+            DOMElements.recentNotesContainer.innerHTML = '';
+            recentNotes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = 'note-card recent-note-card';
+                card.dataset.id = note.id;
+                const baseColor = note.color || state.settings.noteCardColor;
+                const opacity = state.settings.noteCardOpacity || 1;
+                card.style.backgroundColor = hexToRgba(baseColor, opacity);
+                card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
+                card.addEventListener('click', () => openEditPane(note.id));
+                DOMElements.recentNotesContainer.appendChild(card);
+            });
+
+            renderShortcuts();
+        }
+
+        function getFilteredNotes() {
+            const filterText = DOMElements.filterInput.value.toLowerCase();
+            if (!filterText) return state.notes;
+            return state.notes.filter(note => {
+                const titleMatch = (note.title || '').toLowerCase().includes(filterText);
+                const contentMatch = (note.content || '').toLowerCase().includes(filterText);
+                const labelMatch = (note.label || '').toLowerCase().includes(filterText);
+                return titleMatch || contentMatch || labelMatch;
+            });
+        }
+
+        function renderNoteLists() {
+            // Clear existing content
+            DOMElements.labelsContainer.innerHTML = '';
+            DOMElements.archiveList.innerHTML = '';
+
+            const filteredNotes = getFilteredNotes();
+            
+            const activeNotes = filteredNotes.filter(n => !n.archived);
+            const archivedNotes = filteredNotes.filter(n => n.archived);
+
+            // Helper function to create and append DOM nodes for a group of notes
+            const buildAndAppendLabelGroups = (container, notes, defaultTitle) => {
+                if (notes.length === 0) return;
+                
+                const notesByLabel = {};
+                const labels = [...new Set(notes.map(n => n.label).filter(Boolean))];
+                labels.forEach(label => notesByLabel[label] = []);
+                const uncategorized = [];
+
+                notes.forEach(note => {
+                    if (note.label && notesByLabel[note.label]) {
+                        notesByLabel[note.label].push(note);
+                    } else {
+                        uncategorized.push(note);
+                    }
+                });
+
+                // Helper to create a single <details> block
+                const createLabelGroupElement = (title, notesInGroup) => {
+                    if (notesInGroup.length === 0) return null;
+
+                    const details = document.createElement('details');
+                    details.open = true;
+                    details.className = 'mt-2';
+
+                    const summary = document.createElement('summary');
+                    summary.className = 'cursor-pointer font-semibold p-1 rounded hover:bg-gray-700';
+                    summary.textContent = title;
+
+                    const listContainer = document.createElement('div');
+                    listContainer.className = 'pl-2 border-l-2 border-gray-600';
+
+                    notesInGroup.forEach(note => {
+                        // Here we append the actual element, not its HTML string
+                        listContainer.appendChild(createNoteListItem(note));
+                    });
+
+                    details.appendChild(summary);
+                    details.appendChild(listContainer);
+                    return details;
+                };
+                
+                // Create and append uncategorized notes first
+                const uncategorizedGroup = createLabelGroupElement(defaultTitle, uncategorized);
+                if (uncategorizedGroup) {
+                    container.appendChild(uncategorizedGroup);
+                }
+
+                // Then create and append labeled groups
+                labels.sort().forEach(label => {
+                    const labeledGroup = createLabelGroupElement(label, notesByLabel[label]);
+                    if (labeledGroup) {
+                        container.appendChild(labeledGroup);
+                    }
+                });
+            }
+
+            // Build the UI for active and archived notes
+            buildAndAppendLabelGroups(DOMElements.labelsContainer, activeNotes, 'Unsorted Notes');
+            buildAndAppendLabelGroups(DOMElements.archiveList, archivedNotes, 'Uncategorized');
+
+            // Show/hide the archive section based on content
+            DOMElements.archiveSection.style.display = archivedNotes.length > 0 ? 'block' : 'none';
+        }
+
+        function createNoteListItem(note) {
+            const noteEl = document.createElement('div');
+            noteEl.className = 'p-2 rounded cursor-pointer truncate hover:bg-gray-600';
+            noteEl.dataset.id = note.id;
+            noteEl.innerText = note.title || "Untitled Note";
+            noteEl.addEventListener('click', (e) => { e.stopPropagation(); openEditPane(note.id); });
+            return noteEl;
+        }
+
+        function renderNotesGrid() {
+            DOMElements.notesGrid.innerHTML = '';
+            const filteredNotes = getFilteredNotes();
+            const filterText = DOMElements.filterInput.value.toLowerCase();
+
+            let notesToShow;
+
+            if (filterText) {
+                // If searching, show all matching notes, active or archived
+                notesToShow = filteredNotes;
+            } else {
+                // If not searching, use the toggle state
+                notesToShow = filteredNotes.filter(n => n.archived === state.showArchived);
+            }
+
+            notesToShow.forEach(note => {
+                const card = createNoteCard(note, openEditPane);
+                DOMElements.notesGrid.appendChild(card);
+            });
+             new Sortable(DOMElements.notesGrid, { 
+                animation: 150, 
+                ghostClass: 'sortable-ghost',
+                disabled: state.selectModeActive,
+                delay: 200, // Wait 200ms before starting a drag
+                delayOnTouchOnly: true // Only delay on touch devices
+            });
+        }
+        
+        function createNoteCard(note, clickHandler) {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.dataset.id = note.id;
+            
+            if (note.archived) {
+                card.classList.add('is-archived');
+            }
+            if (state.selectModeActive && state.selectedNoteIds.has(note.id)) {
+                card.classList.add('selected');
+            }
+
+            const baseColor = note.color || state.settings.noteCardColor;
+            const opacity = state.settings.noteCardOpacity || 1;
+            card.style.backgroundColor = hexToRgba(baseColor, opacity);
+            card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
+            
+            card.addEventListener('click', () => {
+                if (state.selectModeActive) {
+                    toggleNoteSelection(note.id, card);
+                } else {
+                    clickHandler(note.id);
+                }
+            });
+            return card;
+        }
+        
+        async function init() {
+            await db.init('NiilowDB', 1, (e) => {
+                const dbInstance = e.target.result;
+                if (!dbInstance.objectStoreNames.contains('notes')) {
+                    dbInstance.createObjectStore('notes', { keyPath: 'id' });
+                }
+                if (!dbInstance.objectStoreNames.contains('settings')) {
+                    dbInstance.createObjectStore('settings');
+                }
+                if (!dbInstance.objectStoreNames.contains('cannedResponses')) {
+                    dbInstance.createObjectStore('cannedResponses', { keyPath: 'name' });
+                }
+            });
+            await loadFromDB();
+            
+            const currentUrl = new URL(window.location.href);
+            const dataFromUrl = currentUrl.searchParams.get('data');
+            const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
+
+            if (dataFromUrl) {
+                let password = currentUrl.searchParams.get('sesh-ID');
+                if (requiresSecret) {
+                     password = prompt("This note is protected. Please enter the password to view it:");
+                }
+                
+                if (password) {
+                    await handleUrlDataImport(dataFromUrl, password);
+                } else if (requiresSecret) {
+                     showNotification("Password required to open this secret note.", "error");
+                     history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+
+
+            applySettings();
+            renderAll();
+            addEventListeners();
+            setupToolbar(DOMElements.newNoteToolbar, DOMElements.newNoteEditor);
+            setupToolbar(DOMElements.editToolbar, DOMElements.editNoteEditor);
+            setInterval(updateTime, 1000);
+            updateTime();
+            
+            const firstVisit = await db.get('settings', 'firstVisit');
+            if(firstVisit === undefined) {
+                 openModal(DOMElements.welcomeModal);
+                 db.put('settings', false, 'firstVisit');
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            DOMElements.timeDisplay.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function makeResizable(element, handle, direction) {
+            if(!handle || !element) return;
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startWidth = element.offsetWidth;
+                const startHeight = element.offsetHeight;
+
+                const doDrag = (moveEvent) => {
+                    if (direction === 'horizontal') {
+                        const deltaX = moveEvent.clientX - startX;
+                        let newWidth = startWidth + (handle === DOMElements.sidePaneResizeHandle ? -deltaX : deltaX);
+                        element.style.width = `${newWidth}px`;
+                    } else { // vertical
+                        const deltaY = moveEvent.clientY - startY;
+                        element.style.height = `${startHeight - deltaY}px`;
+                    }
+                };
+
+                const stopDrag = () => {
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                };
+
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+            });
+        }
+
+        function addEventListeners() {
+            DOMElements.mobileMenuBtn.addEventListener('click', () => {
+                DOMElements.sidebar.classList.toggle('-translate-x-full');
+                DOMElements.modalOverlay.classList.toggle('hidden');
+                DOMElements.modalOverlay.classList.toggle('opacity-0');
+            });
+            
+            DOMElements.closeWelcomeModalBtn.addEventListener('click', () => closeModal(DOMElements.welcomeModal));
+            DOMElements.closeQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.qrCodeModal));
+            DOMElements.shareNoteBtn.addEventListener('click', handleShareNote);
+            DOMElements.secureSendToggle.addEventListener('change', generateShareLink);
+            DOMElements.exportNoteBtn.addEventListener('click', handleExportSingleNote);
+            DOMElements.selectModeBtn.addEventListener('click', toggleSelectMode);
+            DOMElements.batchExportBtn.addEventListener('click', handleBatchExport);
+            DOMElements.batchArchiveBtn.addEventListener('click', handleBatchArchive);
+            DOMElements.batchDeleteBtn.addEventListener('click', handleBatchDelete);
+            DOMElements.cancelBatchDeleteBtn.addEventListener('click', () => closeModal(DOMElements.batchDeleteConfirmModal));
+            DOMElements.confirmBatchDeleteActionBtn.addEventListener('click', executeBatchDelete);
+
+
+            DOMElements.fabAddNoteBtn.addEventListener('click', openNewNotePane);
+            DOMElements.cancelNewNoteBtn.addEventListener('click', closeNewNotePane);
+            DOMElements.saveNewNoteBtn.addEventListener('click', handleSaveNewNote);
+
+            DOMElements.cancelEditNoteBtn.addEventListener('click', closeEditPane);
+            DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit());
+            DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
+            DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
+
+            // UPDATED SEARCH EVENT LISTENER
+            let searchDebounceTimeout;
+            DOMElements.filterInput.addEventListener('input', () => {
+                clearTimeout(searchDebounceTimeout);
+                searchDebounceTimeout = setTimeout(() => {
+                    const filterText = DOMElements.filterInput.value;
+                    if (filterText.length > 0 && DOMElements.dashboardView.classList.contains('hidden')) {
+                        renderNoteLists();
+                        renderNotesGrid();
+                    } else if (filterText.length > 0) {
+                        DOMElements.dashboardView.classList.add('hidden');
+                        DOMElements.notesView.classList.remove('hidden');
+                        renderNoteLists();
+                        renderNotesGrid();
+                    } else {
+                        renderNoteLists();
+                        renderNotesGrid();
+                    }
+                }, 400); // 400ms delay
+            });
+
+            DOMElements.modalOverlay.addEventListener('click', closeAllPopups);
+
+            DOMElements.dashboardLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                showView('dashboard');
+                closeSidebarMobile();
+            });
+             DOMElements.allNotesLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                state.showArchived = false;
+                DOMElements.archiveToggle.checked = false;
+                showView('notes');
+                renderNotesGrid();
+                closeSidebarMobile();
+            });
+            DOMElements.collaborationLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                openModal(DOMElements.collaborationStartModal);
+                closeSidebarMobile();
+            });
+
+
+            DOMElements.archiveToggle.addEventListener('change', e => {
+                state.showArchived = e.target.checked;
+                renderNotesGrid();
+            });
+
+            DOMElements.calendarBtn.addEventListener('click', () => { renderCalendar(); openModal(DOMElements.calendarModal); });
+            DOMElements.settingsBtn.addEventListener('click', () => { applySettings(); openModal(DOMElements.settingsModal); });
+            
+            DOMElements.saveEmbedBtn.addEventListener('click', handleSaveEmbed);
+            DOMElements.cancelEmbedBtn.addEventListener('click', () => closeModal(DOMElements.embedModal));
+            DOMElements.iframeHelperBtn.addEventListener('click', () => openModal(DOMElements.iframeHelperModal));
+            DOMElements.addIframeBtn.addEventListener('click', handleAddIframe);
+            DOMElements.cancelIframeHelperBtn.addEventListener('click', () => closeModal(DOMElements.iframeHelperModal));
+            DOMElements.videoHelperBtn.addEventListener('click', () => openModal(DOMElements.videoHelperModal));
+            DOMElements.addVideoBtn.addEventListener('click', handleAddVideo);
+            DOMElements.cancelVideoHelperBtn.addEventListener('click', () => closeModal(DOMElements.videoHelperModal));
+
+            // Drag and Drop for .nii files
+            const body = DOMElements.body;
+            body.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const items = e.dataTransfer.items;
+                if (items && items.length > 0 && !items[0].type.startsWith('image/')) {
+                    DOMElements.globalDropZone.classList.remove('hidden');
+                }
+            });
+            body.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            body.addEventListener('dragleave', (e) => {
+                 if (!body.contains(e.relatedTarget)) {
+                    DOMElements.globalDropZone.classList.add('hidden');
+                 }
+            });
+            body.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                DOMElements.globalDropZone.classList.add('hidden');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const niiFile = Array.from(files).find(file => file.name.endsWith('.nii'));
+                    if (niiFile) {
+                        processNiiFile(niiFile);
+                    }
+                }
+            });
+
+
+            if (DOMElements.settingsModal) {
+                 DOMElements.settingsModal.querySelector('#close-settings').addEventListener('click', () => closeModal(DOMElements.settingsModal));
+                 DOMElements.settingsModal.querySelector('#import-btn').addEventListener('click', () => DOMElements.importFileInput.click());
+                 DOMElements.importEnexBtn.addEventListener('click', () => DOMElements.importEnexInput.click());
+                 DOMElements.importEnexInput.addEventListener('change', handleEnexImport);
+                 DOMElements.settingsModal.querySelector('#export-btn').addEventListener('click', handleExport);
+                 DOMElements.clearStorageBtn.addEventListener('click', handleClearLocalStorage);
+                 const settingsInputs = [
+                    { el: DOMElements.settingsModal.querySelector('#user-name-setting'), key: 'userName' },
+                    { el: DOMElements.settingsModal.querySelector('#title-setting'), key: 'title' },
+                    { el: DOMElements.settingsModal.querySelector('#footer-text-setting'), key: 'footerText' },
+                    { el: DOMElements.settingsModal.querySelector('#session-password-setting'), key: 'sessionPassword' },
+                    { el: DOMElements.settingsModal.querySelector('#bg-color-setting'), key: 'bgColor' },
+                    { el: DOMElements.settingsModal.querySelector('#sidebar-color-setting'), key: 'sidebarColor' },
+                    { el: DOMElements.settingsModal.querySelector('#font-color-setting'), key: 'fontColor' },
+                    { el: DOMElements.settingsModal.querySelector('#fab-color-setting'), key: 'fabColor' },
+                    { el: DOMElements.settingsModal.querySelector('#note-card-color-setting'), key: 'noteCardColor' },
+                    { el: DOMElements.settingsModal.querySelector('#note-card-opacity-setting'), key: 'noteCardOpacity' },
+                    { el: DOMElements.settingsModal.querySelector('#modal-bg-color-setting'), key: 'modalBgColor' },
+                    { el: DOMElements.settingsModal.querySelector('#modal-opacity-setting'), key: 'modalOpacity' },
+                    { el: DOMElements.settingsModal.querySelector('#text-input-bg-color-setting'), key: 'textInputBgColor' },
+                    { el: DOMElements.settingsModal.querySelector('#text-input-font-color-setting'), key: 'textInputFontColor' }
+                ];
+                settingsInputs.forEach(({el, key}) => {
+                    if (el) el.addEventListener('input', (e) => updateSetting(key, e.target.value))
+                });
+
+                const addShortcutBtn = DOMElements.settingsModal.querySelector('#add-shortcut-btn');
+                const shortcutsManager = DOMElements.settingsModal.querySelector('#shortcuts-manager');
+                if(addShortcutBtn) addShortcutBtn.addEventListener('click', handleAddShortcut);
+                if(shortcutsManager) shortcutsManager.addEventListener('click', handleShortcutAction);
+            }
+             if (DOMElements.calendarModal) {
+                DOMElements.calendarModal.querySelector('#prev-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() - 1); renderCalendar(); });
+                DOMElements.calendarModal.querySelector('#next-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() + 1); renderCalendar(); });
+            }
+             if(DOMElements.confirmClearModal) {
+                DOMElements.deleteConfirmationInput.addEventListener('input', () => {
+                    if (DOMElements.deleteConfirmationInput.value === 'DELETE') {
+                        DOMElements.confirmClearActionBtn.disabled = false;
+                        DOMElements.confirmClearActionBtn.classList.remove('cursor-not-allowed', 'bg-gray-500');
+                        DOMElements.confirmClearActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                    } else {
+                        DOMElements.confirmClearActionBtn.disabled = true;
+                        DOMElements.confirmClearActionBtn.classList.add('cursor-not-allowed', 'bg-gray-500');
+                        DOMElements.confirmClearActionBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    }
+                });
+                DOMElements.confirmClearActionBtn.addEventListener('click', async () => {
+                    if (DOMElements.deleteConfirmationInput.value === 'DELETE') {
+                        await db.clear('notes');
+                        await db.clear('settings');
+                        await db.clear('cannedResponses');
+                        localStorage.clear(); // Clear any old remnants
+                        showNotification("All data has been cleared. The app will now reload.", "success");
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                });
+                DOMElements.cancelClearBtn.addEventListener('click', () => closeModal(DOMElements.confirmClearModal));
+            }
+            makeResizable(DOMElements.sidebar, DOMElements.sidebarResizeHandle, 'horizontal');
+            makeResizable(DOMElements.editNotePane, DOMElements.sidePaneResizeHandle, 'horizontal');
+            makeResizable(DOMElements.newNotePane, DOMElements.bottomResizeHandle, 'vertical');
+            DOMElements.cancelEmailBtn.addEventListener('click', () => closeModal(DOMElements.emailModal));
+            DOMElements.addCannedResponseBtn.addEventListener('click', handleAddCannedResponse);
+            DOMElements.sendEmailBtn.addEventListener('click', handleSendEmail);
+            DOMElements.imageUploadInput.addEventListener('change', handleImageUpload);
+            DOMElements.importFileInput.addEventListener('change', handleImport);
+            
+            [DOMElements.editNoteEditor, DOMElements.newNoteEditor].forEach(editor => {
+                 const container = editor.closest('.editor-container');
+                 container.addEventListener('dragenter', e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const items = e.dataTransfer.items;
+                    if (items && items.length > 0 && items[0].type.startsWith('image/')) {
+                         DOMElements.globalDropZone.classList.add('hidden');
+                         container.classList.add('drop-zone-active');
+                    }
+                 });
+                 container.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                 });
+                 container.addEventListener('dragleave', e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (!container.contains(e.relatedTarget)) {
+                        container.classList.remove('drop-zone-active');
+                    }
+                 });
+                 container.addEventListener('drop', e => {
+                     e.stopPropagation();
+                     e.preventDefault();
+                     DOMElements.globalDropZone.classList.add('hidden');
+                     container.classList.remove('drop-zone-active');
+                     handleImageDrop(e.dataTransfer.files, editor);
+                 });
+            });
+
+            // ++ ADD THIS BLOCK FOR CHECKLISTS ++
+            [DOMElements.editNoteEditor, DOMElements.newNoteEditor].forEach(editor => {
+                editor.addEventListener('click', e => {
+                    const listItem = e.target.closest('li.task-item');
+                    if (listItem) {
+                        e.preventDefault();
+                        listItem.classList.toggle('checked');
+                        if(editor.id === 'edit-note-editor') {
+                            handleSaveEdit(true); // silent save
+                        }
+                    }
+                });
+            });
+            
+            // Collaboration Event Listeners
+            DOMElements.hostSessionBtn.addEventListener('click', hostSession);
+            DOMElements.joinSessionBtn.addEventListener('click', () => {
+                closeModal(DOMElements.collaborationStartModal);
+                openModal(DOMElements.joinSessionModal);
+            });
+            DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
+            DOMElements.leaveSessionBtn.addEventListener('click', leaveSession);
+            DOMElements.footerRoomId.addEventListener('click', () => {
+                navigator.clipboard.writeText(state.roomId).then(() => {
+                    showNotification('Room ID copied to clipboard!', 'success');
+                });
+            });
+            DOMElements.confirmJoinSessionBtn.addEventListener('click', joinSession);
+            DOMElements.cancelJoinSessionBtn.addEventListener('click', () => closeModal(DOMElements.joinSessionModal));
+        }
+
+        async function handleSaveNewNote() {
+            const title = DOMElements.newNoteTitleInput.value || 'Untitled Note';
+            const content = sanitizeHTML(DOMElements.newNoteEditor.innerHTML);
+            const label = DOMElements.newNoteLabelInput.value.trim();
+            const color = DOMElements.newNoteCardColorInput.value;
+            const now = new Date().toISOString();
+            const newNote = { id: Date.now().toString(), title, content, createdAt: now, updatedAt: now, archived: false, label, color, author: state.settings.userName };
+            
+            const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+
+            if (inCollabView) {
+                const action = { type: 'request_add_note', note: newNote };
+                if (state.isHost) {
+                    handleHostAction(action);
+                } else {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send(action);
+                    } else {
+                        showNotification('Cannot add note. Not connected to host.', 'error');
+                    }
+                }
+            } else {
+                state.notes.push(newNote);
+                await saveData();
+                showNotification('Note saved!');
+            }
+            
+            closeNewNotePane();
+        }
+
+        async function handleSaveEdit(silent = false) {
+            if (!state.currentNoteId) return;
+
+            const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+            const notesSource = inCollabView ? state.collaborationNotes : state.notes;
+            
+            const noteIndex = notesSource.findIndex(n => n.id === state.currentNoteId);
+            if (noteIndex === -1) return;
+
+            const updatedNote = { ...notesSource[noteIndex] };
+            updatedNote.title = DOMElements.editNoteTitleInput.value;
+            updatedNote.content = sanitizeHTML(DOMElements.editNoteEditor.innerHTML);
+            updatedNote.label = DOMElements.editNoteLabelInput.value.trim();
+            updatedNote.color = DOMElements.editNoteCardColorInput.value;
+            updatedNote.updatedAt = new Date().toISOString();
+            
+            if (inCollabView) {
+                 const action = { type: 'request_update_note', note: updatedNote };
+                 if (state.isHost) {
+                    handleHostAction(action);
+                 } else {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send(action);
+                    } else {
+                        if (!silent) showNotification('Cannot send edit. Not connected to host.', 'error');
+                    }
+                 }
+            } else {
+                state.notes[noteIndex] = updatedNote;
+                await saveData();
+                if (!silent) showNotification('Note updated!');
+            }
+
+            if (!silent) {
+                closeEditPane();
+            }
+        }
+
+        async function handleDeleteNote() {
+             if (!state.currentNoteId) return;
+             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+
+             if (inCollabView) {
+                const action = { type: 'request_delete_note', noteId: state.currentNoteId };
+                if (state.isHost) {
+                    handleHostAction(action);
+                } else {
+                    const hostConn = state.connections.get(state.roomId);
+                     if (hostConn && hostConn.open) {
+                        hostConn.send(action);
+                    } else {
+                        showNotification('Cannot send delete request. Not connected to host.', 'error');
+                    }
+                }
+             } else {
+                state.notes = state.notes.filter(note => note.id !== state.currentNoteId);
+                await saveData();
+                showNotification('Note deleted.', 'error');
+             }
+             
+             closeEditPane();
+        }
+
+        async function handleArchiveNote() {
+             if (!state.currentNoteId) return;
+             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+             if (inCollabView) {
+                showNotification("Archiving is disabled in collaboration mode.", "error");
+                return;
+             }
+
+             const note = state.notes.find(n => n.id === state.currentNoteId);
+             note.archived = !note.archived;
+             note.updatedAt = new Date().toISOString();
+             await saveData();
+             closeEditPane();
+             showNotification(note.archived ? 'Note archived.' : 'Note unarchived.');
+        }
+
+        async function handleExport() {
+            const password = state.settings.sessionPassword;
+            if (!password) {
+                showNotification('Please set a Session Password in Settings before exporting.', 'error');
+                return;
+            }
+            const settingsForExport = { ...state.settings };
+            delete settingsForExport.sessionPassword;
+            delete settingsForExport.userName; // Don't export username
+            const dataToEncrypt = JSON.stringify({ notes: state.notes, settings: settingsForExport, cannedResponses: state.cannedResponses });
+            try {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedData = new TextEncoder().encode(dataToEncrypt);
+                const encryptedContent = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encodedData);
+                const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                combinedData.set(salt, 0);
+                combinedData.set(iv, salt.length);
+                combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
+                const blob = new Blob([combinedData], { type: 'application/octet-stream' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${state.settings.title.replace(/\s/g, '-')}-Export.nii`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('Secure data exported successfully!');
+            } catch (err) {
+                console.error("Encryption failed:", err);
+                showNotification('Export failed due to an encryption error.', 'error');
+            }
+        }
+        
+        function processNiiFile(file) {
+             const password = prompt("Enter the session password for this file:");
+            if (!password) {
+                showNotification('Password is required to import a file.', 'error');
+                return;
+            }
+            importNiiFile(file, password);
+        }
+
+        function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            processNiiFile(file);
+            DOMElements.importFileInput.value = '';
+        }
+        
+        function handleEnexImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    showNotification('Importing Evernote file...', 'success');
+                    const xmlText = event.target.result;
+                    const newNotes = parseEnexFile(xmlText);
+                    
+                    const existingNoteTitles = new Set(state.notes.map(n => n.title));
+                    const uniqueNewNotes = newNotes.filter(n => !existingNoteTitles.has(n.title));
+                    
+                    state.notes.push(...uniqueNewNotes);
+                    await saveData();
+                    showNotification(`${uniqueNewNotes.length} new note(s) imported successfully!`, 'success');
+                } catch (err) {
+                    console.error("ENEX Import failed:", err);
+                    showNotification('Evernote import failed. The file might be corrupted.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            DOMElements.importEnexInput.value = '';
+        }
+
+        function parseEnexFile(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            
+            const resourceMap = new Map();
+            xmlDoc.querySelectorAll('resource').forEach(resourceNode => {
+                const mime = resourceNode.querySelector('mime')?.textContent;
+                const dataNode = resourceNode.querySelector('data');
+                if (dataNode && dataNode.textContent) {
+                    const hash = dataNode.getAttribute('hash');
+                    const base64Data = dataNode.textContent.replace(/\s/g, '');
+                    const dataUrl = `data:${mime};base64,${base64Data}`;
+                    resourceMap.set(hash, dataUrl);
+                }
+            });
+
+            const noteNodes = xmlDoc.getElementsByTagName('note');
+            const importedNotes = [];
+
+            const formatDate = (enexDate) => {
+                if (!enexDate) return new Date().toISOString();
+                return `${enexDate.substring(0, 4)}-${enexDate.substring(4, 6)}-${enexDate.substring(6, 8)}T${enexDate.substring(9, 11)}:${enexDate.substring(11, 13)}:${enexDate.substring(13, 15)}Z`;
+            };
+
+            for (const noteNode of noteNodes) {
+                const title = noteNode.querySelector('title')?.textContent || 'Untitled Note';
+                const contentNode = noteNode.querySelector('content');
+                let content = contentNode ? contentNode.textContent : '';
+
+                const created = formatDate(noteNode.querySelector('created')?.textContent);
+                const updated = formatDate(noteNode.querySelector('updated')?.textContent);
+                const tags = Array.from(noteNode.querySelectorAll('tag')).map(t => t.textContent);
+
+                // This regex is a simpler way to grab the content within the CDATA block
+                const cdataRegex = /<!\[CDATA\[(.*?)\]\]>/s;
+                const match = cdataRegex.exec(content);
+                if (match && match[1]) {
+                    content = match[1];
+                }
+                
+                // Use a temporary div to parse and manipulate the HTML-like content
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                
+                // Now, query within this temporary structure
+                tempDiv.querySelectorAll('en-media').forEach(mediaNode => {
+                    const hash = mediaNode.getAttribute('hash');
+                    if (resourceMap.has(hash)) {
+                        const img = document.createElement('img');
+                        img.src = resourceMap.get(hash);
+                        mediaNode.replaceWith(img);
+                    }
+                });
+
+                tempDiv.querySelectorAll('en-todo').forEach(todoNode => {
+                    const li = document.createElement('li');
+                    li.classList.add('task-item');
+                    if (todoNode.getAttribute('checked') === 'true') {
+                        li.classList.add('checked');
+                    }
+                    todoNode.replaceWith(li);
+                });
+                
+                let finalContent = tempDiv.innerHTML;
+                
+                importedNotes.push({
+                    id: `enex-${Date.now()}-${Math.random()}`,
+                    title: title,
+                    content: sanitizeHTML(finalContent),
+                    createdAt: created,
+                    updatedAt: updated,
+                    archived: false,
+                    label: tags.length > 0 ? tags[0] : '',
+                    color: state.settings.noteCardColor,
+                });
+            }
+            return importedNotes;
+        }
+        
+        function importNiiFile(file, password) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const combinedData = new Uint8Array(event.target.result);
+                    const salt = combinedData.slice(0, 16);
+                    const iv = combinedData.slice(16, 28);
+                    const encryptedContent = combinedData.slice(28);
+                    const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                    const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+                    const decryptedContent = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encryptedContent);
+                    const decodedString = new TextDecoder().decode(decryptedContent);
+                    const importedState = JSON.parse(decodedString);
+                    
+                    let newNotes = [];
+                    if (Array.isArray(importedState)) { // single note export
+                        newNotes = importedState;
+                    } else if (importedState.notes) { // full export
+                        newNotes = importedState.notes;
+                    }
+                    
+                    const existingNoteIds = new Set(state.notes.map(n => n.id));
+                    const uniqueNewNotes = newNotes.filter(n => !existingNoteIds.has(n.id));
+                    state.notes.push(...uniqueNewNotes);
+
+                    const existingResponses = new Set(state.cannedResponses.map(r => r.name));
+                    if (Array.isArray(importedState.cannedResponses)) {
+                        importedState.cannedResponses.forEach(r => {
+                            if (!existingResponses.has(r.name)) { state.cannedResponses.push(r); }
+                        });
+                    }
+
+                    if (importedState.settings) {
+                        const currentPassword = state.settings.sessionPassword;
+                        const currentUserName = state.settings.userName;
+                        state.settings = { ...state.settings, ...importedState.settings, sessionPassword: currentPassword, userName: currentUserName };
+                    }
+                    
+                    await saveData();
+                    applySettings();
+                    showNotification(`${uniqueNewNotes.length} new note(s) imported successfully!`);
+                } catch (err) {
+                    console.error("Decryption/Import failed:", err);
+                    showNotification('Import failed: Invalid password or corrupted file.', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function handleUrlDataImport(dataFromUrl, password) {
+            try {
+                const base64 = dataFromUrl.replace(/-/g, '+').replace(/_/g, '/');
+                const binary_string = window.atob(base64);
+                const len = binary_string.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binary_string.charCodeAt(i);
+                }
+                const encryptedData = bytes;
+                
+                const salt = encryptedData.slice(0, 16);
+                const iv = encryptedData.slice(16, 28);
+                const data = encryptedData.slice(28);
+
+                const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+                const decryptedCompressed = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+                
+                const decompressedString = LZString.decompressFromUint8Array(new Uint8Array(decryptedCompressed));
+                if (!decompressedString) {
+                    throw new Error("Decompression failed. The data might be corrupted or the password is wrong.");
+                }
+                const importedNote = JSON.parse(decompressedString);
+                
+                const existingNoteIds = new Set(state.notes.map(n => n.id));
+                
+                if (!existingNoteIds.has(importedNote.id)) {
+                    state.notes.unshift(importedNote);
+                    await saveData();
+                    applySettings();
+                    showNotification(`Imported note "${importedNote.title}"!`, 'success');
+                } else {
+                    showNotification('Note from URL already exists.', 'info');
+                }
+
+                history.replaceState({}, document.title, window.location.pathname);
+
+            } catch (err) {
+                console.error("URL Data Import failed:", err);
+                showNotification('Could not load note from URL. Invalid link or password.', 'error');
+                history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+
+        function handleClearLocalStorage() {
+            openModal(DOMElements.confirmClearModal);
+        }
+        
+        async function handleShareNote() {
+            await handleSaveEdit(true); // Silently save before sharing
+            await generateShareLink();
+            openModal(DOMElements.qrCodeModal);
+        }
+        
+        async function generateShareLink() {
+             if (!state.currentNoteId) return;
+            const noteToShare = { ...state.notes.find(n => n.id === state.currentNoteId) };
+            if (!noteToShare) return;
+
+            let password = state.settings.sessionPassword;
+            let temporaryPassword = false;
+            if (!password) {
+                password = Math.random().toString(36).substring(2, 10);
+                temporaryPassword = true;
+            }
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = noteToShare.content;
+            const hasImages = tempDiv.querySelector('img, video, iframe');
+            noteToShare.content = tempDiv.innerHTML.replace(/<img[^>]*>|<video[^>]*>.*?<\/video>|<iframe[^>]*>.*?<\/iframe>/g, '');
+            DOMElements.shareInfo.textContent = hasImages ? 'Images or files removed for URL sharing. Use Export for full note.' : '';
+
+            try {
+                const noteString = JSON.stringify(noteToShare);
+                const compressed = LZString.compressToUint8Array(noteString);
+
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encryptedContent = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, compressed);
+
+                const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                combinedData.set(salt, 0);
+                combinedData.set(iv, salt.length);
+                combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
+
+                const base64Data = btoa(String.fromCharCode.apply(null, combinedData));
+                const urlSafeBase64 = base64Data.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+                const baseUrl = window.location.origin + window.location.pathname;
+                let sessionUrl = `${baseUrl}?data=${urlSafeBase64}`;
+                
+                if (DOMElements.secureSendToggle.checked) {
+                    sessionUrl += '&secret=true';
+                    if (temporaryPassword) {
+                        DOMElements.sharePasswordDisplay.innerHTML = `A temporary password has been created for this share: <br><strong class="text-lg text-yellow-400 font-mono">${password}</strong>`;
+                    } else {
+                        DOMElements.sharePasswordDisplay.innerHTML = `Sharing with your saved session password. The receiver will be prompted to enter it.`;
+                    }
+                } else {
+                    sessionUrl += `&sesh-ID=${encodeURIComponent(password)}`;
+                    DOMElements.sharePasswordDisplay.innerHTML = '';
+                }
+                
+                const textArea = document.createElement("textarea");
+                textArea.value = sessionUrl;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showNotification('Share link copied to clipboard!', 'success');
+                } catch (err) {
+                    showNotification('Failed to copy link.', 'error');
+                }
+                document.body.removeChild(textArea);
+
+                DOMElements.qrCodeContainer.innerHTML = '';
+                const qr = qrcode(0, 'M');
+                qr.addData(sessionUrl);
+                qr.make();
+                DOMElements.qrCodeContainer.innerHTML = qr.createImgTag(5, 10);
+
+            } catch (err) {
+                console.error("Note sharing failed:", err);
+                showNotification('Failed to create share link.', 'error');
+            }
+        }
+        
+        async function handleExportSingleNote() {
+            if (!state.currentNoteId) return;
+            const noteToExport = state.notes.find(n => n.id === state.currentNoteId);
+            if (!noteToExport) return;
+            
+            let password = state.settings.sessionPassword;
+            if (!password) {
+                 password = prompt("Please set a password for this export:");
+                 if (!password) {
+                     showNotification("Password is required for export.", "error");
+                     return;
+                 }
+            }
+
+            const dataToEncrypt = JSON.stringify([noteToExport]);
+            try {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedData = new TextEncoder().encode(dataToEncrypt);
+                const encryptedContent = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encodedData);
+                const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                combinedData.set(salt, 0);
+                combinedData.set(iv, salt.length);
+                combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
+                const blob = new Blob([combinedData], { type: 'application/octet-stream' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${noteToExport.title.replace(/\s/g, '-')}.nii`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('Note exported successfully!');
+            } catch (err) {
+                console.error("Single note export failed:", err);
+                showNotification('Export failed due to an encryption error.', 'error');
+            }
+        }
+
+        function insertImageFile(file, editor) {
+             if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    const imgHTML = `<img src="${dataUrl}" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+                    editor.focus();
+                    document.execCommand('insertHTML', false, imgHTML);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function handleImageDrop(files, editor) {
+            state.activeEditor = editor;
+            if (files.length > 0) {
+                insertImageFile(files[0], editor);
+            }
+        }
+
+        function handleImageUpload(event) {
+            if (event.target.files.length > 0) {
+                 insertImageFile(event.target.files[0], state.activeEditor);
+            }
+            event.target.value = '';
+        }
+
+        function handleSaveEmbed() {
+            const embedCode = DOMElements.embedCodeInput.value;
+            if (embedCode && state.activeEditor) {
+                const sanitizedCode = sanitizeHTML(embedCode);
+                state.activeEditor.focus();
+                document.execCommand('insertHTML', false, sanitizedCode);
+                closeModal(DOMElements.embedModal);
+                DOMElements.embedCodeInput.value = '';
+            }
+        }
+
+        function handleAddIframe() {
+            const url = DOMElements.iframeUrlInput.value;
+            const width = DOMElements.iframeWidthInput.value;
+            const height = DOMElements.iframeHeightInput.value;
+            if (url) {
+                const iframeHTML = `<iframe src="${url}" width="${width}" height="${height}" style="border:0;" allowfullscreen="" loading="lazy"></iframe>`;
+                DOMElements.embedCodeInput.value = iframeHTML;
+                closeModal(DOMElements.iframeHelperModal);
+            } else {
+                showNotification('URL is required to build an iFrame.', 'error');
+            }
+        }
+
+        function handleAddVideo() {
+            const url = DOMElements.videoUrlInput.value;
+            const width = DOMElements.videoWidthInput.value;
+            const height = DOMElements.videoHeightInput.value;
+            const controls = DOMElements.videoControlsCheckbox.checked;
+
+            if (url) {
+                if (!url.toLowerCase().endsWith('.mp4')) {
+                    showNotification('Please provide a URL ending in .mp4', 'error');
+                    return;
+                }
+                const controlsAttr = controls ? 'controls' : '';
+                const videoHTML = `<video width="${width}" height="${height}" ${controlsAttr}><source src="${url}" type="video/mp4"></video>`;
+                DOMElements.embedCodeInput.value = videoHTML;
+                closeModal(DOMElements.videoHelperModal);
+            } else {
+                showNotification('Video URL is required.', 'error');
+            }
+        }
+        
+        async function handleAddCannedResponse() {
+            const name = DOMElements.newCannedResponseNameInput.value.trim();
+            const text = DOMElements.newCannedResponseTextInput.value.trim();
+            if (name && text) {
+                const newResponse = { name, text };
+                state.cannedResponses.push(newResponse);
+                await saveData();
+                renderCannedResponses();
+                 DOMElements.newCannedResponseNameInput.value = '';
+                DOMElements.newCannedResponseTextInput.value = '';
+            } else {
+                showNotification('Both name and text are required for canned responses.', 'error');
+            }
+        }
+
+        function handleSendEmail() {
+            const to = DOMElements.emailTo.value;
+            const subject = DOMElements.emailSubject.value;
+            const body = DOMElements.emailBody.value;
+            window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            closeModal(DOMElements.emailModal);
+        }
+
+        async function handleAddShortcut() {
+            const nameInput = DOMElements.settingsModal.querySelector('#new-shortcut-name');
+            const urlInput = DOMElements.settingsModal.querySelector('#new-shortcut-url');
+            const iconInput = DOMElements.settingsModal.querySelector('#new-shortcut-icon');
+            const name = nameInput.value.trim();
+            let url = urlInput.value.trim();
+            const icon = iconInput.value;
+
+            if (name && url) {
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                state.settings.customLinks.push({ id: Date.now().toString(), name, url, icon });
+                await saveData();
+                nameInput.value = '';
+                urlInput.value = '';
+                renderShortcutsManager();
+            } else {
+                showNotification('Shortcut name and URL are required.', 'error');
+            }
+        }
+
+        async function handleShortcutAction(e) {
+            if (e.target.classList.contains('delete-shortcut-btn')) {
+                const shortcutId = e.target.dataset.id;
+                state.settings.customLinks = state.settings.customLinks.filter(link => link.id !== shortcutId);
+                await saveData();
+                renderShortcutsManager();
+            }
+        }
+
+
+        async function updateSetting(key, value) {
+            state.settings[key] = value;
+            await saveData();
+            applySettings();
+            if (key === 'noteCardColor' || key === 'noteCardOpacity' || key === 'fontColor') {
+                 renderNotesGrid();
+                 renderDashboard();
+            }
+        }
+
+        function openNewNotePane() {
+            state.currentNoteId = null;
+            DOMElements.newNotePane.classList.add('is-open');
+            DOMElements.modalOverlay.classList.remove('hidden');
+            setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
+
+            const allLabels = [...new Set(state.notes.map(n => n.label).filter(Boolean))];
+            DOMElements.labelsDatalist.innerHTML = allLabels.map(l => `<option value="${l}"></option>`).join('');
+
+            DOMElements.newNoteTitleInput.value = '';
+            DOMElements.newNoteEditor.innerHTML = '';
+            DOMElements.newNoteLabelInput.value = '';
+            DOMElements.newNoteCardColorInput.value = state.settings.noteCardColor;
+             closeSidebarMobile();
+        }
+
+        function closeNewNotePane() {
+            DOMElements.newNotePane.classList.remove('is-open');
+            updateOverlayState();
+        }
+
+        function openEditPane(noteId) {
+            state.currentNoteId = noteId;
+            const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+            const notesSource = inCollabView ? state.collaborationNotes : state.notes;
+            const note = notesSource.find(n => n.id === noteId);
+            if (!note) return;
+
+            const allLabels = [...new Set(notesSource.map(n => n.label).filter(Boolean))];
+            DOMElements.labelsDatalist.innerHTML = allLabels.map(l => `<option value="${l}"></option>`).join('');
+
+            DOMElements.editNoteTitleInput.value = note.title;
+            DOMElements.editNoteEditor.innerHTML = note.content;
+            DOMElements.editNoteLabelInput.value = note.label || '';
+            DOMElements.editNoteCardColorInput.value = note.color || state.settings.noteCardColor;
+            
+            DOMElements.archiveNoteBtn.title = note.archived ? 'Unarchive' : 'Archive';
+            DOMElements.archiveNoteBtn.classList.toggle('bg-green-500', note.archived);
+            DOMElements.archiveNoteBtn.classList.toggle('hover:bg-green-600', note.archived);
+            DOMElements.archiveNoteBtn.style.display = inCollabView ? 'none' : 'inline-flex';
+            DOMElements.shareNoteBtn.style.display = inCollabView ? 'none' : 'inline-flex';
+
+
+            DOMElements.editNotePane.classList.add('is-open');
+            DOMElements.modalOverlay.classList.remove('hidden');
+            setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
+            closeSidebarMobile();
+        }
+
+        function closeEditPane() {
+            DOMElements.editNotePane.classList.remove('is-open');
+            state.currentNoteId = null;
+            updateOverlayState();
+        }
+
+        function openModal(modal) {
+            DOMElements.modalOverlay.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                DOMElements.modalOverlay.classList.remove('opacity-0');
+                modal.classList.remove('opacity-0', 'scale-95');
+            }, 10);
+             closeSidebarMobile();
+        }
+
+        function closeModal(modal) {
+            modal.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                updateOverlayState();
+            }, 300);
+        }
+
+        function updateOverlayState() {
+            const anyPopupOpen = DOMElements.newNotePane.classList.contains('is-open') ||
+                                 DOMElements.editNotePane.classList.contains('is-open') ||
+                                 !DOMElements.calendarModal.classList.contains('hidden') ||
+                                 !DOMElements.settingsModal.classList.contains('hidden') ||
+                                 !DOMElements.emailModal.classList.contains('hidden') ||
+                                 !DOMElements.embedModal.classList.contains('hidden') ||
+                                 !DOMElements.iframeHelperModal.classList.contains('hidden') ||
+                                 !DOMElements.videoHelperModal.classList.contains('hidden') ||
+                                 !DOMElements.welcomeModal.classList.contains('hidden') ||
+                                 !DOMElements.qrCodeModal.classList.contains('hidden') ||
+                                 !DOMElements.confirmClearModal.classList.contains('hidden') ||
+                                 !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
+                                 !DOMElements.joinSessionModal.classList.contains('hidden') ||
+                                 !DOMElements.collaborationStartModal.classList.contains('hidden');
+            
+            const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
+
+            if (!anyPopupOpen && !isSidebarOpen) {
+                DOMElements.modalOverlay.classList.add('opacity-0');
+                setTimeout(() => DOMElements.modalOverlay.classList.add('hidden'), 300);
+            } else {
+                 DOMElements.modalOverlay.classList.remove('hidden');
+                 setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
+            }
+        }
+        
+        function closeSidebarMobile(){
+             if (window.innerWidth < 768) { // md breakpoint
+                DOMElements.sidebar.classList.add('-translate-x-full');
+                updateOverlayState();
+            }
+        }
+
+        function closeAllPopups() {
+            closeNewNotePane();
+            closeEditPane();
+            closeModal(DOMElements.calendarModal);
+            closeModal(DOMElements.settingsModal);
+            closeModal(DOMElements.emailModal);
+            closeModal(DOMElements.embedModal);
+            closeModal(DOMElements.iframeHelperModal);
+            closeModal(DOMElements.videoHelperModal);
+            closeModal(DOMElements.welcomeModal);
+            closeModal(DOMElements.confirmClearModal);
+            closeModal(DOMElements.qrCodeModal);
+            closeModal(DOMElements.batchDeleteConfirmModal);
+            closeModal(DOMElements.joinSessionModal);
+            closeModal(DOMElements.collaborationStartModal);
+            closeSidebarMobile();
+        }
+
+        function setupToolbar(toolbarEl, editorEl) {
+            toolbarEl.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const target = e.target.closest('button, input');
+                if (!target) return;
+                const command = target.dataset.command;
+                state.activeEditor = editorEl;
+                editorEl.focus();
+                
+                if (command === 'email') {
+                    openEmailModal();
+                } else if (command === 'insertImage') {
+                    DOMElements.imageUploadInput.click();
+                } else if (command === 'insertEmbed') {
+                    openModal(DOMElements.embedModal);
+                } else if (command === 'insertChecklistItem') {
+                    // This is the FIXED logic for the checklist item
+                    document.execCommand('insertUnorderedList', false, null);
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        let parent = selection.getRangeAt(0).startContainer;
+                        while(parent && parent.tagName !== 'LI') {
+                            parent = parent.parentElement;
+                        }
+                        if (parent && parent.tagName === 'LI') {
+                            parent.classList.toggle('task-item');
+                        }
+                    }
+                } else if (command) {
+                    document.execCommand(command, false, target.value || null);
+                }
+            });
+             editorEl.addEventListener('keyup', () => {
+                 toolbarEl.querySelectorAll('button[data-command]').forEach(btn => {
+                    try {
+                        const isActive = document.queryCommandState(btn.dataset.command);
+                        btn.classList.toggle('active', isActive);
+                    } catch(e) { /* some commands don't support queryCommandState */ }
+                 });
+            });
+        }
+
+        function openEmailModal() {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = state.activeEditor.innerHTML;
+            DOMElements.emailBody.value = tempDiv.innerText;
+            renderCannedResponses();
+            openModal(DOMElements.emailModal);
+        }
+
+        function renderCannedResponses() {
+            DOMElements.cannedResponsesList.innerHTML = '';
+            state.cannedResponses.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'p-1 hover:bg-gray-600 cursor-pointer rounded';
+                li.textContent = item.name;
+                li.onclick = () => {
+                    DOMElements.emailBody.value += `\n\n${item.text}`;
+                };
+                DOMElements.cannedResponsesList.appendChild(li);
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const { notification } = DOMElements;
+            notification.textContent = message;
+            notification.className = `fixed top-0 left-1/2 transform -translate-x-1/2 -translate-y-full text-white py-2 px-6 rounded-b-lg shadow-lg transition-transform duration-500 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            notification.classList.remove('hidden');
+            setTimeout(() => {
+                notification.classList.remove('-translate-y-full');
+            }, 10);
+            setTimeout(() => {
+                notification.classList.add('-translate-y-full');
+                 setTimeout(() => notification.classList.add('hidden'), 500);
+            }, 3000);
+        }
+        
+        function showView(viewName) {
+            ['dashboard', 'notes', 'collaboration'].forEach(view => {
+                DOMElements[view + 'View'].classList.add('hidden');
+            });
+            DOMElements[viewName + 'View'].classList.remove('hidden');
+
+            // Special handling for fab
+            if (viewName === 'collaboration') {
+                DOMElements.fabAddNoteBtn.classList.remove('hidden'); // Everyone can add notes now
+            } else {
+                DOMElements.fabAddNoteBtn.classList.remove('hidden');
+            }
+        }
+
+        function renderCalendar() {
+             const { calendarModal } = DOMElements;
+            if (!calendarModal) return;
+            const grid = calendarModal.querySelector('#calendar-grid');
+            const monthYear = calendarModal.querySelector('#month-year');
+            const notesList = calendarModal.querySelector('#calendar-notes-list');
+
+            grid.innerHTML = '';
+            notesList.innerHTML = '';
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            monthYear.innerText = `${state.currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+                grid.innerHTML += `<div class="font-semibold text-gray-400 text-sm">${day}</div>`;
+            });
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement('button');
+                dayEl.className = 'calendar-day hover:bg-gray-700';
+                dayEl.innerText = day;
+                const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+                const notesOnDay = state.notes.filter(n => n.updatedAt && n.updatedAt.startsWith(dateStr));
+
+                if (notesOnDay.length > 0) dayEl.classList.add('has-notes');
+
+                dayEl.addEventListener('click', () => {
+                    document.querySelectorAll('.calendar-day.selected').forEach(el => el.classList.remove('selected'));
+                    dayEl.classList.add('selected');
+                    renderCalendarNotes(notesOnDay, notesList);
+                });
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function renderCalendarNotes(notesOnDay, notesListEl) {
+            notesListEl.innerHTML = '';
+            if (notesOnDay.length === 0) {
+                notesListEl.innerHTML = `<p class="text-gray-400 p-2">No notes for this day.</p>`;
+                return;
+            }
+            notesOnDay.forEach(note => {
+                const noteEl = document.createElement('div');
+                noteEl.className = 'p-2 rounded cursor-pointer hover:bg-gray-700';
+                noteEl.innerText = note.title;
+                noteEl.addEventListener('click', () => {
+                    closeModal(DOMElements.calendarModal);
+                    openEditPane(note.id);
+                });
+                notesListEl.appendChild(noteEl);
+            });
+        }
+
+        function renderShortcuts() {
+            const { shortcutsGrid } = DOMElements;
+            if (!shortcutsGrid) return;
+            shortcutsGrid.innerHTML = '';
+            state.settings.customLinks.forEach(link => {
+                const linkEl = document.createElement('a');
+                linkEl.href = link.url;
+                linkEl.target = '_blank';
+                linkEl.rel = 'noopener noreferrer';
+                linkEl.className = 'flex flex-col items-center justify-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors';
+                linkEl.innerHTML = `<div class="text-4xl mb-2">${link.icon}</div><span>${link.name}</span>`;
+                shortcutsGrid.appendChild(linkEl);
+            });
+        }
+
+        function renderShortcutsManager() {
+            const { settingsModal } = DOMElements;
+            if (!settingsModal) return;
+            const manager = settingsModal.querySelector('#shortcuts-manager');
+            const iconSelect = settingsModal.querySelector('#new-shortcut-icon');
+            if(!manager || !iconSelect) return;
+
+            manager.innerHTML = '';
+            const icons = ['🔗', '📝', '💼', '🏠', '⭐️', '❤️', '⚙️', '📊'];
+            iconSelect.innerHTML = icons.map(i => `<option value="${i}">${i}</option>`).join('');
+
+            state.settings.customLinks.forEach(link => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-700 p-2 rounded';
+                div.innerHTML = `
+                    <span>${link.icon} ${link.name}</span>
+                    <button data-id="${link.id}" class="delete-shortcut-btn text-red-500 hover:text-red-400">X</button>
+                `;
+                manager.appendChild(div);
+            });
+        }
+        
+        function toggleSelectMode() {
+            state.selectModeActive = !state.selectModeActive;
+            state.selectedNoteIds.clear();
+            
+            if (state.selectModeActive) {
+                DOMElements.selectModeBtn.textContent = 'Done';
+                DOMElements.notesGrid.classList.add('in-select-mode');
+            } else {
+                DOMElements.selectModeBtn.textContent = 'Select';
+                DOMElements.notesGrid.classList.remove('in-select-mode');
+                DOMElements.batchActionBar.classList.add('translate-y-full');
+            }
+            renderNotesGrid(); // Rerender to apply/remove classes
+        }
+
+        function toggleNoteSelection(noteId, cardElement) {
+            if (state.selectedNoteIds.has(noteId)) {
+                state.selectedNoteIds.delete(noteId);
+                cardElement.classList.remove('selected');
+            } else {
+                state.selectedNoteIds.add(noteId);
+                cardElement.classList.add('selected');
+            }
+            
+            const count = state.selectedNoteIds.size;
+            if (count > 0) {
+                DOMElements.selectionCount.textContent = `${count} note${count > 1 ? 's' : ''} selected`;
+                DOMElements.batchActionBar.classList.remove('translate-y-full');
+            } else {
+                DOMElements.batchActionBar.classList.add('translate-y-full');
+            }
+        }
+        
+        function handleBatchDelete() {
+            if (state.selectedNoteIds.size === 0) return;
+            const count = state.selectedNoteIds.size;
+            DOMElements.batchDeleteMessage.textContent = `Are you sure you want to permanently delete these ${count} note${count > 1 ? 's' : ''}?`;
+            openModal(DOMElements.batchDeleteConfirmModal);
+        }
+        
+        async function executeBatchDelete() {
+            state.notes = state.notes.filter(note => !state.selectedNoteIds.has(note.id));
+            await saveData();
+            showNotification(`${state.selectedNoteIds.size} notes deleted.`, 'error');
+            closeModal(DOMElements.batchDeleteConfirmModal);
+            toggleSelectMode(); // Reset the selection UI
+        }
+        
+        async function handleBatchArchive() {
+             if (state.selectedNoteIds.size === 0) return;
+             state.notes.forEach(note => {
+                if (state.selectedNoteIds.has(note.id)) {
+                    note.archived = true;
+                }
+             });
+             await saveData();
+             showNotification(`${state.selectedNoteIds.size} notes archived.`);
+             toggleSelectMode();
+        }
+
+        async function handleBatchExport() {
+             if (state.selectedNoteIds.size === 0) return;
+             let password = state.settings.sessionPassword;
+             if (!password) {
+                 password = prompt("Please set a password for this export:");
+                 if (!password) {
+                     showNotification("Password is required for export.", "error");
+                     return;
+                 }
+            }
+
+            const notesToExport = state.notes.filter(note => state.selectedNoteIds.has(note.id));
+            const dataToEncrypt = JSON.stringify(notesToExport);
+
+             try {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedData = new TextEncoder().encode(dataToEncrypt);
+                const encryptedContent = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encodedData);
+                const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                combinedData.set(salt, 0);
+                combinedData.set(iv, salt.length);
+                combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
+                const blob = new Blob([combinedData], { type: 'application/octet-stream' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `Niilow-Batch-Export.nii`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification(`${notesToExport.length} notes exported successfully!`);
+                toggleSelectMode();
+            } catch (err) {
+                console.error("Batch export failed:", err);
+                showNotification('Export failed due to an encryption error.', 'error');
+            }
+        }
+        
+        // --- Collaboration Logic (WebRTC with PeerJS) ---
+
+        function initPeer() {
+            if (state.peer) {
+                state.peer.destroy();
+            }
+            
+            const peerConfig = {
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true,
+                debug: 2
+            };
+
+            try {
+                state.peer = new Peer(undefined, peerConfig);
+            } catch (e) {
+                console.error("Failed to create Peer instance", e);
+                showNotification("Could not initialize collaboration service.", "error");
+                return;
+            }
+
+            state.peer.on('open', (id) => {
+                console.log('PeerJS open. My ID is:', id);
+                if (state.isHost) {
+                    state.roomId = id;
+                    DOMElements.footerRoomId.textContent = id;
+                    showNotification('Session hosted! Share the Room ID.', 'success');
+                } else {
+                    if (state.roomId) {
+                        console.log(`Client is open. Attempting to connect to host: ${state.roomId}`);
+                        const conn = state.peer.connect(state.roomId, {
+                            metadata: { userName: state.settings.userName },
+                            reliable: true
+                        });
+                        setupConnection(conn);
+                    }
+                }
+            });
+
+            state.peer.on('connection', (conn) => {
+                console.log('Host received an incoming connection from', conn.peer);
+                setupConnection(conn);
+            });
+
+            state.peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                let message = `Connection error: ${err.type}`;
+                if (err.type === 'peer-unavailable') {
+                    message = `Could not find the host. Please check the Room ID.`;
+                } else if (err.type === 'network') {
+                    message = 'Network error. Please check your connection.';
+                } else if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'disconnected') {
+                     message = 'Cannot connect to the collaboration server.';
+                } else if (err.type === 'webrtc') {
+                     message = 'WebRTC connection failed.';
+                }
+                showNotification(message, 'error');
+                leaveSession();
+            });
+        }
+
+        function hostSession() {
+            closeModal(DOMElements.collaborationStartModal);
+            state.isHost = true;
+            initPeer();
+            showView('collaboration');
+            DOMElements.collaborationFooter.classList.remove('hidden');
+            DOMElements.collaborationFooter.classList.remove('translate-y-full');
+            renderCollaborationNotesGrid();
+        }
+
+        function joinSession() {
+            const roomId = DOMElements.joinRoomIdInput.value.trim();
+            if (!roomId) {
+                showNotification("Please enter a Room ID.", "error");
+                return;
+            };
+            closeModal(DOMElements.joinSessionModal);
+            state.isHost = false;
+            state.roomId = roomId;
+            initPeer();
+        }
+
+        function leaveSession() {
+            if (state.peer) {
+                state.peer.destroy();
+            }
+            state.peer = null;
+            state.connections.clear();
+            state.roomId = null;
+            state.isHost = false;
+            state.collaborationNotes = [];
+            
+            showView('dashboard');
+            DOMElements.collaborationFooter.classList.add('hidden');
+            DOMElements.collaborationFooter.classList.add('translate-y-full');
+            DOMElements.collaborationNotesGrid.innerHTML = '';
+            DOMElements.peerList.innerHTML = '';
+            showNotification('You have left the session.', 'info');
+        }
+
+        function setupConnection(conn) {
+            conn.on('open', () => {
+                console.log('Connection established with', conn.peer);
+                conn.reliable = true;
+                state.connections.set(conn.peer, conn);
+                const peerName = conn.metadata?.userName || 'Anonymous';
+                showNotification(`${peerName} has joined the session.`, 'success');
+                updatePeerList();
+
+                if (state.isHost) {
+                    conn.send({ 
+                        type: 'full_sync', 
+                        notes: state.collaborationNotes,
+                        hostName: state.settings.userName
+                    });
+                }
+            });
+
+            conn.on('data', (data) => {
+                console.log('Received data:', data, 'from', conn.peer);
+                handleReceivedData(data, conn.peer);
+            });
+
+            conn.on('close', () => {
+                const peerName = conn.metadata?.userName || 'A user';
+                showNotification(`${peerName} has left the session.`, 'error');
+                state.connections.delete(conn.peer);
+                updatePeerList();
+            });
+
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+                showNotification(`Connection with ${conn.metadata?.userName || 'a user'} lost.`, 'error');
+                state.connections.delete(conn.peer);
+                updatePeerList();
+            });
+        }
+        
+        function handleHostAction(action) {
+            let broadcastPayload = null;
+            switch(action.type) {
+                case 'request_add_note':
+                    state.collaborationNotes.push(action.note);
+                    broadcastPayload = { type: 'add_note', note: action.note };
+                    break;
+                case 'request_update_note':
+                    const noteIndex = state.collaborationNotes.findIndex(n => n.id === action.note.id);
+                    if (noteIndex > -1) {
+                        state.collaborationNotes[noteIndex] = action.note;
+                        broadcastPayload = { type: 'update_note', note: action.note };
+                    }
+                    break;
+                case 'request_delete_note':
+                    state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== action.noteId);
+                    broadcastPayload = { type: 'delete_note', noteId: action.noteId };
+                    break;
+            }
+            if (broadcastPayload) {
+                renderCollaborationNotesGrid();
+                broadcastData(broadcastPayload);
+            }
+        }
+
+        function handleReceivedData(data, fromPeerId) {
+            if (state.isHost) {
+                handleHostAction(data);
+            } else {
+                // Clients receive broadcasts and update their state
+                switch(data.type) {
+                    case 'full_sync':
+                        state.collaborationNotes = data.notes;
+                        renderCollaborationNotesGrid();
+                        showView('collaboration');
+                        DOMElements.footerRoomId.textContent = state.roomId;
+                        DOMElements.collaborationFooter.classList.remove('hidden');
+                        DOMElements.collaborationFooter.classList.remove('translate-y-full');
+                        showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
+                        break;
+                    case 'add_note':
+                        state.collaborationNotes.push(data.note);
+                        renderCollaborationNotesGrid();
+                        break;
+                    case 'update_note':
+                        const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
+                        if (noteIndex > -1) {
+                            state.collaborationNotes[noteIndex] = data.note;
+                        }
+                        renderCollaborationNotesGrid();
+                        break;
+                    case 'delete_note':
+                        state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
+                        renderCollaborationNotesGrid();
+                        break;
+                }
+            }
+        }
+        
+        function broadcastData(data) {
+            console.log('Host is broadcasting data:', data);
+            // The host sends the update to all connected clients.
+            for (const conn of state.connections.values()) {
+                if (conn && conn.open) {
+                    conn.send(data);
+                }
+            }
+        }
+        
+        function renderCollaborationNotesGrid() {
+            DOMElements.collaborationNotesGrid.innerHTML = '';
+            state.collaborationNotes.forEach(note => {
+                const card = createNoteCard(note, openEditPane);
+                DOMElements.collaborationNotesGrid.appendChild(card);
+            });
+        }
+        
+        function updatePeerList() {
+            DOMElements.peerList.innerHTML = '';
+            // Add self
+            const selfEl = document.createElement('div');
+            selfEl.className = 'p-1 px-2 rounded-full bg-blue-500 text-sm';
+            selfEl.textContent = `${state.settings.userName} (You)`;
+            DOMElements.peerList.appendChild(selfEl);
+            
+            // Add connected peers
+            for (const conn of state.connections.values()) {
+                const peerEl = document.createElement('div');
+                peerEl.className = 'p-1 px-2 rounded-full bg-gray-600 text-sm';
+                peerEl.textContent = conn.metadata.userName || 'Anonymous';
+                DOMElements.peerList.appendChild(peerEl);
+            }
+        }
+
+        // --- Initial Load ---
+        init();
+    </script>
+</body>
+</html>
