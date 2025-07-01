@@ -313,14 +313,22 @@
                     Collaboration
                  </a>
             </div>
-            <div class="flex-grow overflow-y-auto">
+            <div class="flex-grow overflow-y-auto custom-scrollbar">
                 <div id="labels-container"></div>
                 <details class="mt-4" id="archive-section">
                     <summary class="cursor-pointer text-lg font-semibold">Archived</summary>
                     <div id="archive-list" class="pt-2"></div>
                 </details>
             </div>
-            <div id="sidebar-footer" class="text-center text-xs text-gray-500 mt-auto pt-4"></div>
+            <div class="mt-auto"> <!-- Wrapper to push both logo and footer to the bottom -->
+                <!-- Niilow Logo -->
+                <div class="p-2 text-center">
+                    <a href="https://www.niilow.com" target="_blank" rel="noopener noreferrer" title="Visit Niilow.com">
+                        <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto w-20 h-auto transition-transform hover:scale-110" onerror="this.style.display='none'">
+                    </a>
+                </div>
+                <div id="sidebar-footer" class="text-center text-xs text-gray-500 pt-2 pb-2"></div>
+            </div>
         </div>
     </div>
 
@@ -390,7 +398,7 @@
 
     <div id="welcome-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6 text-center">
-            <img src="https://www.makeitmakesense.lol/logo.png" alt="Make It Make Sense Logo" class="mx-auto mb-6" style="max-width: 300px;">
+            <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto mb-6" style="max-width: 190px;">
             <p class="text-lg mb-6">Your simple, secure note-taking application.</p>
             <div class="text-left space-y-4 mb-8">
                 <p><strong><span class="text-blue-400">Your Personal Interpreter:</span></strong> Niilow helps you capture, organize, and interpret your thoughts and ideas effortlessly.</p>
@@ -904,7 +912,7 @@
             collaborationNotes: [],
         };
         const defaultSettings = {
-            title: 'Collections', bgColor: '#3c6d5e', sidebarColor: '#000000', fontColor: '#ffffff',
+            title: 'Collections', bgColor: '#303030', sidebarColor: '#000000', fontColor: '#ffffff',
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
