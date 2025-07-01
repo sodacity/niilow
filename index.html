@@ -250,6 +250,12 @@
         }
         #collaboration-footer {
             transition: transform 0.3s ease-in-out;
+            overflow: hidden; /* Prevent content from spilling out */
+        }
+        #peer-list {
+            flex-wrap: nowrap; /* Prevent wrapping */
+            overflow-x: auto; /* Allow horizontal scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
          @media (min-width: 768px) {
             #edit-note-pane, #chat-log-pane {
@@ -285,6 +291,8 @@
             height: 300px;
             pointer-events: none; /* Allows clicks to go through to notes */
             z-index: 45;
+            display: flex;
+            justify-content: center;
         }
         .floating-chat-bubble-container {
             position: absolute;
@@ -295,6 +303,8 @@
             opacity: 0;
             animation: floatUp 8s linear forwards;
             pointer-events: all;
+            left: 50%;
+            transform: translateX(-50%);
         }
         .floating-chat-bubble-container img {
             width: 40px;
@@ -347,10 +357,10 @@
         .typing-indicator span:nth-child(3) { animation-delay: -0.8s; }
 
         @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(0.8); }
-            20% { transform: translateY(-40px) scale(1); }
+            0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+            20% { transform: translate(-50%, -40px) scale(1); }
             80% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-280px) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -280px) scale(1); }
         }
 
         @keyframes typing-bounce {
@@ -414,6 +424,7 @@
         #fab-add-note {
             right: 0;
             border-radius: 1.5rem 0 0 1.5rem;
+            font-size: 2.5rem; /* Larger plus sign */
         }
         #fab-chat-log {
             left: 0;
@@ -879,7 +890,7 @@
     </div>
 
     <button id="fab-add-note" title="New Note" class="fab-peek-btn">
-        <span>NOTE</span>
+        <span>+</span>
     </button>
     <button id="fab-chat-log" title="Chat Log" class="fab-peek-btn hidden">
         <div class="unread-dot"></div>
@@ -888,7 +899,12 @@
     
     <div id="chat-log-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
         <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
-            <h2 class="text-2xl font-bold text-center mb-4 flex-shrink-0">Chat History</h2>
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 class="text-2xl font-bold text-center flex-grow">Chat History</h2>
+                <button id="close-chat-log-btn" class="p-2 rounded-full hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
             <div id="chat-log-messages" class="flex-grow overflow-y-auto custom-scrollbar">
                 <!-- Chat messages will be rendered here by JavaScript -->
             </div>
@@ -909,14 +925,14 @@
     <!-- REMOVED enex file input -->
 
     <footer id="collaboration-footer" class="hidden fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-2 text-sm z-40 flex justify-between items-center px-4">
-        <div class="flex items-center">
+        <div class="flex items-center flex-shrink-0">
             Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Return to Collaboration View"></span>
             <button id="copy-collab-link-btn" class="ml-2 p-1 rounded hover:bg-gray-600" title="Copy Invite Link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
         </div>
-        <div id="peer-list" class="flex items-center gap-4"></div>
-        <button id="leave-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs">Leave</button>
+        <div id="peer-list" class="flex items-center gap-4 mx-4"></div>
+        <button id="leave-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs flex-shrink-0">Leave</button>
     </footer>
 
     <script>
@@ -1052,6 +1068,7 @@
             // Chat Log Pane
             fabChatLogBtn: document.getElementById('fab-chat-log'),
             chatLogPane: document.getElementById('chat-log-pane'),
+            closeChatLogBtn: document.getElementById('close-chat-log-btn'),
             chatLogMessages: document.getElementById('chat-log-messages'),
             chatLogInput: document.getElementById('chat-log-input'),
             sendChatLogBtn: document.getElementById('send-chat-log-btn'),
@@ -1782,6 +1799,7 @@
             });
             // Chat Log Pane Listeners
             DOMElements.fabChatLogBtn.addEventListener('click', toggleChatLogPane);
+            DOMElements.closeChatLogBtn.addEventListener('click', toggleChatLogPane);
             DOMElements.sendChatLogBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput));
             DOMElements.chatLogInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput);
@@ -2926,9 +2944,6 @@
         }
 
         function displayChatBubble({ from, message }) {
-            const peerIconEl = document.getElementById(`peer-icon-${from}`);
-            if (!peerIconEl) return;
-
             const senderInfo = state.peerInfo.get(from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
 
             const container = document.createElement('div');
@@ -2943,12 +2958,6 @@
             
             container.appendChild(avatarImg);
             container.appendChild(bubble);
-
-            const iconRect = peerIconEl.getBoundingClientRect();
-            const containerRect = DOMElements.chatContainer.getBoundingClientRect();
-            const bubbleLeft = iconRect.left - containerRect.left + (iconRect.width / 2);
-            container.style.left = `${bubbleLeft}px`;
-            container.style.transform = 'translateX(-50%)';
 
             DOMElements.chatContainer.appendChild(container);
 
