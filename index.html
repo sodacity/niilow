@@ -126,7 +126,7 @@
         }
         .note-card-content { flex-grow: 1; overflow: hidden; font-size: 0.9rem; }
         .note-card-content * { color: inherit; }
-        
+
         /* --- Checklist Styles --- */
         .editor ul li.task-item {
             list-style-type: none; /* Hide the default bullet point */
@@ -158,7 +158,7 @@
 
         .sidebar-icon-btn { color: #9ca3af; transition: color 0.2s; }
         .sidebar-icon-btn:hover { color: white; }
-        #edit-note-pane, #new-note-pane {
+        #edit-note-pane, #new-note-pane, #chat-log-pane {
             position: fixed;
             z-index: 50;
             transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.3s;
@@ -170,6 +170,13 @@
             height: 100%;
             transform: translateX(100%);
         }
+        #chat-log-pane {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: translateX(-100%);
+        }
         #side-pane-resize-handle {
             position: absolute;
             top: 0;
@@ -179,7 +186,7 @@
             cursor: col-resize;
             z-index: 10;
         }
-        #edit-note-pane.is-open {
+        #edit-note-pane.is-open, #chat-log-pane.is-open {
             transform: translateX(0);
         }
          #new-note-pane {
@@ -245,7 +252,7 @@
             transition: transform 0.3s ease-in-out;
         }
          @media (min-width: 768px) {
-            #edit-note-pane {
+            #edit-note-pane, #chat-log-pane {
                 width: 50%;
                 max-width: 800px;
             }
@@ -279,22 +286,43 @@
             pointer-events: none; /* Allows clicks to go through to notes */
             z-index: 45;
         }
-        .chat-bubble {
+        .floating-chat-bubble-container {
             position: absolute;
             bottom: 0;
-            background-color: rgba(31, 41, 55, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+            animation: floatUp 8s linear forwards;
+            pointer-events: all;
+        }
+        .floating-chat-bubble-container img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        .chat-bubble {
+            background-color: rgba(31, 41, 55, 0.95);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 1.5rem;
             max-width: 250px;
             word-wrap: break-word;
-            opacity: 0;
-            animation: floatUp 8s linear forwards;
-            pointer-events: all; /* Bubbles are clickable */
+            font-size: 1.2rem; /* Increased font size */
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .chat-bubble strong {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #a0aec0;
         }
         .typing-indicator {
             position: absolute;
-            bottom: 60px; /* Above the user icon */
+            bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
             background-color: #4a5568;
@@ -319,25 +347,98 @@
         .typing-indicator span:nth-child(3) { animation-delay: -0.8s; }
 
         @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(0.8);
-            }
-            20% {
-                transform: translateY(-40px) scale(1);
-            }
-            80% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-280px) scale(1);
-            }
+            0% { opacity: 1; transform: translateY(0) scale(0.8); }
+            20% { transform: translateY(-40px) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-280px) scale(1); }
         }
 
         @keyframes typing-bounce {
             0%, 60%, 100% { transform: translateY(0); }
             30% { transform: translateY(-4px); }
+        }
+
+        /* Chat Log Pane Styles */
+        #chat-log-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .chat-log-line {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 75%;
+        }
+        .chat-log-line.is-self {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+        .chat-log-line img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .chat-log-bubble {
+            padding: 0.5rem 1rem;
+            border-radius: 1.25rem;
+        }
+        .chat-log-line.is-self .chat-log-bubble {
+            background-color: #2b6cb0; /* Blue 600 */
+        }
+        .chat-log-line:not(.is-self) .chat-log-bubble {
+            background-color: #4a5568; /* Gray 600 */
+        }
+        .chat-log-bubble strong {
+            display: block;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+            color: #cbd5e0; /* Gray 400 */
+        }
+        .fab-peek-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 40;
+            width: 4rem;
+            height: 7rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease-in-out;
+        }
+        #fab-add-note {
+            right: 0;
+            border-radius: 1.5rem 0 0 1.5rem;
+        }
+        #fab-chat-log {
+            left: 0;
+            border-radius: 0 1.5rem 1.5rem 0;
+        }
+        #fab-chat-log .unread-dot {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            background-color: #ef4444; /* red-500 */
+            border-radius: 50%;
+            border: 2px solid white;
+            display: none;
+        }
+        #fab-chat-log.has-unread .unread-dot {
+            display: block;
+        }
+        .fab-peek-btn span {
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            letter-spacing: 0.1em;
         }
     </style>
 </head>
@@ -350,7 +451,7 @@
             <h2 class="text-3xl font-bold">Drop .nii file to import</h2>
         </div>
     </div>
-    
+
     <div id="sidebar" class="sidebar bg-gray-800 p-4 flex flex-col fixed h-full z-40 w-64 md:w-auto md:relative md:translate-x-0 transform -translate-x-full">
         <div id="sidebar-resize-handle" class="hidden md:block"></div>
         <div class="flex justify-between items-center mb-4">
@@ -398,7 +499,8 @@
         </div>
     </div>
 
-    <main id="main-content" class="flex-grow p-6 overflow-y-auto relative">
+    <!-- ADDED custom-scrollbar class -->
+    <main id="main-content" class="flex-grow p-6 overflow-y-auto relative custom-scrollbar">
          <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 bg-opacity-50 rounded-full text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -412,11 +514,7 @@
                 <h2 class="text-xl font-semibold mb-4">Recent Notes</h2>
                 <div id="recent-notes-container" class="recent-notes-container"></div>
             </div>
-             <hr class="my-8 border-gray-400">
-             <div>
-                 <h2 class="text-xl font-semibold mb-4">Shortcuts</h2>
-                 <div id="shortcuts-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-             </div>
+             <!-- REMOVED Shortcuts Section -->
         </div>
         <div id="notes-view" class="hidden">
             <div class="flex justify-end items-center mb-4 gap-4">
@@ -432,7 +530,7 @@
             </div>
             <div id="notes-grid"></div>
         </div>
-        
+
         <div id="collaboration-view" class="hidden h-full flex flex-col">
             <div id="collaboration-notes-section" class="custom-scrollbar flex-grow">
                 <div id="collaboration-notes-grid"></div>
@@ -478,7 +576,7 @@
             <button id="close-welcome-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Get Started</button>
         </div>
     </div>
-    
+
     <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
             <h2 class="text-2xl font-bold mb-6">Real-Time Collaboration</h2>
@@ -539,7 +637,7 @@
                 <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                <button class="toolbar-btn" data-command="email" title="Email Note"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+                <!-- REMOVED Email Button -->
             </div>
             <div class="editor-container">
                 <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
@@ -594,7 +692,7 @@
                  <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
                 <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
                  <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                <button class="toolbar-btn" data-command="email" title="Email Note"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+                <!-- REMOVED Email Button -->
             </div>
             <div class="editor-container">
                 <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
@@ -629,7 +727,7 @@
             <div class="mt-4 max-h-48 overflow-y-auto" id="calendar-notes-list"></div>
         </div>
     </div>
-    
+
     <div id="embed-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <div class="flex justify-between items-center mb-4">
@@ -651,7 +749,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="iframe-helper-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 class="text-2xl font-bold mb-4">iFrame Builder</h2>
@@ -712,7 +810,7 @@
                 <div class="flex justify-center gap-2 items-start">
                     <div class="flex flex-col gap-1">
                         <button id="import-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import .nii</button>
-                        <button id="import-enex-btn" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-1 px-4 rounded text-sm">Import .enex</button>
+                        <!-- REMOVED Import .enex button -->
                     </div>
                     <button id="export-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Export .nii</button>
                 </div>
@@ -723,6 +821,14 @@
                     <div><label for="title-setting" class="block mb-2 font-semibold">App Title</label><input type="text" id="title-setting" class="text-input-field w-full p-2 rounded text-white"></div>
                      <div><label for="footer-text-setting" class="block mb-2 font-semibold">Footer Text</label><input type="text" id="footer-text-setting" class="text-input-field w-full p-2 rounded text-white"></div>
                      <div><label for="session-password-setting" class="block mb-2 font-semibold">Session Password (for secure export/import)</label><input type="password" id="session-password-setting" class="text-input-field w-full p-2 rounded text-white" placeholder="Set a password to secure backups"></div>
+                     <hr>
+                     <div>
+                        <label class="block mb-2 font-semibold">Profile Avatar</label>
+                        <div class="flex items-center gap-4">
+                            <img id="avatar-preview" src="https://www.niilow.com/logo.png" alt="Avatar Preview" class="w-16 h-16 rounded-full bg-gray-700 object-cover">
+                            <button id="avatar-upload-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Upload Image</button>
+                        </div>
+                     </div>
                      <hr>
                     <div class="flex justify-between items-center"><label for="bg-color-setting" class="font-semibold">Background Color</label><input type="color" id="bg-color-setting"></div>
                     <div class="flex justify-between items-center"><label for="sidebar-color-setting" class="font-semibold">Sidebar Color</label><input type="color" id="sidebar-color-setting"></div>
@@ -735,15 +841,7 @@
                     <div class="flex justify-between items-center"><label for="text-input-bg-color-setting" class="font-semibold">Text Input Fields</label><input type="color" id="text-input-bg-color-setting"></div>
                     <div class="flex justify-between items-center"><label for="text-input-font-color-setting" class="font-semibold">Text Input Font Color</label><input type="color" id="text-input-font-color-setting"></div>
                      <hr>
-                    <h3 class="text-lg font-semibold">Manage Shortcuts</h3>
-                    <div id="shortcuts-manager" class="space-y-2"></div>
-                    <div class="flex gap-2">
-                        <input type="text" id="new-shortcut-name" placeholder="Shortcut Name" class="text-input-field p-2 rounded w-1/2">
-                        <input type="text" id="new-shortcut-url" placeholder="Shortcut URL" class="text-input-field p-2 rounded w-1/2">
-                        <select id="new-shortcut-icon" class="text-input-field p-2 rounded bg-gray-700 text-white"></select>
-                        <button id="add-shortcut-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded">Add</button>
-                    </div>
-                    <hr>
+                    <!-- REMOVED Shortcuts Manager -->
                     <div>
                          <button id="clear-storage-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Clear All Local Data</button>
                     </div>
@@ -755,33 +853,8 @@
         </div>
     </div>
 
-    <div id="email-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-2xl opacity-0 scale-95">
-        <div class="p-6 flex flex-col h-full">
-            <h2 class="text-2xl font-bold mb-4">Compose Email</h2>
-            <div class="space-y-4 flex-grow flex flex-col">
-                <input id="email-to" type="email" placeholder="To:" class="text-input-field p-2 rounded w-full">
-                <input id="email-subject" type="text" placeholder="Subject" class="text-input-field p-2 rounded w-full">
-                <textarea id="email-body" placeholder="Email body..." class="text-input-field p-2 rounded w-full flex-grow min-h-[150px]"></textarea>
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="w-full md:w-1/2">
-                        <h3 class="font-semibold mb-2">Canned Responses</h3>
-                        <div id="canned-responses-list" class="max-h-24 overflow-y-auto bg-gray-700 rounded p-2"></div>
-                    </div>
-                    <div class="w-full md:w-1/2">
-                        <h3 class="font-semibold mb-2">Add New Response</h3>
-                        <input type="text" id="new-canned-response-name" placeholder="Response Name" class="text-input-field p-2 rounded w-full mb-2">
-                        <textarea id="new-canned-response-text" placeholder="Response Text..." class="text-input-field p-2 rounded w-full h-16 mb-2"></textarea>
-                        <button id="add-canned-response" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded">Add</button>
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-email" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="send-email" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
-            </div>
-        </div>
-    </div>
-    
+    <!-- REMOVED Email Modal -->
+
     <div id="qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
             <h2 class="text-2xl font-bold mb-4">Share Note</h2>
@@ -805,18 +878,39 @@
         </div>
     </div>
 
-
-    <button id="fab-add-note" title="New Note" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-white transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    <button id="fab-add-note" title="New Note" class="fab-peek-btn">
+        <span>NOTE</span>
     </button>
+    <button id="fab-chat-log" title="Chat Log" class="fab-peek-btn hidden">
+        <div class="unread-dot"></div>
+        <span>CHAT</span>
+    </button>
+    
+    <div id="chat-log-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
+        <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
+            <h2 class="text-2xl font-bold text-center mb-4 flex-shrink-0">Chat History</h2>
+            <div id="chat-log-messages" class="flex-grow overflow-y-auto custom-scrollbar">
+                <!-- Chat messages will be rendered here by JavaScript -->
+            </div>
+            <div class="flex-shrink-0 p-2 border-t border-gray-700">
+                <div class="flex items-center gap-2">
+                    <input type="text" id="chat-log-input" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Send a message...">
+                    <button id="send-chat-log-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <datalist id="labels-datalist"></datalist>
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+    <input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
     <input type="file" id="import-file-input" class="hidden" accept=".nii">
-    <input type="file" id="import-enex-input" class="hidden" accept=".enex">
-    
+    <!-- REMOVED enex file input -->
+
     <footer id="collaboration-footer" class="hidden fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-2 text-sm z-40 flex justify-between items-center px-4">
         <div class="flex items-center">
-            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Click to copy Room ID"></span>
+            Connected to Room: <span id="footer-room-id" class="font-mono p-1 bg-gray-700 rounded cursor-pointer" title="Return to Collaboration View"></span>
             <button id="copy-collab-link-btn" class="ml-2 p-1 rounded hover:bg-gray-600" title="Copy Invite Link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -884,17 +978,6 @@
             settingsBtn: document.getElementById('settings-btn'),
             settingsModal: document.getElementById('settings-modal'),
             labelsDatalist: document.getElementById('labels-datalist'),
-             // Email Modal
-            emailModal: document.getElementById('email-modal'),
-            emailTo: document.getElementById('email-to'),
-            emailSubject: document.getElementById('email-subject'),
-            emailBody: document.getElementById('email-body'),
-            cannedResponsesList: document.getElementById('canned-responses-list'),
-            newCannedResponseNameInput: document.getElementById('new-canned-response-name'),
-            newCannedResponseTextInput: document.getElementById('new-canned-response-text'),
-            addCannedResponseBtn: document.getElementById('add-canned-response'),
-            sendEmailBtn: document.getElementById('send-email'),
-            cancelEmailBtn: document.getElementById('cancel-email'),
             // Embed Modals
             embedModal: document.getElementById('embed-modal'),
             embedCodeInput: document.getElementById('embed-code-input'),
@@ -917,9 +1000,10 @@
             cancelVideoHelperBtn: document.getElementById('cancel-video-helper-btn'),
             // Import/Export & Image
             importFileInput: document.getElementById('import-file-input'),
-            importEnexBtn: document.getElementById('import-enex-btn'),
-            importEnexInput: document.getElementById('import-enex-input'),
             imageUploadInput: document.getElementById('image-upload-input'),
+            avatarUploadInput: document.getElementById('avatar-upload-input'),
+            avatarUploadBtn: document.getElementById('avatar-upload-btn'),
+            avatarPreview: document.getElementById('avatar-preview'),
             clearStorageBtn: document.getElementById('clear-storage-btn'),
             // Dashboard & Notes View
             dashboardView: document.getElementById('dashboard-view'),
@@ -930,7 +1014,6 @@
             greetingText: document.getElementById('greeting-text'),
             timeDisplay: document.getElementById('time-display'),
             recentNotesContainer: document.getElementById('recent-notes-container'),
-            shortcutsGrid: document.getElementById('shortcuts-grid'),
             // Batch Actions
             selectModeBtn: document.getElementById('select-mode-btn'),
             batchActionBar: document.getElementById('batch-action-bar'),
@@ -966,34 +1049,42 @@
             joinRoomIdInput: document.getElementById('join-room-id-input'),
             confirmJoinSessionBtn: document.getElementById('confirm-join-session-btn'),
             cancelJoinSessionBtn: document.getElementById('cancel-join-session-btn'),
+            // Chat Log Pane
+            fabChatLogBtn: document.getElementById('fab-chat-log'),
+            chatLogPane: document.getElementById('chat-log-pane'),
+            chatLogMessages: document.getElementById('chat-log-messages'),
+            chatLogInput: document.getElementById('chat-log-input'),
+            sendChatLogBtn: document.getElementById('send-chat-log-btn'),
         };
 
         // --- App State ---
-        let state = { 
-            notes: [], 
-            settings: {}, 
-            cannedResponses: [], 
-            currentNoteId: null, 
-            activeEditor: null, 
+        let state = {
+            notes: [],
+            settings: {},
+            currentNoteId: null,
+            activeEditor: null,
             currentDate: new Date(),
             selectModeActive: false,
             selectedNoteIds: new Set(),
             showArchived: false,
             // Collaboration State
             peer: null,
-            connections: new Map(), // Use a Map to store connections by peerId
+            connections: new Map(),
             roomId: null,
             isHost: false,
             collaborationNotes: [],
-            peerInfo: new Map(), // Stores info like name and icon style for each peer
+            peerInfo: new Map(),
+            chatLog: [],
+            isChatLogOpen: false,
         };
         const defaultSettings = {
             title: 'Collections', bgColor: '#303030', sidebarColor: '#000000', fontColor: '#ffffff',
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
-            footerText: 'Niilow 1.0', modalOpacity: 0.95, userName: 'User', customLinks: [],
-            sessionPassword: ''
+            footerText: 'Niilow 1.0', modalOpacity: 0.95, userName: 'User',
+            sessionPassword: '',
+            userAvatar: null,
         };
 
         // --- IndexedDB Helper ---
@@ -1051,21 +1142,21 @@
         async function loadFromDB() {
             try {
                 state.notes = await db.getAll('notes') || [];
-                state.cannedResponses = await db.getAll('cannedResponses') || [];
                 const savedSettings = await db.get('settings', 'appSettings');
                 state.settings = { ...defaultSettings, ...savedSettings };
+                 if (!state.settings.customLinks) {
+                    state.settings.customLinks = [];
+                }
             } catch(e) {
                  console.error("Failed to load data from IndexedDB", e);
                  state.settings = defaultSettings;
             }
         }
-        
+
         async function saveData() {
-            // Only save non-collaboration data
             try {
                 await Promise.all([
                     db.clear('notes').then(() => Promise.all(state.notes.map(note => db.put('notes', note)))),
-                    db.clear('cannedResponses').then(() => Promise.all(state.cannedResponses.map(res => db.put('cannedResponses', res)))),
                     db.put('settings', state.settings, 'appSettings')
                 ]);
             } catch (e) {
@@ -1080,7 +1171,7 @@
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = dirtyHTML;
             const allowedTags = [
-                'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'P', 'A', 'UL', 'OL', 'LI', 'B', 'I', 'STRONG', 'EM', 'U', 'BR', 'DIV', 'SPAN', 
+                'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'P', 'A', 'UL', 'OL', 'LI', 'B', 'I', 'STRONG', 'EM', 'U', 'BR', 'DIV', 'SPAN',
                 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG', 'VIDEO', 'SOURCE', 'IFRAME', 'FONT'
             ];
             const allowedAttrs = {
@@ -1096,7 +1187,7 @@
             const cleanNode = (node) => {
                 if (node.nodeType === 3) return node.cloneNode();
                 if (node.nodeType !== 1) return null;
-                
+
                 const tagName = node.tagName.toUpperCase();
                 if (!allowedTags.includes(tagName)) return null;
 
@@ -1115,7 +1206,7 @@
                         newNode.setAttribute(attr.name, attr.value);
                     }
                 }
-                
+
                 for(const child of node.childNodes){
                     const cleanChild = cleanNode(child);
                     if(cleanChild) newNode.appendChild(cleanChild);
@@ -1129,7 +1220,7 @@
                 const cleanChild = cleanNode(child);
                 if (cleanChild) fragment.appendChild(cleanChild);
             }
-            
+
             const cleanDiv = document.createElement('div');
             cleanDiv.appendChild(fragment);
             return cleanDiv.innerHTML;
@@ -1160,11 +1251,12 @@
             DOMElements.sidebar.style.backgroundColor = settings.sidebarColor;
             DOMElements.body.style.color = settings.fontColor;
             DOMElements.sidebarFooter.innerText = settings.footerText;
-            
+
             DOMElements.fabAddNoteBtn.style.backgroundColor = settings.fabColor;
+            DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
             const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.emailModal, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal].forEach(el => {
+            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal].forEach(el => {
                 if (el) {
                     const inner = el.firstElementChild;
                     if (inner && (el.id.includes('-modal'))) {
@@ -1192,6 +1284,7 @@
                 settingsModal.querySelector('#title-setting').value = settings.title;
                 settingsModal.querySelector('#footer-text-setting').value = settings.footerText;
                 settingsModal.querySelector('#session-password-setting').value = settings.sessionPassword || '';
+                if(DOMElements.avatarPreview) DOMElements.avatarPreview.src = settings.userAvatar || 'https://www.niilow.com/logo.png';
                 settingsModal.querySelector('#bg-color-setting').value = settings.bgColor;
                 settingsModal.querySelector('#sidebar-color-setting').value = settings.sidebarColor;
                 settingsModal.querySelector('#font-color-setting').value = settings.fontColor;
@@ -1229,8 +1322,6 @@
                 card.addEventListener('click', () => openEditPane(note.id));
                 DOMElements.recentNotesContainer.appendChild(card);
             });
-
-            renderShortcuts();
         }
 
         function getFilteredNotes() {
@@ -1245,19 +1336,17 @@
         }
 
         function renderNoteLists() {
-            // Clear existing content
             DOMElements.labelsContainer.innerHTML = '';
             DOMElements.archiveList.innerHTML = '';
 
             const filteredNotes = getFilteredNotes();
-            
+
             const activeNotes = filteredNotes.filter(n => !n.archived);
             const archivedNotes = filteredNotes.filter(n => n.archived);
 
-            // Helper function to create and append DOM nodes for a group of notes
             const buildAndAppendLabelGroups = (container, notes, defaultTitle) => {
                 if (notes.length === 0) return;
-                
+
                 const notesByLabel = {};
                 const labels = [...new Set(notes.map(n => n.label).filter(Boolean))];
                 labels.forEach(label => notesByLabel[label] = []);
@@ -1271,7 +1360,6 @@
                     }
                 });
 
-                // Helper to create a single <details> block
                 const createLabelGroupElement = (title, notesInGroup) => {
                     if (notesInGroup.length === 0) return null;
 
@@ -1287,7 +1375,6 @@
                     listContainer.className = 'pl-2 border-l-2 border-gray-600';
 
                     notesInGroup.forEach(note => {
-                        // Here we append the actual element, not its HTML string
                         listContainer.appendChild(createNoteListItem(note));
                     });
 
@@ -1295,14 +1382,12 @@
                     details.appendChild(listContainer);
                     return details;
                 };
-                
-                // Create and append uncategorized notes first
+
                 const uncategorizedGroup = createLabelGroupElement(defaultTitle, uncategorized);
                 if (uncategorizedGroup) {
                     container.appendChild(uncategorizedGroup);
                 }
 
-                // Then create and append labeled groups
                 labels.sort().forEach(label => {
                     const labeledGroup = createLabelGroupElement(label, notesByLabel[label]);
                     if (labeledGroup) {
@@ -1311,11 +1396,9 @@
                 });
             }
 
-            // Build the UI for active and archived notes
             buildAndAppendLabelGroups(DOMElements.labelsContainer, activeNotes, 'Unsorted Notes');
             buildAndAppendLabelGroups(DOMElements.archiveList, archivedNotes, 'Uncategorized');
 
-            // Show/hide the archive section based on content
             DOMElements.archiveSection.style.display = archivedNotes.length > 0 ? 'block' : 'none';
         }
 
@@ -1336,10 +1419,8 @@
             let notesToShow;
 
             if (filterText) {
-                // If searching, show all matching notes, active or archived
                 notesToShow = filteredNotes;
             } else {
-                // If not searching, use the toggle state
                 notesToShow = filteredNotes.filter(n => n.archived === state.showArchived);
             }
 
@@ -1347,20 +1428,20 @@
                 const card = createNoteCard(note, openEditPane);
                 DOMElements.notesGrid.appendChild(card);
             });
-             new Sortable(DOMElements.notesGrid, { 
-                animation: 150, 
+             new Sortable(DOMElements.notesGrid, {
+                animation: 150,
                 ghostClass: 'sortable-ghost',
                 disabled: state.selectModeActive,
-                delay: 200, // Wait 200ms before starting a drag
-                delayOnTouchOnly: true // Only delay on touch devices
+                delay: 200,
+                delayOnTouchOnly: true
             });
         }
-        
+
         function createNoteCard(note, clickHandler) {
             const card = document.createElement('div');
             card.className = 'note-card';
             card.dataset.id = note.id;
-            
+
             if (note.archived) {
                 card.classList.add('is-archived');
             }
@@ -1372,7 +1453,7 @@
             const opacity = state.settings.noteCardOpacity || 1;
             card.style.backgroundColor = hexToRgba(baseColor, opacity);
             card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
-            
+
             card.addEventListener('click', () => {
                 if (state.selectModeActive) {
                     toggleNoteSelection(note.id, card);
@@ -1382,7 +1463,7 @@
             });
             return card;
         }
-        
+
         async function init() {
             await db.init('NiilowDB', 1, (e) => {
                 const dbInstance = e.target.result;
@@ -1392,12 +1473,9 @@
                 if (!dbInstance.objectStoreNames.contains('settings')) {
                     dbInstance.createObjectStore('settings');
                 }
-                if (!dbInstance.objectStoreNames.contains('cannedResponses')) {
-                    dbInstance.createObjectStore('cannedResponses', { keyPath: 'name' });
-                }
             });
             await loadFromDB();
-            
+
             const currentUrl = new URL(window.location.href);
             const dataFromUrl = currentUrl.searchParams.get('data');
             const collabRoomId = currentUrl.searchParams.get('collab');
@@ -1408,13 +1486,13 @@
                 state.isHost = false;
                 state.roomId = collabRoomId;
                 initPeer();
-                history.replaceState({}, document.title, window.location.pathname); 
+                history.replaceState({}, document.title, window.location.pathname);
             } else if (dataFromUrl) {
                 let password = currentUrl.searchParams.get('sesh-ID');
                 if (requiresSecret) {
                      password = prompt("This note is protected. Please enter the password to view it:");
                 }
-                
+
                 if (password) {
                     await handleUrlDataImport(dataFromUrl, password);
                 } else if (requiresSecret) {
@@ -1431,7 +1509,7 @@
             setupToolbar(DOMElements.editToolbar, DOMElements.editNoteEditor);
             setInterval(updateTime, 1000);
             updateTime();
-            
+
             const firstVisit = await db.get('settings', 'firstVisit');
             if(firstVisit === undefined) {
                  openModal(DOMElements.welcomeModal);
@@ -1480,7 +1558,7 @@
                 DOMElements.modalOverlay.classList.toggle('hidden');
                 DOMElements.modalOverlay.classList.toggle('opacity-0');
             });
-            
+
             DOMElements.closeWelcomeModalBtn.addEventListener('click', () => closeModal(DOMElements.welcomeModal));
             DOMElements.closeQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.qrCodeModal));
             DOMElements.shareNoteBtn.addEventListener('click', handleShareNote);
@@ -1503,7 +1581,6 @@
             DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
             DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
 
-            // UPDATED SEARCH EVENT LISTENER
             let searchDebounceTimeout;
             DOMElements.filterInput.addEventListener('input', () => {
                 clearTimeout(searchDebounceTimeout);
@@ -1521,7 +1598,7 @@
                         renderNoteLists();
                         renderNotesGrid();
                     }
-                }, 400); // 400ms delay
+                }, 400);
             });
 
             DOMElements.modalOverlay.addEventListener('click', closeAllPopups);
@@ -1553,7 +1630,7 @@
 
             DOMElements.calendarBtn.addEventListener('click', () => { renderCalendar(); openModal(DOMElements.calendarModal); });
             DOMElements.settingsBtn.addEventListener('click', () => { applySettings(); openModal(DOMElements.settingsModal); });
-            
+
             DOMElements.saveEmbedBtn.addEventListener('click', handleSaveEmbed);
             DOMElements.cancelEmbedBtn.addEventListener('click', () => closeModal(DOMElements.embedModal));
             DOMElements.iframeHelperBtn.addEventListener('click', () => openModal(DOMElements.iframeHelperModal));
@@ -1563,7 +1640,6 @@
             DOMElements.addVideoBtn.addEventListener('click', handleAddVideo);
             DOMElements.cancelVideoHelperBtn.addEventListener('click', () => closeModal(DOMElements.videoHelperModal));
 
-            // Drag and Drop for .nii files
             const body = DOMElements.body;
             body.addEventListener('dragenter', (e) => {
                 e.preventDefault();
@@ -1573,25 +1649,19 @@
                     DOMElements.globalDropZone.classList.remove('hidden');
                 }
             });
-            body.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
+            body.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
             body.addEventListener('dragleave', (e) => {
                  if (!body.contains(e.relatedTarget)) {
                     DOMElements.globalDropZone.classList.add('hidden');
                  }
             });
             body.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 DOMElements.globalDropZone.classList.add('hidden');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     const niiFile = Array.from(files).find(file => file.name.endsWith('.nii'));
-                    if (niiFile) {
-                        processNiiFile(niiFile);
-                    }
+                    if (niiFile) { processNiiFile(niiFile); }
                 }
             });
 
@@ -1599,10 +1669,10 @@
             if (DOMElements.settingsModal) {
                  DOMElements.settingsModal.querySelector('#close-settings').addEventListener('click', () => closeModal(DOMElements.settingsModal));
                  DOMElements.settingsModal.querySelector('#import-btn').addEventListener('click', () => DOMElements.importFileInput.click());
-                 DOMElements.importEnexBtn.addEventListener('click', () => DOMElements.importEnexInput.click());
-                 DOMElements.importEnexInput.addEventListener('change', handleEnexImport);
                  DOMElements.settingsModal.querySelector('#export-btn').addEventListener('click', handleExport);
                  DOMElements.clearStorageBtn.addEventListener('click', handleClearLocalStorage);
+                 DOMElements.avatarUploadBtn.addEventListener('click', () => DOMElements.avatarUploadInput.click());
+                 DOMElements.avatarUploadInput.addEventListener('change', handleAvatarUpload);
                  const settingsInputs = [
                     { el: DOMElements.settingsModal.querySelector('#user-name-setting'), key: 'userName' },
                     { el: DOMElements.settingsModal.querySelector('#title-setting'), key: 'title' },
@@ -1622,11 +1692,6 @@
                 settingsInputs.forEach(({el, key}) => {
                     if (el) el.addEventListener('input', (e) => updateSetting(key, e.target.value))
                 });
-
-                const addShortcutBtn = DOMElements.settingsModal.querySelector('#add-shortcut-btn');
-                const shortcutsManager = DOMElements.settingsModal.querySelector('#shortcuts-manager');
-                if(addShortcutBtn) addShortcutBtn.addEventListener('click', handleAddShortcut);
-                if(shortcutsManager) shortcutsManager.addEventListener('click', handleShortcutAction);
             }
              if (DOMElements.calendarModal) {
                 DOMElements.calendarModal.querySelector('#prev-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() - 1); renderCalendar(); });
@@ -1648,8 +1713,7 @@
                     if (DOMElements.deleteConfirmationInput.value === 'DELETE') {
                         await db.clear('notes');
                         await db.clear('settings');
-                        await db.clear('cannedResponses');
-                        localStorage.clear(); // Clear any old remnants
+                        localStorage.clear();
                         showNotification("All data has been cleared. The app will now reload.", "success");
                         setTimeout(() => window.location.reload(), 1500);
                     }
@@ -1659,44 +1723,34 @@
             makeResizable(DOMElements.sidebar, DOMElements.sidebarResizeHandle, 'horizontal');
             makeResizable(DOMElements.editNotePane, DOMElements.sidePaneResizeHandle, 'horizontal');
             makeResizable(DOMElements.newNotePane, DOMElements.bottomResizeHandle, 'vertical');
-            DOMElements.cancelEmailBtn.addEventListener('click', () => closeModal(DOMElements.emailModal));
-            DOMElements.addCannedResponseBtn.addEventListener('click', handleAddCannedResponse);
-            DOMElements.sendEmailBtn.addEventListener('click', handleSendEmail);
             DOMElements.imageUploadInput.addEventListener('change', handleImageUpload);
             DOMElements.importFileInput.addEventListener('change', handleImport);
-            
+
             [DOMElements.editNoteEditor, DOMElements.newNoteEditor].forEach(editor => {
                  const container = editor.closest('.editor-container');
                  container.addEventListener('dragenter', e => {
-                    e.stopPropagation();
-                    e.preventDefault();
+                    e.stopPropagation(); e.preventDefault();
                     const items = e.dataTransfer.items;
                     if (items && items.length > 0 && items[0].type.startsWith('image/')) {
                          DOMElements.globalDropZone.classList.add('hidden');
                          container.classList.add('drop-zone-active');
                     }
                  });
-                 container.addEventListener('dragover', e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                 });
+                 container.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
                  container.addEventListener('dragleave', e => {
-                    e.stopPropagation();
-                    e.preventDefault();
+                    e.stopPropagation(); e.preventDefault();
                     if (!container.contains(e.relatedTarget)) {
                         container.classList.remove('drop-zone-active');
                     }
                  });
                  container.addEventListener('drop', e => {
-                     e.stopPropagation();
-                     e.preventDefault();
+                     e.stopPropagation(); e.preventDefault();
                      DOMElements.globalDropZone.classList.add('hidden');
                      container.classList.remove('drop-zone-active');
                      handleImageDrop(e.dataTransfer.files, editor);
                  });
             });
 
-            // ++ FIX: Checklist silent save ++
             [DOMElements.editNoteEditor, DOMElements.newNoteEditor].forEach(editor => {
                 editor.addEventListener('click', e => {
                     const listItem = e.target.closest('li.task-item');
@@ -1704,12 +1758,12 @@
                         e.preventDefault();
                         listItem.classList.toggle('checked');
                         if(editor.id === 'edit-note-editor') {
-                            handleSaveEdit(true); // silent save
+                            handleSaveEdit(true);
                         }
                     }
                 });
             });
-            
+
             // Collaboration Event Listeners
             DOMElements.hostSessionBtn.addEventListener('click', hostSession);
             DOMElements.joinSessionBtn.addEventListener('click', () => {
@@ -1718,17 +1772,19 @@
             });
             DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
             DOMElements.leaveSessionBtn.addEventListener('click', leaveSession);
-            DOMElements.footerRoomId.addEventListener('click', () => {
-                navigator.clipboard.writeText(state.roomId).then(() => {
-                    showNotification('Room ID copied to clipboard!', 'success');
-                });
-            });
+            DOMElements.footerRoomId.addEventListener('click', () => { showView('collaboration'); });
             DOMElements.copyCollabLinkBtn.addEventListener('click', copyCollabLink);
             DOMElements.confirmJoinSessionBtn.addEventListener('click', joinSession);
             DOMElements.cancelJoinSessionBtn.addEventListener('click', () => closeModal(DOMElements.joinSessionModal));
-            DOMElements.sendChatBtn.addEventListener('click', sendChatMessage);
+            DOMElements.sendChatBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput));
             DOMElements.chatInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') sendChatMessage();
+                if (e.key === 'Enter') sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput);
+            });
+            // Chat Log Pane Listeners
+            DOMElements.fabChatLogBtn.addEventListener('click', toggleChatLogPane);
+            DOMElements.sendChatLogBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput));
+            DOMElements.chatLogInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput);
             });
         }
 
@@ -1739,7 +1795,7 @@
             const color = DOMElements.newNoteCardColorInput.value;
             const now = new Date().toISOString();
             const newNote = { id: Date.now().toString(), title, content, createdAt: now, updatedAt: now, archived: false, label, color, author: state.settings.userName };
-            
+
             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
 
             if (inCollabView) {
@@ -1759,7 +1815,7 @@
                 await saveData();
                 showNotification('Note saved!');
             }
-            
+
             closeNewNotePane();
         }
 
@@ -1768,7 +1824,7 @@
 
             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
             const notesSource = inCollabView ? state.collaborationNotes : state.notes;
-            
+
             const noteIndex = notesSource.findIndex(n => n.id === state.currentNoteId);
             if (noteIndex === -1) return;
 
@@ -1778,7 +1834,7 @@
             updatedNote.label = DOMElements.editNoteLabelInput.value.trim();
             updatedNote.color = DOMElements.editNoteCardColorInput.value;
             updatedNote.updatedAt = new Date().toISOString();
-            
+
             if (inCollabView) {
                  const action = { type: 'request_update_note', note: updatedNote };
                  if (state.isHost) {
@@ -1823,7 +1879,7 @@
                 await saveData();
                 showNotification('Note deleted.', 'error');
              }
-             
+
              closeEditPane();
         }
 
@@ -1851,8 +1907,8 @@
             }
             const settingsForExport = { ...state.settings };
             delete settingsForExport.sessionPassword;
-            delete settingsForExport.userName; // Don't export username
-            const dataToEncrypt = JSON.stringify({ notes: state.notes, settings: settingsForExport, cannedResponses: state.cannedResponses });
+            delete settingsForExport.userName;
+            const dataToEncrypt = JSON.stringify({ notes: state.notes, settings: settingsForExport });
             try {
                 const salt = window.crypto.getRandomValues(new Uint8Array(16));
                 const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
@@ -1877,7 +1933,7 @@
                 showNotification('Export failed due to an encryption error.', 'error');
             }
         }
-        
+
         function processNiiFile(file) {
              const password = prompt("Enter the session password for this file:");
             if (!password) {
@@ -1893,112 +1949,7 @@
             processNiiFile(file);
             DOMElements.importFileInput.value = '';
         }
-        
-        function handleEnexImport(e) {
-            const file = e.target.files[0];
-            if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    showNotification('Importing Evernote file...', 'success');
-                    const xmlText = event.target.result;
-                    const newNotes = parseEnexFile(xmlText);
-                    
-                    const existingNoteTitles = new Set(state.notes.map(n => n.title));
-                    const uniqueNewNotes = newNotes.filter(n => !existingNoteTitles.has(n.title));
-                    
-                    state.notes.push(...uniqueNewNotes);
-                    await saveData();
-                    showNotification(`${uniqueNewNotes.length} new note(s) imported successfully!`, 'success');
-                } catch (err) {
-                    console.error("ENEX Import failed:", err);
-                    showNotification('Evernote import failed. The file might be corrupted.', 'error');
-                }
-            };
-            reader.readAsText(file);
-            DOMElements.importEnexInput.value = '';
-        }
-
-        function parseEnexFile(xmlText) {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-            
-            const resourceMap = new Map();
-            xmlDoc.querySelectorAll('resource').forEach(resourceNode => {
-                const mime = resourceNode.querySelector('mime')?.textContent;
-                const dataNode = resourceNode.querySelector('data');
-                if (dataNode && dataNode.textContent) {
-                    const hash = dataNode.getAttribute('hash');
-                    const base64Data = dataNode.textContent.replace(/\s/g, '');
-                    const dataUrl = `data:${mime};base64,${base64Data}`;
-                    resourceMap.set(hash, dataUrl);
-                }
-            });
-
-            const noteNodes = xmlDoc.getElementsByTagName('note');
-            const importedNotes = [];
-
-            const formatDate = (enexDate) => {
-                if (!enexDate) return new Date().toISOString();
-                return `${enexDate.substring(0, 4)}-${enexDate.substring(4, 6)}-${enexDate.substring(6, 8)}T${enexDate.substring(9, 11)}:${enexDate.substring(11, 13)}:${enexDate.substring(13, 15)}Z`;
-            };
-
-            for (const noteNode of noteNodes) {
-                const title = noteNode.querySelector('title')?.textContent || 'Untitled Note';
-                const contentNode = noteNode.querySelector('content');
-                let content = contentNode ? contentNode.textContent : '';
-
-                const created = formatDate(noteNode.querySelector('created')?.textContent);
-                const updated = formatDate(noteNode.querySelector('updated')?.textContent);
-                const tags = Array.from(noteNode.querySelectorAll('tag')).map(t => t.textContent);
-
-                // This regex is a simpler way to grab the content within the CDATA block
-                const cdataRegex = /<!\[CDATA\[(.*?)\]\]>/s;
-                const match = cdataRegex.exec(content);
-                if (match && match[1]) {
-                    content = match[1];
-                }
-                
-                // Use a temporary div to parse and manipulate the HTML-like content
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = content;
-                
-                // Now, query within this temporary structure
-                tempDiv.querySelectorAll('en-media').forEach(mediaNode => {
-                    const hash = mediaNode.getAttribute('hash');
-                    if (resourceMap.has(hash)) {
-                        const img = document.createElement('img');
-                        img.src = resourceMap.get(hash);
-                        mediaNode.replaceWith(img);
-                    }
-                });
-
-                tempDiv.querySelectorAll('en-todo').forEach(todoNode => {
-                    const li = document.createElement('li');
-                    li.classList.add('task-item');
-                    if (todoNode.getAttribute('checked') === 'true') {
-                        li.classList.add('checked');
-                    }
-                    todoNode.replaceWith(li);
-                });
-                
-                let finalContent = tempDiv.innerHTML;
-                
-                importedNotes.push({
-                    id: `enex-${Date.now()}-${Math.random()}`,
-                    title: title,
-                    content: sanitizeHTML(finalContent),
-                    createdAt: created,
-                    updatedAt: updated,
-                    archived: false,
-                    label: tags.length > 0 ? tags[0] : '',
-                    color: state.settings.noteCardColor,
-                });
-            }
-            return importedNotes;
-        }
-        
         function importNiiFile(file, password) {
             const reader = new FileReader();
             reader.onload = async (event) => {
@@ -2012,31 +1963,24 @@
                     const decryptedContent = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encryptedContent);
                     const decodedString = new TextDecoder().decode(decryptedContent);
                     const importedState = JSON.parse(decodedString);
-                    
+
                     let newNotes = [];
-                    if (Array.isArray(importedState)) { // single note export
+                    if (Array.isArray(importedState)) {
                         newNotes = importedState;
-                    } else if (importedState.notes) { // full export
+                    } else if (importedState.notes) {
                         newNotes = importedState.notes;
                     }
-                    
+
                     const existingNoteIds = new Set(state.notes.map(n => n.id));
                     const uniqueNewNotes = newNotes.filter(n => !existingNoteIds.has(n.id));
                     state.notes.push(...uniqueNewNotes);
-
-                    const existingResponses = new Set(state.cannedResponses.map(r => r.name));
-                    if (Array.isArray(importedState.cannedResponses)) {
-                        importedState.cannedResponses.forEach(r => {
-                            if (!existingResponses.has(r.name)) { state.cannedResponses.push(r); }
-                        });
-                    }
 
                     if (importedState.settings) {
                         const currentPassword = state.settings.sessionPassword;
                         const currentUserName = state.settings.userName;
                         state.settings = { ...state.settings, ...importedState.settings, sessionPassword: currentPassword, userName: currentUserName };
                     }
-                    
+
                     await saveData();
                     applySettings();
                     showNotification(`${uniqueNewNotes.length} new note(s) imported successfully!`);
@@ -2058,7 +2002,7 @@
                     bytes[i] = binary_string.charCodeAt(i);
                 }
                 const encryptedData = bytes;
-                
+
                 const salt = encryptedData.slice(0, 16);
                 const iv = encryptedData.slice(16, 28);
                 const data = encryptedData.slice(28);
@@ -2066,15 +2010,15 @@
                 const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
                 const key = await window.crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
                 const decryptedCompressed = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
-                
+
                 const decompressedString = LZString.decompressFromUint8Array(new Uint8Array(decryptedCompressed));
                 if (!decompressedString) {
                     throw new Error("Decompression failed. The data might be corrupted or the password is wrong.");
                 }
                 const importedNote = JSON.parse(decompressedString);
-                
+
                 const existingNoteIds = new Set(state.notes.map(n => n.id));
-                
+
                 if (!existingNoteIds.has(importedNote.id)) {
                     state.notes.unshift(importedNote);
                     await saveData();
@@ -2097,13 +2041,13 @@
         function handleClearLocalStorage() {
             openModal(DOMElements.confirmClearModal);
         }
-        
+
         async function handleShareNote() {
-            await handleSaveEdit(true); // Silently save before sharing
+            await handleSaveEdit(true);
             await generateShareLink();
             openModal(DOMElements.qrCodeModal);
         }
-        
+
         async function generateShareLink() {
              if (!state.currentNoteId) return;
             const noteToShare = { ...state.notes.find(n => n.id === state.currentNoteId) };
@@ -2115,7 +2059,7 @@
                 password = Math.random().toString(36).substring(2, 10);
                 temporaryPassword = true;
             }
-            
+
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = noteToShare.content;
             const hasImages = tempDiv.querySelector('img, video, iframe');
@@ -2142,7 +2086,7 @@
 
                 const baseUrl = window.location.origin + window.location.pathname;
                 let sessionUrl = `${baseUrl}?data=${urlSafeBase64}`;
-                
+
                 if (DOMElements.secureSendToggle.checked) {
                     sessionUrl += '&secret=true';
                     if (temporaryPassword) {
@@ -2154,7 +2098,7 @@
                     sessionUrl += `&sesh-ID=${encodeURIComponent(password)}`;
                     DOMElements.sharePasswordDisplay.innerHTML = '';
                 }
-                
+
                 const textArea = document.createElement("textarea");
                 textArea.value = sessionUrl;
                 document.body.appendChild(textArea);
@@ -2179,12 +2123,12 @@
                 showNotification('Failed to create share link.', 'error');
             }
         }
-        
+
         async function handleExportSingleNote() {
             if (!state.currentNoteId) return;
             const noteToExport = state.notes.find(n => n.id === state.currentNoteId);
             if (!noteToExport) return;
-            
+
             let password = state.settings.sessionPassword;
             if (!password) {
                  password = prompt("Please set a password for this export:");
@@ -2232,7 +2176,7 @@
                 reader.readAsDataURL(file);
             }
         }
-        
+
         function handleImageDrop(files, editor) {
             state.activeEditor = editor;
             if (files.length > 0) {
@@ -2245,6 +2189,19 @@
                  insertImageFile(event.target.files[0], state.activeEditor);
             }
             event.target.value = '';
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    updateSetting('userAvatar', dataUrl);
+                };
+                reader.readAsDataURL(file);
+            }
+             event.target.value = '';
         }
 
         function handleSaveEmbed() {
@@ -2290,61 +2247,6 @@
                 showNotification('Video URL is required.', 'error');
             }
         }
-        
-        async function handleAddCannedResponse() {
-            const name = DOMElements.newCannedResponseNameInput.value.trim();
-            const text = DOMElements.newCannedResponseTextInput.value.trim();
-            if (name && text) {
-                const newResponse = { name, text };
-                state.cannedResponses.push(newResponse);
-                await saveData();
-                renderCannedResponses();
-                 DOMElements.newCannedResponseNameInput.value = '';
-                DOMElements.newCannedResponseTextInput.value = '';
-            } else {
-                showNotification('Both name and text are required for canned responses.', 'error');
-            }
-        }
-
-        function handleSendEmail() {
-            const to = DOMElements.emailTo.value;
-            const subject = DOMElements.emailSubject.value;
-            const body = DOMElements.emailBody.value;
-            window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            closeModal(DOMElements.emailModal);
-        }
-
-        async function handleAddShortcut() {
-            const nameInput = DOMElements.settingsModal.querySelector('#new-shortcut-name');
-            const urlInput = DOMElements.settingsModal.querySelector('#new-shortcut-url');
-            const iconInput = DOMElements.settingsModal.querySelector('#new-shortcut-icon');
-            const name = nameInput.value.trim();
-            let url = urlInput.value.trim();
-            const icon = iconInput.value;
-
-            if (name && url) {
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    url = 'https://' + url;
-                }
-                state.settings.customLinks.push({ id: Date.now().toString(), name, url, icon });
-                await saveData();
-                nameInput.value = '';
-                urlInput.value = '';
-                renderShortcutsManager();
-            } else {
-                showNotification('Shortcut name and URL are required.', 'error');
-            }
-        }
-
-        async function handleShortcutAction(e) {
-            if (e.target.classList.contains('delete-shortcut-btn')) {
-                const shortcutId = e.target.dataset.id;
-                state.settings.customLinks = state.settings.customLinks.filter(link => link.id !== shortcutId);
-                await saveData();
-                renderShortcutsManager();
-            }
-        }
-
 
         async function updateSetting(key, value) {
             state.settings[key] = value;
@@ -2391,7 +2293,7 @@
             DOMElements.editNoteEditor.innerHTML = note.content;
             DOMElements.editNoteLabelInput.value = note.label || '';
             DOMElements.editNoteCardColorInput.value = note.color || state.settings.noteCardColor;
-            
+
             DOMElements.archiveNoteBtn.title = note.archived ? 'Unarchive' : 'Archive';
             DOMElements.archiveNoteBtn.classList.toggle('bg-green-500', note.archived);
             DOMElements.archiveNoteBtn.classList.toggle('hover:bg-green-600', note.archived);
@@ -2409,6 +2311,19 @@
             DOMElements.editNotePane.classList.remove('is-open');
             state.currentNoteId = null;
             updateOverlayState();
+        }
+        
+        function toggleChatLogPane() {
+            state.isChatLogOpen = !state.isChatLogOpen;
+            if(state.isChatLogOpen) {
+                DOMElements.chatLogPane.classList.add('is-open');
+                DOMElements.modalOverlay.classList.remove('hidden');
+                setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
+                DOMElements.fabChatLogBtn.classList.remove('has-unread');
+            } else {
+                DOMElements.chatLogPane.classList.remove('is-open');
+                updateOverlayState();
+            }
         }
 
         function openModal(modal) {
@@ -2432,9 +2347,9 @@
         function updateOverlayState() {
             const anyPopupOpen = DOMElements.newNotePane.classList.contains('is-open') ||
                                  DOMElements.editNotePane.classList.contains('is-open') ||
+                                 DOMElements.chatLogPane.classList.contains('is-open') ||
                                  !DOMElements.calendarModal.classList.contains('hidden') ||
                                  !DOMElements.settingsModal.classList.contains('hidden') ||
-                                 !DOMElements.emailModal.classList.contains('hidden') ||
                                  !DOMElements.embedModal.classList.contains('hidden') ||
                                  !DOMElements.iframeHelperModal.classList.contains('hidden') ||
                                  !DOMElements.videoHelperModal.classList.contains('hidden') ||
@@ -2444,7 +2359,7 @@
                                  !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
                                  !DOMElements.joinSessionModal.classList.contains('hidden') ||
                                  !DOMElements.collaborationStartModal.classList.contains('hidden');
-            
+
             const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
 
             if (!anyPopupOpen && !isSidebarOpen) {
@@ -2455,7 +2370,7 @@
                  setTimeout(() => DOMElements.modalOverlay.classList.remove('opacity-0'), 10);
             }
         }
-        
+
         function closeSidebarMobile(){
              if (window.innerWidth < 768) { // md breakpoint
                 DOMElements.sidebar.classList.add('-translate-x-full');
@@ -2466,9 +2381,9 @@
         function closeAllPopups() {
             closeNewNotePane();
             closeEditPane();
+            if (state.isChatLogOpen) toggleChatLogPane();
             closeModal(DOMElements.calendarModal);
             closeModal(DOMElements.settingsModal);
-            closeModal(DOMElements.emailModal);
             closeModal(DOMElements.embedModal);
             closeModal(DOMElements.iframeHelperModal);
             closeModal(DOMElements.videoHelperModal);
@@ -2489,15 +2404,12 @@
                 const command = target.dataset.command;
                 state.activeEditor = editorEl;
                 editorEl.focus();
-                
-                if (command === 'email') {
-                    openEmailModal();
-                } else if (command === 'insertImage') {
+
+                if (command === 'insertImage') {
                     DOMElements.imageUploadInput.click();
                 } else if (command === 'insertEmbed') {
                     openModal(DOMElements.embedModal);
                 } else if (command === 'insertChecklistItem') {
-                    // This is the FIXED logic for the checklist item
                     document.execCommand('insertUnorderedList', false, null);
                     const selection = window.getSelection();
                     if (selection.rangeCount > 0) {
@@ -2523,27 +2435,6 @@
             });
         }
 
-        function openEmailModal() {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = state.activeEditor.innerHTML;
-            DOMElements.emailBody.value = tempDiv.innerText;
-            renderCannedResponses();
-            openModal(DOMElements.emailModal);
-        }
-
-        function renderCannedResponses() {
-            DOMElements.cannedResponsesList.innerHTML = '';
-            state.cannedResponses.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'p-1 hover:bg-gray-600 cursor-pointer rounded';
-                li.textContent = item.name;
-                li.onclick = () => {
-                    DOMElements.emailBody.value += `\n\n${item.text}`;
-                };
-                DOMElements.cannedResponsesList.appendChild(li);
-            });
-        }
-
         function showNotification(message, type = 'success') {
             const { notification } = DOMElements;
             notification.textContent = message;
@@ -2557,19 +2448,14 @@
                  setTimeout(() => notification.classList.add('hidden'), 500);
             }, 3000);
         }
-        
+
         function showView(viewName) {
             ['dashboard', 'notes', 'collaboration'].forEach(view => {
                 DOMElements[view + 'View'].classList.add('hidden');
             });
             DOMElements[viewName + 'View'].classList.remove('hidden');
 
-            // Special handling for fab
-            if (viewName === 'collaboration') {
-                DOMElements.fabAddNoteBtn.classList.remove('hidden'); 
-            } else {
-                DOMElements.fabAddNoteBtn.classList.remove('hidden');
-            }
+            DOMElements.fabChatLogBtn.classList.toggle('hidden', viewName !== 'collaboration');
         }
 
         function renderCalendar() {
@@ -2632,47 +2518,10 @@
             });
         }
 
-        function renderShortcuts() {
-            const { shortcutsGrid } = DOMElements;
-            if (!shortcutsGrid) return;
-            shortcutsGrid.innerHTML = '';
-            state.settings.customLinks.forEach(link => {
-                const linkEl = document.createElement('a');
-                linkEl.href = link.url;
-                linkEl.target = '_blank';
-                linkEl.rel = 'noopener noreferrer';
-                linkEl.className = 'flex flex-col items-center justify-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors';
-                linkEl.innerHTML = `<div class="text-4xl mb-2">${link.icon}</div><span>${link.name}</span>`;
-                shortcutsGrid.appendChild(linkEl);
-            });
-        }
-
-        function renderShortcutsManager() {
-            const { settingsModal } = DOMElements;
-            if (!settingsModal) return;
-            const manager = settingsModal.querySelector('#shortcuts-manager');
-            const iconSelect = settingsModal.querySelector('#new-shortcut-icon');
-            if(!manager || !iconSelect) return;
-
-            manager.innerHTML = '';
-            const icons = ['🔗', '📝', '💼', '🏠', '⭐️', '❤️', '⚙️', '📊'];
-            iconSelect.innerHTML = icons.map(i => `<option value="${i}">${i}</option>`).join('');
-
-            state.settings.customLinks.forEach(link => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-700 p-2 rounded';
-                div.innerHTML = `
-                    <span>${link.icon} ${link.name}</span>
-                    <button data-id="${link.id}" class="delete-shortcut-btn text-red-500 hover:text-red-400">X</button>
-                `;
-                manager.appendChild(div);
-            });
-        }
-        
         function toggleSelectMode() {
             state.selectModeActive = !state.selectModeActive;
             state.selectedNoteIds.clear();
-            
+
             if (state.selectModeActive) {
                 DOMElements.selectModeBtn.textContent = 'Done';
                 DOMElements.notesGrid.classList.add('in-select-mode');
@@ -2681,7 +2530,7 @@
                 DOMElements.notesGrid.classList.remove('in-select-mode');
                 DOMElements.batchActionBar.classList.add('translate-y-full');
             }
-            renderNotesGrid(); // Rerender to apply/remove classes
+            renderNotesGrid();
         }
 
         function toggleNoteSelection(noteId, cardElement) {
@@ -2692,7 +2541,7 @@
                 state.selectedNoteIds.add(noteId);
                 cardElement.classList.add('selected');
             }
-            
+
             const count = state.selectedNoteIds.size;
             if (count > 0) {
                 DOMElements.selectionCount.textContent = `${count} note${count > 1 ? 's' : ''} selected`;
@@ -2701,22 +2550,22 @@
                 DOMElements.batchActionBar.classList.add('translate-y-full');
             }
         }
-        
+
         function handleBatchDelete() {
             if (state.selectedNoteIds.size === 0) return;
             const count = state.selectedNoteIds.size;
             DOMElements.batchDeleteMessage.textContent = `Are you sure you want to permanently delete these ${count} note${count > 1 ? 's' : ''}?`;
             openModal(DOMElements.batchDeleteConfirmModal);
         }
-        
+
         async function executeBatchDelete() {
             state.notes = state.notes.filter(note => !state.selectedNoteIds.has(note.id));
             await saveData();
             showNotification(`${state.selectedNoteIds.size} notes deleted.`, 'error');
             closeModal(DOMElements.batchDeleteConfirmModal);
-            toggleSelectMode(); // Reset the selection UI
+            toggleSelectMode();
         }
-        
+
         async function handleBatchArchive() {
              if (state.selectedNoteIds.size === 0) return;
              state.notes.forEach(note => {
@@ -2768,7 +2617,7 @@
                 showNotification('Export failed due to an encryption error.', 'error');
             }
         }
-        
+
         // --- Collaboration Logic (WebRTC with PeerJS) ---
 
         function copyCollabLink() {
@@ -2782,37 +2631,27 @@
             });
         }
 
-        // ++ FIX: Host chat bug ++
-        function initPeer() {
-            if (state.peer) {
-                state.peer.destroy();
+        function setCollaborationFooterVisible(visible) {
+            if (visible) {
+                DOMElements.collaborationFooter.classList.remove('hidden');
+                DOMElements.mainContent.style.paddingBottom = '60px';
+            } else {
+                DOMElements.collaborationFooter.classList.add('hidden');
+                DOMElements.mainContent.style.paddingBottom = '';
             }
-            
-            const peerConfig = {
-                host: '0.peerjs.com',
-                port: 443,
-                path: '/',
-                secure: true,
-                debug: 2
-            };
+        }
 
-            try {
-                const myId = state.isHost ? undefined : `client-${Date.now()}`;
-                state.peer = new Peer(myId, peerConfig);
-            } catch (e) {
-                console.error("Failed to create Peer instance", e);
-                showNotification("Could not initialize collaboration service.", "error");
-                return;
-            }
+        function initPeer() {
+            if (state.peer) { state.peer.destroy(); }
+
+            state.peer = new Peer(state.isHost ? undefined : `client-${Date.now()}`, {
+                host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 2
+            });
 
             state.peer.on('open', (id) => {
                 console.log('PeerJS open. My ID is:', id);
-                
-                // Set peer info here, now that we have the real ID
-                state.peerInfo.set(id, {
-                    name: state.settings.userName,
-                    isFlipped: false
-                });
+                const myPeerId = state.isHost ? id : state.peer.id;
+                state.peerInfo.set(myPeerId, { name: state.settings.userName, avatar: state.settings.userAvatar });
 
                 if (state.isHost) {
                     state.roomId = id;
@@ -2821,12 +2660,8 @@
                     updatePeerList();
                 } else {
                     if (state.roomId) {
-                        console.log(`Client is open. Attempting to connect to host: ${state.roomId}`);
                         const conn = state.peer.connect(state.roomId, {
-                            metadata: { 
-                                userName: state.settings.userName,
-                                peerId: id
-                            },
+                            metadata: { userName: state.settings.userName, avatar: state.settings.userAvatar },
                             reliable: true
                         });
                         setupConnection(conn);
@@ -2846,10 +2681,6 @@
                     message = `Could not find the host. Please check the Room ID.`;
                 } else if (err.type === 'network') {
                     message = 'Network error. Please check your connection.';
-                } else if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'disconnected') {
-                     message = 'Cannot connect to the collaboration server.';
-                } else if (err.type === 'webrtc') {
-                     message = 'WebRTC connection failed.';
                 }
                 showNotification(message, 'error');
                 leaveSession();
@@ -2861,8 +2692,7 @@
             state.isHost = true;
             initPeer();
             showView('collaboration');
-            DOMElements.collaborationFooter.classList.remove('hidden');
-            DOMElements.collaborationFooter.classList.remove('translate-y-full');
+            setCollaborationFooterVisible(true);
             renderCollaborationNotesGrid();
         }
 
@@ -2879,19 +2709,17 @@
         }
 
         function leaveSession() {
-            if (state.peer) {
-                state.peer.destroy();
-            }
+            if (state.peer) { state.peer.destroy(); }
             state.peer = null;
             state.connections.clear();
             state.peerInfo.clear();
             state.roomId = null;
             state.isHost = false;
             state.collaborationNotes = [];
-            
+            state.chatLog = [];
+
             showView('dashboard');
-            DOMElements.collaborationFooter.classList.add('hidden');
-            DOMElements.collaborationFooter.classList.add('translate-y-full');
+            setCollaborationFooterVisible(false);
             DOMElements.collaborationNotesGrid.innerHTML = '';
             DOMElements.peerList.innerHTML = '';
             showNotification('You have left the session.', 'info');
@@ -2901,27 +2729,21 @@
             conn.on('open', () => {
                 console.log('Connection established with', conn.peer);
                 conn.reliable = true;
-                
-                const peerId = conn.peer;
-                const peerName = conn.metadata?.userName || 'Anonymous';
-
-                state.connections.set(peerId, conn);
+                state.connections.set(conn.peer, conn);
 
                 if (state.isHost) {
-                    const isFlipped = (state.peerInfo.size % 2) !== 0;
-                    state.peerInfo.set(peerId, { name: peerName, isFlipped });
+                    state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: conn.metadata.avatar });
                     updatePeerList();
-
-                    conn.send({ 
-                        type: 'full_sync', 
+                    conn.send({
+                        type: 'full_sync',
                         notes: state.collaborationNotes,
+                        chatLog: state.chatLog,
                         peerInfo: Object.fromEntries(state.peerInfo),
                         hostName: state.settings.userName
                     });
-                    broadcastData({ type: 'peer_joined', peerId, info: state.peerInfo.get(peerId) });
+                    broadcastData({ type: 'peer_joined', peerId: conn.peer, info: state.peerInfo.get(conn.peer) });
                 }
-                
-                showNotification(`${peerName} has joined the session.`, 'success');
+                showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
             });
 
             conn.on('data', (data) => {
@@ -2935,26 +2757,16 @@
                 showNotification(`${peerInfo.name} has left the session.`, 'error');
                 state.connections.delete(peerId);
                 state.peerInfo.delete(peerId);
-                if (state.isHost) {
-                    broadcastData({ type: 'peer_left', peerId });
-                }
+                if (state.isHost) { broadcastData({ type: 'peer_left', peerId }); }
                 updatePeerList();
             });
 
             conn.on('error', (err) => {
                 console.error('Connection error:', err);
-                const peerId = conn.peer;
-                const peerInfo = state.peerInfo.get(peerId) || { name: 'a user' };
-                showNotification(`Connection with ${peerInfo.name} lost.`, 'error');
-                state.connections.delete(peerId);
-                state.peerInfo.delete(peerId);
-                if (state.isHost) {
-                    broadcastData({ type: 'peer_left', peerId });
-                }
-                updatePeerList();
+                leaveSession();
             });
         }
-        
+
         function handleHostAction(data, fromPeerId) {
             let broadcastPayload = null;
             switch(data.type) {
@@ -2974,6 +2786,10 @@
                     broadcastPayload = { type: 'delete_note', noteId: data.noteId };
                     break;
                 case 'chat_message':
+                    const chatMessage = { ...data, from: fromPeerId, timestamp: Date.now() };
+                    state.chatLog.push(chatMessage);
+                    broadcastPayload = chatMessage;
+                    break;
                 case 'typing_start':
                 case 'typing_stop':
                     broadcastPayload = { ...data, from: fromPeerId };
@@ -2984,9 +2800,9 @@
                      renderCollaborationNotesGrid();
                 }
                 broadcastData(broadcastPayload);
-                // Host also processes its own chat messages and typing indicators
                 if (broadcastPayload.type === 'chat_message') {
                     displayChatBubble(broadcastPayload);
+                    renderChatLog();
                 } else if (broadcastPayload.type === 'typing_start') {
                     showTypingIndicator(broadcastPayload.from, true);
                 } else if (broadcastPayload.type === 'typing_stop') {
@@ -3000,18 +2816,18 @@
                 handleHostAction(data, fromPeerId);
                 return;
             }
-            
-            // Client-side data handling
+
             switch(data.type) {
                 case 'full_sync':
                     state.collaborationNotes = data.notes;
+                    state.chatLog = data.chatLog;
                     state.peerInfo = new Map(Object.entries(data.peerInfo));
                     renderCollaborationNotesGrid();
+                    renderChatLog();
                     updatePeerList();
                     showView('collaboration');
                     DOMElements.footerRoomId.textContent = state.roomId;
-                    DOMElements.collaborationFooter.classList.remove('hidden');
-                    DOMElements.collaborationFooter.classList.remove('translate-y-full');
+                    setCollaborationFooterVisible(true);
                     showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                     break;
                 case 'add_note':
@@ -3020,9 +2836,7 @@
                     break;
                 case 'update_note':
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
-                    if (noteIndex > -1) {
-                        state.collaborationNotes[noteIndex] = data.note;
-                    }
+                    if (noteIndex > -1) { state.collaborationNotes[noteIndex] = data.note; }
                     renderCollaborationNotesGrid();
                     break;
                 case 'delete_note':
@@ -3038,7 +2852,12 @@
                     updatePeerList();
                     break;
                 case 'chat_message':
+                    state.chatLog.push(data);
                     displayChatBubble(data);
+                    renderChatLog();
+                    if (!state.isChatLogOpen) {
+                        DOMElements.fabChatLogBtn.classList.add('has-unread');
+                    }
                     break;
                 case 'typing_start':
                     showTypingIndicator(data.from, true);
@@ -3048,16 +2867,14 @@
                     break;
             }
         }
-        
+
         function broadcastData(data) {
             console.log('Broadcasting data:', data);
-            for (const [peerId, conn] of state.connections.entries()) {
-                if (conn && conn.open) {
-                    conn.send(data);
-                }
+            for (const conn of state.connections.values()) {
+                if (conn && conn.open) { conn.send(data); }
             }
         }
-        
+
         function renderCollaborationNotesGrid() {
             if(DOMElements.collaborationNotesGrid) {
                 DOMElements.collaborationNotesGrid.innerHTML = '';
@@ -3067,46 +2884,33 @@
                 });
             }
         }
-        
+
         function updatePeerList() {
             DOMElements.peerList.innerHTML = '';
-            const peerIds = Array.from(state.peerInfo.keys());
-
-            peerIds.forEach(peerId => {
-                const info = state.peerInfo.get(peerId);
+            for (const [peerId, info] of state.peerInfo.entries()) {
                 const isSelf = peerId === state.peer.id;
-
                 const peerEl = document.createElement('div');
                 peerEl.id = `peer-icon-${peerId}`;
-                peerEl.className = 'relative flex items-center gap-2 px-3 py-1 rounded-full';
-                peerEl.className += isSelf ? ' bg-blue-500 text-white' : ' bg-gray-600';
-
-                const img = document.createElement('img');
-                img.src = "https://www.niilow.com/logo.png";
-                img.className = "w-5 h-5";
-                if (info.isFlipped) {
-                    img.classList.add('transform', '-scale-x-100');
-                }
+                peerEl.className = `relative flex items-center gap-2 px-3 py-1 rounded-full ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-600'}`;
                 
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = isSelf ? `${info.name} (You)` : info.name;
-
+                
                 const typingIndicator = document.createElement('div');
                 typingIndicator.className = 'typing-indicator';
                 typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-                
-                peerEl.appendChild(img);
+
                 peerEl.appendChild(nameSpan);
                 peerEl.appendChild(typingIndicator);
                 DOMElements.peerList.appendChild(peerEl);
-            });
+            }
         }
 
-        function sendChatMessage() {
-            const message = DOMElements.chatInput.value.trim();
-            if (!message) return;
+        function sendChatMessage(message, inputElement) {
+            const trimmedMessage = message.trim();
+            if (!trimmedMessage) return;
 
-            const payload = { type: 'chat_message', message };
+            const payload = { type: 'chat_message', message: trimmedMessage };
 
             if (state.isHost) {
                 handleHostAction(payload, state.peer.id);
@@ -3116,32 +2920,62 @@
                     hostConn.send(payload);
                 }
             }
-            DOMElements.chatInput.value = '';
+            if (inputElement) {
+                inputElement.value = '';
+            }
         }
 
         function displayChatBubble({ from, message }) {
             const peerIconEl = document.getElementById(`peer-icon-${from}`);
             if (!peerIconEl) return;
 
+            const senderInfo = state.peerInfo.get(from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
+
+            const container = document.createElement('div');
+            container.className = 'floating-chat-bubble-container';
+
+            const avatarImg = document.createElement('img');
+            avatarImg.src = senderInfo.avatar || 'https://www.niilow.com/logo.png';
+            
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble';
-            bubble.textContent = message;
+            bubble.innerHTML = `<strong>${senderInfo.name}</strong><span>${message}</span>`;
             
-            // Position the bubble relative to the icon
+            container.appendChild(avatarImg);
+            container.appendChild(bubble);
+
             const iconRect = peerIconEl.getBoundingClientRect();
             const containerRect = DOMElements.chatContainer.getBoundingClientRect();
-            
-            // Center the bubble over the icon
             const bubbleLeft = iconRect.left - containerRect.left + (iconRect.width / 2);
-            bubble.style.left = `${bubbleLeft}px`;
-            bubble.style.transform = 'translateX(-50%)'; // Horizontally center it
-            
-            DOMElements.chatContainer.appendChild(bubble);
-            
-            // Clean up the bubble after animation
-            setTimeout(() => {
-                bubble.remove();
-            }, 8000);
+            container.style.left = `${bubbleLeft}px`;
+            container.style.transform = 'translateX(-50%)';
+
+            DOMElements.chatContainer.appendChild(container);
+
+            setTimeout(() => { container.remove(); }, 8000);
+        }
+        
+        function renderChatLog() {
+            DOMElements.chatLogMessages.innerHTML = '';
+            state.chatLog.forEach(msg => {
+                const senderInfo = state.peerInfo.get(msg.from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
+                const isSelf = msg.from === state.peer.id;
+
+                const line = document.createElement('div');
+                line.className = `chat-log-line ${isSelf ? 'is-self' : ''}`;
+                
+                const avatar = document.createElement('img');
+                avatar.src = senderInfo.avatar || 'https://www.niilow.com/logo.png';
+
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-log-bubble';
+                bubble.innerHTML = `<strong>${senderInfo.name}</strong><span>${msg.message}</span>`;
+                
+                line.appendChild(avatar);
+                line.appendChild(bubble);
+                DOMElements.chatLogMessages.appendChild(line);
+            });
+            DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
         }
 
         function showTypingIndicator(peerId, isTyping) {
@@ -3154,8 +2988,6 @@
             }
         }
 
-
-        // --- Initial Load ---
         init();
     </script>
 </body>
