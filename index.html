@@ -1224,7 +1224,7 @@
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
-            footerText: 'Niilow 1.4', modalOpacity: 0.95, userName: 'User',
+            footerText: 'Niilow 1.5', modalOpacity: 0.95, userName: 'User',
             sessionPassword: '',
             userAvatar: null,
             videoWall: '', // New setting for video wall
@@ -1309,6 +1309,17 @@
                  console.error("Save failed:", e);
             }
             renderAll();
+        }
+
+        // --- Sound Player ---
+        function playSound(soundUrl) {
+            try {
+                const audio = new Audio(soundUrl);
+                // We ask the browser to play the sound and gracefully handle if it doesn't
+                audio.play().catch(e => console.error("Audio play failed. Browser might have blocked it.", e));
+            } catch (e) {
+                console.error("Failed to create or play sound:", e);
+            }
         }
 
         // --- HTML Sanitizer ---
@@ -2450,6 +2461,9 @@
                  renderNotesGrid();
                  renderDashboard();
             }
+            if (key === 'videoWall' && state.isHost) {
+                broadcastData({ type: 'video_wall_update', url: value });
+            }
         }
 
         function openNewNotePane() {
@@ -2852,11 +2866,12 @@
             if (!url) return;
 
             let videoElement;
+            // This is the fix for the YouTube credentials issue
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
                 const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
                 const videoId = videoIdMatch ? videoIdMatch[1] : null;
                 if (videoId) {
-                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&autohide=1&modestbranding=1&iv_load_policy=3`;
+                    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&autohide=1&modestbranding=1&iv_load_policy=3`;
                     videoElement = document.createElement('iframe');
                     videoElement.src = embedUrl;
                     videoElement.frameborder = '0';
@@ -2965,6 +2980,7 @@
             showView('collaboration');
             DOMElements.mainContent.style.paddingBottom = '60px';
             renderCollaborationNotesGrid();
+            playSound('https://www.niilow.com/join.mp3');
         }
 
         function joinSession() {
@@ -3030,6 +3046,7 @@
             DOMElements.mainContent.style.paddingBottom = '';
             DOMElements.collaborationNotesGrid.innerHTML = '';
             showNotification('You have left the session.', 'info');
+            playSound('https://www.niilow.com/dismiss.mp3');
         }
 
 
@@ -3049,7 +3066,8 @@
                         notes: state.collaborationNotes,
                         chatLog: state.chatLog,
                         peerInfo: Object.fromEntries(state.peerInfo),
-                        hostName: state.settings.userName
+                        hostName: state.settings.userName,
+                        videoWall: state.settings.videoWall // Sync video wall on connect
                     });
                     broadcastData({ type: 'peer_joined', peerId: conn.peer, info: peerInfoPayload });
                 } else {
@@ -3078,6 +3096,7 @@
                 if (state.isHost) { broadcastData({ type: 'peer_left', peerId }); }
                 renderSessionInfo();
                 removeLiveShareCardFromGrid(peerId);
+                playSound('https://www.niilow.com/dismiss.mp3');
             });
 
             conn.on('error', (err) => {
@@ -3153,12 +3172,17 @@
                     state.collaborationNotes = data.notes;
                     state.chatLog = data.chatLog;
                     state.peerInfo = new Map(Object.entries(data.peerInfo));
+                    if (data.videoWall) {
+                        state.settings.videoWall = data.videoWall;
+                        applyVideoWall();
+                    }
                     renderCollaborationNotesGrid();
                     renderChatLog();
                     renderSessionInfo();
                     showView('collaboration');
                     DOMElements.mainContent.style.paddingBottom = '60px';
                     showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
+                    playSound('https://www.niilow.com/join.mp3');
                     break;
                 case 'add_note':
                     if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
@@ -3199,6 +3223,7 @@
                         if (!state.isChatLogOpen) {
                             DOMElements.fabChatLogBtn.classList.add('has-unread');
                         }
+                        playSound('https://www.niilow.com/chat.mp3');
                     }
                     break;
                 case 'typing_start':
@@ -3226,6 +3251,10 @@
                     stopScreenShare(false);
                     DOMElements.startShareBtn.disabled = false;
                     DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
+                    break;
+                case 'video_wall_update':
+                    state.settings.videoWall = data.url;
+                    applyVideoWall();
                     break;
             }
         }
@@ -3323,6 +3352,7 @@
             if (inputElement) {
                 inputElement.value = '';
             }
+            playSound('https://www.niilow.com/chat.mp3');
         }
 
 
