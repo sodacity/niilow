@@ -585,7 +585,6 @@
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
                     <input type="text" id="chat-input" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
-                    <!-- Screen Share Button -->
                     <button id="start-share-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold p-2 rounded-full" title="Share Screen">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>
                     </button>
@@ -614,7 +613,6 @@
 
     <div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-30 transition-opacity duration-300"></div>
 
-    <!-- Screen Share Modal -->
     <div id="screen-share-modal" class="hidden modal fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl p-4 flex flex-col max-h-[90vh]">
             <h3 id="sharer-name" class="text-lg font-bold mb-2 text-center text-white"></h3>
@@ -683,6 +681,17 @@
             </div>
         </div>
     </div>
+    <div id="save-collab-notes-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4 text-white">Leave Session</h2>
+            <p class="text-white mb-6">Would you like to save the notes from this collaboration session locally?</p>
+            <div class="flex justify-center gap-4">
+                <button id="decline-save-collab-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Leave Without Saving</button>
+                <button id="confirm-save-collab-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Save Notes & Leave</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="edit-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
         <div id="side-pane-resize-handle" class="hidden md:block"></div>
@@ -1109,6 +1118,9 @@
             joinRoomIdInput: document.getElementById('join-room-id-input'),
             confirmJoinSessionBtn: document.getElementById('confirm-join-session-btn'),
             cancelJoinSessionBtn: document.getElementById('cancel-join-session-btn'),
+            saveCollabNotesModal: document.getElementById('save-collab-notes-modal'),
+            confirmSaveCollabBtn: document.getElementById('confirm-save-collab-btn'),
+            declineSaveCollabBtn: document.getElementById('decline-save-collab-btn'),
             // Chat Log Pane
             fabChatLogBtn: document.getElementById('fab-chat-log'),
             chatLogPane: document.getElementById('chat-log-pane'),
@@ -1151,10 +1163,12 @@
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
-            footerText: 'Niilow 1.0', modalOpacity: 0.95, userName: 'User',
+            footerText: 'Niilow 1.3', modalOpacity: 0.95, userName: 'User',
             sessionPassword: '',
             userAvatar: null,
         };
+        let autoSaveTimeout = null;
+
 
         // --- IndexedDB Helper ---
         const db = {
@@ -1325,7 +1339,7 @@
             DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
             const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal].forEach(el => {
+            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal].forEach(el => {
                 if (el) {
                     const inner = el.firstElementChild;
                     if (inner && (el.id.includes('-modal'))) {
@@ -1657,6 +1671,16 @@
             DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
             DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
 
+            const autoSaveHandler = () => {
+                clearTimeout(autoSaveTimeout);
+                if (DOMElements.editNotePane.classList.contains('is-open')) {
+                     autoSaveTimeout = setTimeout(() => handleSaveEdit(true), 2000);
+                }
+            };
+            DOMElements.editNoteTitleInput.addEventListener('input', autoSaveHandler);
+            DOMElements.editNoteEditor.addEventListener('input', autoSaveHandler);
+
+
             let searchDebounceTimeout;
             DOMElements.filterInput.addEventListener('input', () => {
                 clearTimeout(searchDebounceTimeout);
@@ -1869,6 +1893,10 @@
             // Screen Share Listeners
             DOMElements.startShareBtn.addEventListener('click', startScreenShare);
             DOMElements.closeShareModalBtn.addEventListener('click', () => stopScreenShare(false));
+
+            // NEW: Listeners for the save collab notes modal
+            DOMElements.confirmSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(true));
+            DOMElements.declineSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(false));
         }
 
         async function handleSaveNewNote() {
@@ -2391,6 +2419,7 @@
         }
 
         function closeEditPane() {
+            clearTimeout(autoSaveTimeout); // Stop any pending auto-save when closing
             DOMElements.editNotePane.classList.remove('is-open');
             state.currentNoteId = null;
             updateOverlayState();
@@ -2444,6 +2473,7 @@
                                  !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
                                  !DOMElements.joinSessionModal.classList.contains('hidden') ||
                                  !DOMElements.collaborationStartModal.classList.contains('hidden') ||
+                                 !DOMElements.saveCollabNotesModal.classList.contains('hidden') ||
                                  !DOMElements.screenShareModal.classList.contains('hidden');
 
             const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
@@ -2481,6 +2511,7 @@
             closeModal(DOMElements.joinSessionModal);
             closeModal(DOMElements.collaborationStartModal);
             closeModal(DOMElements.screenShareModal);
+            closeModal(DOMElements.saveCollabNotesModal);
             closeSidebarMobile();
         }
 
@@ -2573,16 +2604,18 @@
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayEl = document.createElement('button');
-                dayEl.className = 'calendar-day hover:bg-gray-700';
+                dayEl.className = 'calendar-day hover:bg-gray-700 p-2 rounded-full';
                 dayEl.innerText = day;
                 const dateStr = new Date(year, month, day).toISOString().split('T')[0];
                 const notesOnDay = state.notes.filter(n => n.updatedAt && n.updatedAt.startsWith(dateStr));
 
-                if (notesOnDay.length > 0) dayEl.classList.add('has-notes');
+                if (notesOnDay.length > 0) {
+                     dayEl.classList.add('bg-blue-500', 'text-white');
+                }
 
                 dayEl.addEventListener('click', () => {
-                    document.querySelectorAll('.calendar-day.selected').forEach(el => el.classList.remove('selected'));
-                    dayEl.classList.add('selected');
+                    document.querySelectorAll('.calendar-day.bg-blue-800').forEach(el => el.classList.remove('bg-blue-800'));
+                    dayEl.classList.add('bg-blue-800');
                     renderCalendarNotes(notesOnDay, notesList);
                 });
                 grid.appendChild(dayEl);
@@ -2748,7 +2781,7 @@
                 } else {
                     if (state.roomId) {
                         const conn = state.peer.connect(state.roomId, {
-                            metadata: { userName: state.settings.userName },
+                            metadata: { userName: state.settings.userName, userAvatar: state.settings.userAvatar },
                             reliable: true
                         });
                         setupConnection(conn);
@@ -2761,12 +2794,10 @@
                 setupConnection(conn);
             });
 
-            // Listen for incoming media calls (screen share)
             state.peer.on('call', call => {
-                call.answer(state.localScreenStream); // Answer with our own stream if we have one (for future audio/video chat)
-                state.activeCall = call; // Store the call object
+                call.answer(state.localScreenStream);
+                state.activeCall = call;
                 call.on('stream', remoteStream => {
-                    // Find the live share card and pipe the stream into it
                     const liveCard = document.getElementById(`live-share-${call.peer}`);
                     if (liveCard) {
                         const videoEl = liveCard.querySelector('video');
@@ -2784,7 +2815,6 @@
                 } else if (err.type === 'network') {
                     message = 'Network error. Please check your connection.';
                 } else if (err.type === 'disconnected') {
-                    // This can happen if the host leaves abruptly
                     leaveSession();
                 }
                 showNotification(message, 'error');
@@ -2796,7 +2826,7 @@
             state.isHost = true;
             initPeer();
             showView('collaboration');
-            DOMElements.mainContent.style.paddingBottom = '60px'; // Space for chat input
+            DOMElements.mainContent.style.paddingBottom = '60px';
             renderCollaborationNotesGrid();
         }
 
@@ -2813,8 +2843,42 @@
         }
 
         function leaveSession() {
+            if (state.collaborationNotes.length > 0) {
+                openModal(DOMElements.saveCollabNotesModal);
+            } else {
+                _finishLeaveSession();
+            }
+        }
+
+        async function handleSaveCollabNotes(shouldSave) {
+            closeModal(DOMElements.saveCollabNotesModal);
+            if (shouldSave) {
+                const hostInfo = state.peerInfo.get(state.roomId) || { name: 'Session' };
+                const collabTag = `Collab: ${hostInfo.name} (${new Date().toLocaleDateString()})`;
+                let newNotesCount = 0;
+
+                state.collaborationNotes.forEach(collabNote => {
+                    const existingNoteIndex = state.notes.findIndex(localNote => localNote.id === collabNote.id);
+                    if (existingNoteIndex === -1) {
+                        const newLocalNote = { ...collabNote, label: collabTag };
+                        state.notes.push(newLocalNote);
+                        newNotesCount++;
+                    }
+                });
+
+                if (newNotesCount > 0) {
+                    await saveData();
+                    showNotification(`Saved ${newNotesCount} new note(s) from the session.`, 'success');
+                } else {
+                    showNotification('No new notes to save from the session.', 'info');
+                }
+            }
+            _finishLeaveSession();
+        }
+
+        function _finishLeaveSession() {
             if (state.localScreenStream) {
-                stopScreenShare(true); // Stop sharing if we are the one sharing
+                stopScreenShare(true);
             }
             if (state.peer) { state.peer.destroy(); }
             state.peer = null;
@@ -2831,6 +2895,7 @@
             showNotification('You have left the session.', 'info');
         }
 
+
         function setupConnection(conn) {
             conn.on('open', () => {
                 console.log('Connection established with', conn.peer);
@@ -2838,26 +2903,18 @@
                 state.connections.set(conn.peer, conn);
 
                 if (state.isHost) {
-                    const existingPeerInfo = Object.fromEntries(state.peerInfo);
-                    state.peerInfo.set(conn.peer, { name: conn.metadata.userName, avatar: null }); // Set avatar to null initially
+                    const peerInfoPayload = { name: conn.metadata.userName, avatar: conn.metadata.userAvatar };
+                    state.peerInfo.set(conn.peer, peerInfoPayload);
                     renderSessionInfo();
                     
                     conn.send({
                         type: 'full_sync',
                         notes: state.collaborationNotes,
                         chatLog: state.chatLog,
-                        peerInfo: existingPeerInfo,
+                        peerInfo: Object.fromEntries(state.peerInfo),
                         hostName: state.settings.userName
                     });
-                } else {
-                    // This is a client connecting. After connection is open, send our info.
-                    conn.send({ 
-                        type: 'client_info', 
-                        info: { 
-                            name: state.settings.userName, 
-                            avatar: state.settings.userAvatar 
-                        } 
-                    });
+                    broadcastData({ type: 'peer_joined', peerId: conn.peer, info: peerInfoPayload });
                 }
                 showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
             });
@@ -2875,7 +2932,6 @@
                 state.peerInfo.delete(peerId);
                 if (state.isHost) { broadcastData({ type: 'peer_left', peerId }); }
                 renderSessionInfo();
-                // If the person who left was sharing their screen, remove their card
                 removeLiveShareCardFromGrid(peerId);
             });
 
@@ -2887,14 +2943,11 @@
         function handleHostAction(data, fromPeerId) {
             let broadcastPayload = null;
             switch(data.type) {
-                case 'client_info':
-                    state.peerInfo.set(fromPeerId, data.info);
-                    renderSessionInfo();
-                    broadcastPayload = { type: 'peer_joined', peerId: fromPeerId, info: data.info };
-                    break;
                 case 'request_add_note':
-                    state.collaborationNotes.push(data.note);
-                    broadcastPayload = { type: 'add_note', note: data.note };
+                    if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
+                        state.collaborationNotes.push(data.note);
+                        broadcastPayload = { type: 'add_note', note: data.note };
+                    }
                     break;
                 case 'request_update_note':
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
@@ -2908,15 +2961,17 @@
                     broadcastPayload = { type: 'delete_note', noteId: data.noteId };
                     break;
                 case 'chat_message':
+                    state.peerInfo.set(fromPeerId, data.senderInfo);
                     const chatMessage = { ...data, from: fromPeerId, timestamp: Date.now() };
-                    state.chatLog.push(chatMessage);
+                    if (!state.chatLog.some(msg => msg.id === chatMessage.id)) {
+                        state.chatLog.push(chatMessage);
+                    }
                     broadcastPayload = chatMessage;
                     break;
                 case 'typing_start':
                 case 'typing_stop':
                     broadcastPayload = { ...data, from: fromPeerId };
                     break;
-                // --- Screen Share Host Actions ---
                 case 'request_start_share':
                     const sharerInfo = state.peerInfo.get(fromPeerId);
                     if (sharerInfo) {
@@ -2931,16 +2986,7 @@
                 if (broadcastPayload.type.includes('note')) {
                      renderCollaborationNotesGrid();
                 }
-                broadcastData(broadcastPayload);
-                if (broadcastPayload.type === 'chat_message') {
-                    displayChatBubble(broadcastPayload);
-                    renderChatLog();
-                } else if (broadcastPayload.type === 'typing_start' || broadcastPayload.type === 'typing_stop') {
-                    // Host doesn't need to see its own typing indicators
-                } else {
-                    // Handle the host's own UI changes for screen sharing
-                    handleReceivedData(broadcastPayload, fromPeerId);
-                }
+                broadcastData(broadcastPayload, fromPeerId);
             }
         }
 
@@ -2959,12 +3005,14 @@
                     renderChatLog();
                     renderSessionInfo();
                     showView('collaboration');
-                    DOMElements.mainContent.style.paddingBottom = '60px'; // Space for chat input
+                    DOMElements.mainContent.style.paddingBottom = '60px';
                     showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                     break;
                 case 'add_note':
-                    state.collaborationNotes.push(data.note);
-                    renderCollaborationNotesGrid();
+                    if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
+                        state.collaborationNotes.push(data.note);
+                        renderCollaborationNotesGrid();
+                    }
                     break;
                 case 'update_note':
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
@@ -2982,14 +3030,17 @@
                 case 'peer_left':
                     state.peerInfo.delete(data.peerId);
                     renderSessionInfo();
-                    removeLiveShareCardFromGrid(data.peerId); // Remove their card if they leave
+                    removeLiveShareCardFromGrid(data.peerId);
                     break;
                 case 'chat_message':
-                    state.chatLog.push(data);
-                    displayChatBubble(data);
-                    renderChatLog();
-                    if (!state.isChatLogOpen) {
-                        DOMElements.fabChatLogBtn.classList.add('has-unread');
+                    state.peerInfo.set(data.from, data.senderInfo);
+                    if (!state.chatLog.some(msg => msg.id === data.id)) {
+                        state.chatLog.push(data);
+                        displayChatBubble(data);
+                        renderChatLog();
+                        if (!state.isChatLogOpen && data.from !== state.peer.id) {
+                            DOMElements.fabChatLogBtn.classList.add('has-unread');
+                        }
                     }
                     break;
                 case 'typing_start':
@@ -2998,13 +3049,11 @@
                 case 'typing_stop':
                     showTypingIndicator(data.from, false);
                     break;
-                // --- Screen Share Data Handling ---
                 case 'screen_share_started':
                     addLiveShareCardToGrid(data.peerId, data.info);
                     DOMElements.startShareBtn.disabled = true;
                     DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
                     
-                    // If I am the one who is starting the share, now I can call everyone.
                     if (data.peerId === state.peer.id && state.localScreenStream) {
                         for (const peerId of state.peerInfo.keys()) {
                             if (peerId !== state.peer.id) {
@@ -3016,23 +3065,25 @@
                     break;
                 case 'screen_share_ended':
                     removeLiveShareCardFromGrid(data.peerId);
-                    stopScreenShare(false); // Clean up client-side call state
+                    stopScreenShare(false);
                     DOMElements.startShareBtn.disabled = false;
                     DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
                     break;
             }
         }
-
-        function broadcastData(data) {
-            console.log('Broadcasting data:', data);
+        
+        // MODIFIED: Added excludePeerId to prevent echoing messages to the sender
+        function broadcastData(data, excludePeerId = null) {
+            console.log('Broadcasting data:', data, 'excluding', excludePeerId);
             for (const conn of state.connections.values()) {
-                if (conn && conn.open) { conn.send(data); }
+                if (conn && conn.open && conn.peer !== excludePeerId) {
+                     conn.send(data);
+                }
             }
         }
 
         function renderCollaborationNotesGrid() {
             if(DOMElements.collaborationNotesGrid) {
-                // Preserve any live share cards that might be present
                 const liveCards = DOMElements.collaborationNotesGrid.querySelectorAll('.live-share-card');
                 DOMElements.collaborationNotesGrid.innerHTML = '';
                 liveCards.forEach(card => DOMElements.collaborationNotesGrid.appendChild(card));
@@ -3081,37 +3132,59 @@
             hub.querySelector('#hub-leave-btn').addEventListener('click', leaveSession);
         }
 
+        // FINAL FIX: Senders now trigger their own UI updates for instant feedback.
         function sendChatMessage(message, inputElement) {
             const trimmedMessage = message.trim();
-            if (!trimmedMessage) return;
+            if (!trimmedMessage || !state.peer) return;
 
-            const payload = { type: 'chat_message', message: trimmedMessage };
+            const messageId = state.peer.id + '-' + Date.now();
+            const senderInfo = { name: state.settings.userName, avatar: state.settings.userAvatar };
+
+            const payload = { 
+                type: 'chat_message', 
+                id: messageId, 
+                message: trimmedMessage,
+                senderInfo: senderInfo
+            };
+            
+            const localMessage = { ...payload, from: state.peer.id, timestamp: Date.now() };
+
+            // Trigger local UI updates immediately for the sender
+            if (!state.chatLog.some(msg => msg.id === localMessage.id)) {
+                state.chatLog.push(localMessage);
+                renderChatLog();
+                displayChatBubble(localMessage);
+            }
 
             if (state.isHost) {
+                // Host processes and broadcasts to others
                 handleHostAction(payload, state.peer.id);
             } else {
+                // Client sends to host
                 const hostConn = state.connections.get(state.roomId);
                 if (hostConn && hostConn.open) {
                     hostConn.send(payload);
                 }
             }
+
             if (inputElement) {
                 inputElement.value = '';
             }
         }
 
-        function displayChatBubble({ from, message }) {
-            const senderInfo = state.peerInfo.get(from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
+
+        function displayChatBubble({ from, message, senderInfo }) {
+            const info = senderInfo || state.peerInfo.get(from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
 
             const container = document.createElement('div');
             container.className = 'floating-chat-bubble-container';
 
             const avatarImg = document.createElement('img');
-            avatarImg.src = senderInfo.avatar || 'https://www.niilow.com/logo.png';
+            avatarImg.src = info.avatar || 'https://www.niilow.com/logo.png';
             
             const bubble = document.createElement('div');
             bubble.className = 'chat-bubble';
-            bubble.innerHTML = `<strong>${senderInfo.name}</strong><span>${message}</span>`;
+            bubble.innerHTML = `<strong>${info.name}</strong><span>${message}</span>`;
             
             container.appendChild(avatarImg);
             container.appendChild(bubble);
@@ -3124,7 +3197,7 @@
         function renderChatLog() {
             DOMElements.chatLogMessages.innerHTML = '';
             state.chatLog.forEach(msg => {
-                const senderInfo = state.peerInfo.get(msg.from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
+                const senderInfo = msg.senderInfo || state.peerInfo.get(msg.from) || { name: 'Unknown', avatar: 'https://www.niilow.com/logo.png' };
                 const isSelf = msg.from === state.peer.id;
 
                 const line = document.createElement('div');
