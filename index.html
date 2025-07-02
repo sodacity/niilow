@@ -675,29 +675,22 @@
             <button id="close-welcome-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Get Started</button>
         </div>
     </div>
-
+    
+    <!-- MODIFIED: Collaboration Start Modal -->
     <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
-            <h2 class="text-2xl font-bold mb-6">Real-Time Collaboration</h2>
-            <div class="flex flex-col gap-4">
-                <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Host a New Session</button>
-                <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Join a Session</button>
+            <h2 class="text-2xl font-bold mb-4">Real-Time Collaboration</h2>
+            <p class="text-gray-400 mb-6">Enter a room name to create or join a session.</p>
+            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg" placeholder="e.g., ProjectPhoenix">
+            <div class="flex justify-center gap-4">
+                <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Create & Host</button>
+                <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Join</button>
             </div>
-             <button id="cancel-collaboration-start-btn" class="mt-6 text-gray-400 hover:text-white">Cancel</button>
+             <button id="cancel-collaboration-start-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
 
-    <div id="join-session-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">Join Collaboration Session</h2>
-            <p class="text-gray-400 mb-4">Enter the Room ID provided by the host.</p>
-            <input type="text" id="join-room-id-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="Room ID">
-            <div class="flex justify-end gap-4">
-                <button id="cancel-join-session-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="confirm-join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Join</button>
-            </div>
-        </div>
-    </div>
+    <!-- REMOVED: The old join-session-modal is no longer needed -->
 
     <div id="batch-delete-confirm-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
         <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
@@ -1163,14 +1156,12 @@
             chatInput: document.getElementById('chat-input'),
             sendChatBtn: document.getElementById('send-chat-btn'),
             startShareBtn: document.getElementById('start-share-btn'),
+            // MODIFIED: New collaboration modal elements
             collaborationStartModal: document.getElementById('collaboration-start-modal'),
+            customRoomIdInput: document.getElementById('custom-room-id-input'),
             hostSessionBtn: document.getElementById('host-session-btn'),
             joinSessionBtn: document.getElementById('join-session-btn'),
             cancelCollaborationStartBtn: document.getElementById('cancel-collaboration-start-btn'),
-            joinSessionModal: document.getElementById('join-session-modal'),
-            joinRoomIdInput: document.getElementById('join-room-id-input'),
-            confirmJoinSessionBtn: document.getElementById('confirm-join-session-btn'),
-            cancelJoinSessionBtn: document.getElementById('cancel-join-session-btn'),
             saveCollabNotesModal: document.getElementById('save-collab-notes-modal'),
             confirmSaveCollabBtn: document.getElementById('confirm-save-collab-btn'),
             declineSaveCollabBtn: document.getElementById('decline-save-collab-btn'),
@@ -1417,7 +1408,7 @@
             DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
             const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.joinSessionModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal].forEach(el => {
+            [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal].forEach(el => {
                 if (el) {
                     const inner = el.firstElementChild;
                     if (inner && (el.id.includes('-modal'))) {
@@ -1643,10 +1634,9 @@
             const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
 
             if (collabRoomId) {
+                // MODIFIED: Auto-join from URL
                 showNotification(`Attempting to join collaboration room: ${collabRoomId}`, 'info');
-                state.isHost = false;
-                state.roomId = collabRoomId;
-                initPeer();
+                joinSession(collabRoomId); // Pass the room ID to the join function
                 history.replaceState({}, document.title, window.location.pathname);
             } else if (dataFromUrl) {
                 let password = currentUrl.searchParams.get('sesh-ID');
@@ -1746,7 +1736,7 @@
             DOMElements.saveNewNoteBtn.addEventListener('click', handleSaveNewNote);
 
             DOMElements.cancelEditNoteBtn.addEventListener('click', closeEditPane);
-            DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit());
+            DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit(true)); // MODIFIED: Save silently on button click now
             DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
             DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
 
@@ -1960,16 +1950,11 @@
                 });
             });
 
-            // Collaboration Event Listeners
+            // MODIFIED: Collaboration Event Listeners for new modal
             DOMElements.hostSessionBtn.addEventListener('click', hostSession);
-            DOMElements.joinSessionBtn.addEventListener('click', () => {
-                closeModal(DOMElements.collaborationStartModal);
-                openModal(DOMElements.joinSessionModal);
-            });
+            DOMElements.joinSessionBtn.addEventListener('click', joinSession);
             DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
 
-            DOMElements.confirmJoinSessionBtn.addEventListener('click', joinSession);
-            DOMElements.cancelJoinSessionBtn.addEventListener('click', () => closeModal(DOMElements.joinSessionModal));
             DOMElements.sendChatBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput));
             DOMElements.chatInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput);
@@ -2584,7 +2569,6 @@
                                  !DOMElements.collabQrCodeModal.classList.contains('hidden') ||
                                  !DOMElements.confirmClearModal.classList.contains('hidden') ||
                                  !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
-                                 !DOMElements.joinSessionModal.classList.contains('hidden') ||
                                  !DOMElements.collaborationStartModal.classList.contains('hidden') ||
                                  !DOMElements.saveCollabNotesModal.classList.contains('hidden') ||
                                  !DOMElements.videoWallModal.classList.contains('hidden') ||
@@ -2622,7 +2606,6 @@
             closeModal(DOMElements.qrCodeModal);
             closeModal(DOMElements.collabQrCodeModal);
             closeModal(DOMElements.batchDeleteConfirmModal);
-            closeModal(DOMElements.joinSessionModal);
             closeModal(DOMElements.collaborationStartModal);
             closeModal(DOMElements.screenShareModal);
             closeModal(DOMElements.saveCollabNotesModal);
@@ -2908,7 +2891,7 @@
             }
         }
 
-        // --- Collaboration Logic (WebRTC with PeerJS) ---
+        // --- MODIFIED: Collaboration Logic (WebRTC with PeerJS) ---
 
         function generateCollabQrCode() {
             if (!state.roomId) return;
@@ -2932,24 +2915,30 @@
 
         function initPeer() {
             if (state.peer) { state.peer.destroy(); }
+            
+            // MODIFIED: Use state.roomId for the peer ID if it exists (for both host and client)
+            const peerId = state.isHost ? state.roomId : undefined; 
 
-            state.peer = new Peer(state.isHost ? undefined : `client-${Date.now()}`, {
+            state.peer = new Peer(peerId, {
                 host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 2
             });
 
             state.peer.on('open', (id) => {
                 console.log('PeerJS open. My ID is:', id);
-                const myPeerId = state.isHost ? id : state.peer.id;
+                // The actual ID used by the peer connection
+                const myPeerId = id; 
                 state.peerInfo.set(myPeerId, { name: state.settings.userName, avatar: state.settings.userAvatar });
 
                 if (state.isHost) {
+                    // Host's ID is the room ID.
                     state.roomId = id;
                     renderSessionInfo();
-                    showNotification('Session hosted! Share the Room ID.', 'success');
+                    showNotification(`Session "${id}" is live! Share the name.`, 'success');
                 } else {
+                    // Client connects to the room ID from the state.
                     if (state.roomId) {
                         const conn = state.peer.connect(state.roomId, {
-                            metadata: { userName: state.settings.userName }, // AVATAR REMOVED FROM INITIAL CONNECT
+                            metadata: { userName: state.settings.userName },
                             reliable: true
                         });
                         setupConnection(conn);
@@ -2978,8 +2967,12 @@
             state.peer.on('error', (err) => {
                 console.error('PeerJS error:', err);
                 let message = `Connection error: ${err.type}`;
-                if (err.type === 'peer-unavailable') {
-                    message = `Could not find the host. Please check the Room ID.`;
+                // MODIFIED: Specific error for unavailable ID
+                if (err.type === 'unavailable-id') {
+                    message = `Room name "${state.roomId}" is already taken. Please try another one.`;
+                    closeModal(DOMElements.collaborationStartModal); // Close the modal on failure
+                } else if (err.type === 'peer-unavailable') {
+                    message = `Could not find room "${state.roomId}". Please check the name.`;
                 } else if (err.type === 'network') {
                     message = 'Network error. Please check your connection.';
                 } else if (err.type === 'disconnected') {
@@ -2988,10 +2981,17 @@
                 showNotification(message, 'error');
             });
         }
-
+        
+        // MODIFIED: New hostSession function
         function hostSession() {
+            const roomId = DOMElements.customRoomIdInput.value.trim();
+            if (!roomId) {
+                showNotification("Please enter a room name to host.", "error");
+                return;
+            }
             closeModal(DOMElements.collaborationStartModal);
             state.isHost = true;
+            state.roomId = roomId; // Set the custom room ID
             initPeer();
             showView('collaboration');
             DOMElements.mainContent.style.paddingBottom = '60px';
@@ -2999,15 +2999,16 @@
             playSound('https://www.niilow.com/join.mp3');
         }
 
-        function joinSession() {
-            const roomId = DOMElements.joinRoomIdInput.value.trim();
+        // MODIFIED: New joinSession function
+        function joinSession(roomIdFromUrl = null) {
+            const roomId = roomIdFromUrl || DOMElements.customRoomIdInput.value.trim();
             if (!roomId) {
-                showNotification("Please enter a Room ID.", "error");
+                showNotification("Please enter a room name to join.", "error");
                 return;
             };
-            closeModal(DOMElements.joinSessionModal);
+            closeModal(DOMElements.collaborationStartModal);
             state.isHost = false;
-            state.roomId = roomId;
+            state.roomId = roomId; // Set the custom room ID
             initPeer();
         }
 
