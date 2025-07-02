@@ -1224,7 +1224,7 @@
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
-            footerText: 'Niilow 1.5', modalOpacity: 0.95, userName: 'User',
+            footerText: 'Niilow 1.6', modalOpacity: 0.95, userName: 'User',
             sessionPassword: '',
             userAvatar: null,
             videoWall: '', // New setting for video wall
@@ -1310,8 +1310,13 @@
             }
             renderAll();
         }
+        
+        // --- Platform & Sound Helpers ---
+        function isUnsupportedDevice() {
+            // WebRTC support on iOS is notoriously buggy and limited, especially for P2P data channels.
+            return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
 
-        // --- Sound Player ---
         function playSound(soundUrl) {
             try {
                 const audio = new Audio(soundUrl);
@@ -1790,11 +1795,22 @@
                 renderNotesGrid();
                 closeSidebarMobile();
             });
-            DOMElements.collaborationLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                openModal(DOMElements.collaborationStartModal);
-                closeSidebarMobile();
-            });
+            
+            // --- iOS/Unsupported Device Check for Collaboration ---
+            if (isUnsupportedDevice()) {
+                DOMElements.collaborationLink.style.opacity = '0.5';
+                DOMElements.collaborationLink.style.cursor = 'not-allowed';
+                DOMElements.collaborationLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showNotification('Collaboration is not supported on this device.', 'error');
+                });
+            } else {
+                DOMElements.collaborationLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openModal(DOMElements.collaborationStartModal);
+                    closeSidebarMobile();
+                });
+            }
 
 
             DOMElements.archiveToggle.addEventListener('change', e => {
