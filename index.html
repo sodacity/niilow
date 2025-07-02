@@ -1163,7 +1163,7 @@
             fabColor: '#000000',
             noteCardColor: '#000000', noteCardOpacity: 0.7, modalBgColor: '#000000',
             textInputBgColor: '#ffffff', textInputFontColor: '#000000',
-            footerText: 'Niilow 1.3', modalOpacity: 0.95, userName: 'User',
+            footerText: 'Niilow 1.4', modalOpacity: 0.95, userName: 'User',
             sessionPassword: '',
             userAvatar: null,
         };
@@ -1910,6 +1910,11 @@
             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
 
             if (inCollabView) {
+                // Optimistically update the guest's UI
+                if (!state.isHost) {
+                    state.collaborationNotes.push(newNote);
+                    renderCollaborationNotesGrid();
+                }
                 const action = { type: 'request_add_note', note: newNote };
                  if (state.isHost) {
                     handleHostAction(action, state.peer.id);
@@ -1947,6 +1952,11 @@
             updatedNote.updatedAt = new Date().toISOString();
 
             if (inCollabView) {
+                // Optimistically update the guest's UI
+                if (!state.isHost) {
+                    state.collaborationNotes[noteIndex] = updatedNote;
+                    renderCollaborationNotesGrid();
+                }
                  const action = { type: 'request_update_note', note: updatedNote };
                  if (state.isHost) {
                     handleHostAction(action, state.peer.id);
@@ -1974,6 +1984,10 @@
              const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
 
              if (inCollabView) {
+                if (!state.isHost) {
+                    state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== state.currentNoteId);
+                    renderCollaborationNotesGrid();
+                }
                 const action = { type: 'request_delete_note', noteId: state.currentNoteId };
                 if (state.isHost) {
                     handleHostAction(action, state.peer.id);
@@ -2946,18 +2960,21 @@
                 case 'request_add_note':
                     if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                         state.collaborationNotes.push(data.note);
-                        broadcastPayload = { type: 'add_note', note: data.note };
+                        renderCollaborationNotesGrid(); // Host UI update
                     }
+                    broadcastPayload = { type: 'add_note', note: data.note };
                     break;
                 case 'request_update_note':
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
                     if (noteIndex > -1) {
                         state.collaborationNotes[noteIndex] = data.note;
-                        broadcastPayload = { type: 'update_note', note: data.note };
+                        renderCollaborationNotesGrid(); // Host UI update
                     }
+                    broadcastPayload = { type: 'update_note', note: data.note };
                     break;
                 case 'request_delete_note':
                     state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
+                    renderCollaborationNotesGrid(); // Host UI update
                     broadcastPayload = { type: 'delete_note', noteId: data.noteId };
                     break;
                 case 'chat_message':
@@ -2983,10 +3000,9 @@
                     break;
             }
             if (broadcastPayload) {
-                if (broadcastPayload.type.includes('note')) {
-                     renderCollaborationNotesGrid();
-                }
-                broadcastData(broadcastPayload, fromPeerId);
+                // FINAL FIX: No longer excluding the original sender for note updates.
+                // The client-side logic is now smart enough to handle it.
+                broadcastData(broadcastPayload);
             }
         }
 
@@ -3011,8 +3027,8 @@
                 case 'add_note':
                     if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                         state.collaborationNotes.push(data.note);
-                        renderCollaborationNotesGrid();
                     }
+                    renderCollaborationNotesGrid();
                     break;
                 case 'update_note':
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
@@ -3033,12 +3049,16 @@
                     removeLiveShareCardFromGrid(data.peerId);
                     break;
                 case 'chat_message':
-                    state.peerInfo.set(data.from, data.senderInfo);
-                    if (!state.chatLog.some(msg => msg.id === data.id)) {
-                        state.chatLog.push(data);
+                    // This logic now primarily handles messages from OTHERS.
+                    // The sender's own message is handled optimistically in sendChatMessage.
+                    if (data.from !== state.peer.id) {
+                        state.peerInfo.set(data.from, data.senderInfo);
+                        if (!state.chatLog.some(msg => msg.id === data.id)) {
+                            state.chatLog.push(data);
+                            renderChatLog();
+                        }
                         displayChatBubble(data);
-                        renderChatLog();
-                        if (!state.isChatLogOpen && data.from !== state.peer.id) {
+                        if (!state.isChatLogOpen) {
                             DOMElements.fabChatLogBtn.classList.add('has-unread');
                         }
                     }
@@ -3072,11 +3092,10 @@
             }
         }
         
-        // MODIFIED: Added excludePeerId to prevent echoing messages to the sender
-        function broadcastData(data, excludePeerId = null) {
-            console.log('Broadcasting data:', data, 'excluding', excludePeerId);
+        function broadcastData(data) {
+            console.log('Broadcasting data to all:', data);
             for (const conn of state.connections.values()) {
-                if (conn && conn.open && conn.peer !== excludePeerId) {
+                if (conn && conn.open) {
                      conn.send(data);
                 }
             }
@@ -3132,7 +3151,6 @@
             hub.querySelector('#hub-leave-btn').addEventListener('click', leaveSession);
         }
 
-        // FINAL FIX: Senders now trigger their own UI updates for instant feedback.
         function sendChatMessage(message, inputElement) {
             const trimmedMessage = message.trim();
             if (!trimmedMessage || !state.peer) return;
@@ -3149,7 +3167,6 @@
             
             const localMessage = { ...payload, from: state.peer.id, timestamp: Date.now() };
 
-            // Trigger local UI updates immediately for the sender
             if (!state.chatLog.some(msg => msg.id === localMessage.id)) {
                 state.chatLog.push(localMessage);
                 renderChatLog();
@@ -3157,10 +3174,8 @@
             }
 
             if (state.isHost) {
-                // Host processes and broadcasts to others
                 handleHostAction(payload, state.peer.id);
             } else {
-                // Client sends to host
                 const hostConn = state.connections.get(state.roomId);
                 if (hostConn && hostConn.open) {
                     hostConn.send(payload);
