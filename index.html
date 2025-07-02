@@ -676,12 +676,11 @@
         </div>
     </div>
     
-    <!-- MODIFIED: Collaboration Start Modal -->
     <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
             <h2 class="text-2xl font-bold mb-4">Real-Time Collaboration</h2>
             <p class="text-gray-400 mb-6">Enter a room name to create or join a session.</p>
-            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg" placeholder="e.g., Niilow">
+            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg" placeholder="e.g., ProjectPhoenix">
             <div class="flex justify-center gap-4">
                 <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Create & Host</button>
                 <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Join</button>
@@ -689,8 +688,6 @@
              <button id="cancel-collaboration-start-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
-
-    <!-- REMOVED: The old join-session-modal is no longer needed -->
 
     <div id="batch-delete-confirm-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
         <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
@@ -1156,7 +1153,6 @@
             chatInput: document.getElementById('chat-input'),
             sendChatBtn: document.getElementById('send-chat-btn'),
             startShareBtn: document.getElementById('start-share-btn'),
-            // MODIFIED: New collaboration modal elements
             collaborationStartModal: document.getElementById('collaboration-start-modal'),
             customRoomIdInput: document.getElementById('custom-room-id-input'),
             hostSessionBtn: document.getElementById('host-session-btn'),
@@ -1634,9 +1630,8 @@
             const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
 
             if (collabRoomId) {
-                // MODIFIED: Auto-join from URL
                 showNotification(`Attempting to join collaboration room: ${collabRoomId}`, 'info');
-                joinSession(collabRoomId); // Pass the room ID to the join function
+                joinSession(collabRoomId); 
                 history.replaceState({}, document.title, window.location.pathname);
             } else if (dataFromUrl) {
                 let password = currentUrl.searchParams.get('sesh-ID');
@@ -1654,7 +1649,7 @@
 
 
             applySettings();
-            applyVideoWall(); // Apply video wall on startup
+            applyVideoWall(); 
             renderAll();
             addEventListeners();
             setupToolbar(DOMElements.newNoteToolbar, DOMElements.newNoteEditor);
@@ -1736,7 +1731,7 @@
             DOMElements.saveNewNoteBtn.addEventListener('click', handleSaveNewNote);
 
             DOMElements.cancelEditNoteBtn.addEventListener('click', closeEditPane);
-            DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit(true)); // MODIFIED: Save silently on button click now
+            DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit(false)); 
             DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
             DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
 
@@ -1786,7 +1781,6 @@
                 closeSidebarMobile();
             });
             
-            // --- iOS/Unsupported Device Check for Collaboration ---
             if (isUnsupportedDevice()) {
                 DOMElements.collaborationLink.style.opacity = '0.5';
                 DOMElements.collaborationLink.style.cursor = 'not-allowed';
@@ -1820,7 +1814,6 @@
             DOMElements.addVideoBtn.addEventListener('click', handleAddVideo);
             DOMElements.cancelVideoHelperBtn.addEventListener('click', () => closeModal(DOMElements.videoHelperModal));
 
-            // Video Wall Listeners
             DOMElements.videoWallBtn.addEventListener('click', () => openModal(DOMElements.videoWallModal));
             DOMElements.cancelVideoWallBtn.addEventListener('click', () => closeModal(DOMElements.videoWallModal));
             DOMElements.saveVideoWallBtn.addEventListener('click', handleSetVideoWall);
@@ -1950,16 +1943,15 @@
                 });
             });
 
-            // MODIFIED: Collaboration Event Listeners for new modal
             DOMElements.hostSessionBtn.addEventListener('click', hostSession);
-            DOMElements.joinSessionBtn.addEventListener('click', joinSession);
+            DOMElements.joinSessionBtn.addEventListener('click', () => joinSession());
             DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
 
             DOMElements.sendChatBtn.addEventListener('click', () => sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput));
             DOMElements.chatInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') sendChatMessage(DOMElements.chatInput.value, DOMElements.chatInput);
             });
-            // Chat Log Pane & Hub Listeners
+            
             DOMElements.fabChatLogBtn.addEventListener('click', () => {
                 if(DOMElements.collaborationView.classList.contains('hidden')){
                     showView('collaboration');
@@ -1971,11 +1963,10 @@
             DOMElements.chatLogInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput);
             });
-            // Screen Share Listeners
+            
             DOMElements.startShareBtn.addEventListener('click', startScreenShare);
             DOMElements.closeShareModalBtn.addEventListener('click', () => stopScreenShare(false));
 
-            // NEW: Listeners for the save collab notes modal
             DOMElements.confirmSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(true));
             DOMElements.declineSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(false));
         }
@@ -1991,21 +1982,15 @@
             const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
 
             if (inCollabView) {
-                // Optimistically update the guest's UI
-                if (!state.isHost) {
-                    state.collaborationNotes.push(newNote);
-                    renderCollaborationNotesGrid();
-                }
                 const action = { type: 'request_add_note', note: newNote };
-                 if (state.isHost) {
+                const hostConn = state.isHost ? null : state.connections.get(state.roomId);
+                
+                if (state.isHost) {
                     handleHostAction(action, state.peer.id);
+                } else if (hostConn && hostConn.open) {
+                    hostConn.send(action);
                 } else {
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send(action);
-                    } else {
-                        showNotification('Cannot add note. Not connected to host.', 'error');
-                    }
+                    showNotification('Cannot add note. Not connected to host.', 'error');
                 }
             } else {
                 state.notes.push(newNote);
@@ -2033,21 +2018,15 @@
             updatedNote.updatedAt = new Date().toISOString();
 
             if (inCollabView) {
-                // Optimistically update the guest's UI
-                if (!state.isHost) {
-                    state.collaborationNotes[noteIndex] = updatedNote;
-                    renderCollaborationNotesGrid();
-                }
                  const action = { type: 'request_update_note', note: updatedNote };
+                 const hostConn = state.isHost ? null : state.connections.get(state.roomId);
+
                  if (state.isHost) {
                     handleHostAction(action, state.peer.id);
+                 } else if (hostConn && hostConn.open) {
+                    hostConn.send(action);
                  } else {
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send(action);
-                    } else {
-                        if (!silent) showNotification('Cannot send edit. Not connected to host.', 'error');
-                    }
+                    if (!silent) showNotification('Cannot send edit. Not connected to host.', 'error');
                  }
             } else {
                 state.notes[noteIndex] = updatedNote;
@@ -2065,20 +2044,15 @@
              const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
 
              if (inCollabView) {
-                if (!state.isHost) {
-                    state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== state.currentNoteId);
-                    renderCollaborationNotesGrid();
-                }
                 const action = { type: 'request_delete_note', noteId: state.currentNoteId };
+                const hostConn = state.isHost ? null : state.connections.get(state.roomId);
+
                 if (state.isHost) {
                     handleHostAction(action, state.peer.id);
+                } else if (hostConn && hostConn.open) {
+                    hostConn.send(action);
                 } else {
-                    const hostConn = state.connections.get(state.roomId);
-                     if (hostConn && hostConn.open) {
-                        hostConn.send(action);
-                    } else {
-                        showNotification('Cannot send delete request. Not connected to host.', 'error');
-                    }
+                    showNotification('Cannot send delete request. Not connected to host.', 'error');
                 }
              } else {
                 state.notes = state.notes.filter(note => note.id !== state.currentNoteId);
@@ -2463,7 +2437,7 @@
                  renderDashboard();
             }
             if (key === 'videoWall' && state.isHost) {
-                broadcastData({ type: 'video_wall_update', url: value });
+                broadcastToAllPeers({ type: 'video_wall_update', url: value });
             }
         }
 
@@ -2517,7 +2491,7 @@
         }
 
         function closeEditPane() {
-            clearTimeout(autoSaveTimeout); // Stop any pending auto-save when closing
+            clearTimeout(autoSaveTimeout); 
             DOMElements.editNotePane.classList.remove('is-open');
             state.currentNoteId = null;
             updateOverlayState();
@@ -2586,7 +2560,7 @@
         }
 
         function closeSidebarMobile(){
-             if (window.innerWidth < 768) { // md breakpoint
+             if (window.innerWidth < 768) { 
                 DOMElements.sidebar.classList.add('-translate-x-full');
                 updateOverlayState();
             }
@@ -2865,7 +2839,6 @@
             if (!url) return;
 
             let videoElement;
-            // This is the fix for the YouTube credentials issue
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
                 const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/);
                 const videoId = videoIdMatch ? videoIdMatch[1] : null;
@@ -2891,7 +2864,7 @@
             }
         }
 
-        // --- MODIFIED: Collaboration Logic (WebRTC with PeerJS) ---
+        // --- Collaboration Logic (WebRTC with PeerJS) ---
 
         function generateCollabQrCode() {
             if (!state.roomId) return;
@@ -2916,7 +2889,6 @@
         function initPeer() {
             if (state.peer) { state.peer.destroy(); }
             
-            // MODIFIED: Use state.roomId for the peer ID if it exists (for both host and client)
             const peerId = state.isHost ? state.roomId : undefined; 
 
             state.peer = new Peer(peerId, {
@@ -2925,20 +2897,17 @@
 
             state.peer.on('open', (id) => {
                 console.log('PeerJS open. My ID is:', id);
-                // The actual ID used by the peer connection
                 const myPeerId = id; 
                 state.peerInfo.set(myPeerId, { name: state.settings.userName, avatar: state.settings.userAvatar });
 
                 if (state.isHost) {
-                    // Host's ID is the room ID.
                     state.roomId = id;
                     renderSessionInfo();
                     showNotification(`Session "${id}" is live! Share the name.`, 'success');
                 } else {
-                    // Client connects to the room ID from the state.
                     if (state.roomId) {
                         const conn = state.peer.connect(state.roomId, {
-                            metadata: { userName: state.settings.userName },
+                            metadata: { userName: state.settings.userName, peerId: myPeerId },
                             reliable: true
                         });
                         setupConnection(conn);
@@ -2967,10 +2936,9 @@
             state.peer.on('error', (err) => {
                 console.error('PeerJS error:', err);
                 let message = `Connection error: ${err.type}`;
-                // MODIFIED: Specific error for unavailable ID
                 if (err.type === 'unavailable-id') {
                     message = `Room name "${state.roomId}" is already taken. Please try another one.`;
-                    closeModal(DOMElements.collaborationStartModal); // Close the modal on failure
+                    closeModal(DOMElements.collaborationStartModal); 
                 } else if (err.type === 'peer-unavailable') {
                     message = `Could not find room "${state.roomId}". Please check the name.`;
                 } else if (err.type === 'network') {
@@ -2982,7 +2950,6 @@
             });
         }
         
-        // MODIFIED: New hostSession function
         function hostSession() {
             const roomId = DOMElements.customRoomIdInput.value.trim();
             if (!roomId) {
@@ -2991,7 +2958,7 @@
             }
             closeModal(DOMElements.collaborationStartModal);
             state.isHost = true;
-            state.roomId = roomId; // Set the custom room ID
+            state.roomId = roomId; 
             initPeer();
             showView('collaboration');
             DOMElements.mainContent.style.paddingBottom = '60px';
@@ -2999,7 +2966,6 @@
             playSound('https://www.niilow.com/join.mp3');
         }
 
-        // MODIFIED: New joinSession function
         function joinSession(roomIdFromUrl = null) {
             const roomId = roomIdFromUrl || DOMElements.customRoomIdInput.value.trim();
             if (!roomId) {
@@ -3008,7 +2974,7 @@
             };
             closeModal(DOMElements.collaborationStartModal);
             state.isHost = false;
-            state.roomId = roomId; // Set the custom room ID
+            state.roomId = roomId; 
             initPeer();
         }
 
@@ -3066,36 +3032,37 @@
             playSound('https://www.niilow.com/dismiss.mp3');
         }
 
-
+        // --- MESH NETWORK IMPLEMENTATION ---
         function setupConnection(conn) {
             conn.on('open', () => {
-                console.log('Connection established with', conn.peer);
+                const peerId = conn.peer;
+                console.log('Connection established with', peerId);
                 conn.reliable = true;
-                state.connections.set(conn.peer, conn);
+                state.connections.set(peerId, conn);
 
                 if (state.isHost) {
-                    const peerInfoPayload = { name: conn.metadata.userName, avatar: null }; // Start with null avatar
-                    state.peerInfo.set(conn.peer, peerInfoPayload);
-                    renderSessionInfo();
-
+                    // HOST: A new peer has connected to the host.
+                    const newPeerId = conn.metadata.peerId;
+                    const newPeerInfo = { name: conn.metadata.userName, avatar: null };
+                    state.peerInfo.set(newPeerId, newPeerInfo);
+                    
+                    // 1. Send the full sync to the *new* peer, including a list of everyone else.
+                    const otherPeerIds = Array.from(state.peerInfo.keys()).filter(id => id !== newPeerId && id !== state.peer.id);
                     conn.send({
                         type: 'full_sync',
                         notes: state.collaborationNotes,
                         chatLog: state.chatLog,
                         peerInfo: Object.fromEntries(state.peerInfo),
+                        otherPeerIds: otherPeerIds, // Send list of other peers to connect to
                         hostName: state.settings.userName,
-                        videoWall: state.settings.videoWall // Sync video wall on connect
+                        videoWall: state.settings.videoWall
                     });
-                    broadcastData({ type: 'peer_joined', peerId: conn.peer, info: peerInfoPayload });
-                } else {
-                    // GUEST: Send avatar info AFTER connecting
-                    conn.send({
-                        type: 'update_peer_info',
-                        payload: {
-                            avatar: state.settings.userAvatar
-                        }
-                    });
-                }
+
+                    // 2. Announce the new peer to all *other* existing peers.
+                    broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
+                    
+                    renderSessionInfo();
+                } 
                 showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
             });
 
@@ -3110,7 +3077,10 @@
                 showNotification(`${peerInfo.name} has left the session.`, 'error');
                 state.connections.delete(peerId);
                 state.peerInfo.delete(peerId);
-                if (state.isHost) { broadcastData({ type: 'peer_left', peerId }); }
+                
+                // Announce the departure to all remaining peers
+                broadcastToAllPeers({ type: 'peer_left', peerId });
+                
                 renderSessionInfo();
                 removeLiveShareCardFromGrid(peerId);
                 playSound('https://www.niilow.com/dismiss.mp3');
@@ -3122,12 +3092,13 @@
         }
 
         function handleHostAction(data, fromPeerId) {
+            // This function is now ONLY for note-related actions (the "arbiter" role)
             let broadcastPayload = null;
             switch(data.type) {
                 case 'request_add_note':
                     if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                         state.collaborationNotes.push(data.note);
-                        renderCollaborationNotesGrid(); // Host UI update
+                        renderCollaborationNotesGrid();
                     }
                     broadcastPayload = { type: 'add_note', note: data.note };
                     break;
@@ -3135,57 +3106,31 @@
                     const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
                     if (noteIndex > -1) {
                         state.collaborationNotes[noteIndex] = data.note;
-                        renderCollaborationNotesGrid(); // Host UI update
+                        renderCollaborationNotesGrid();
                     }
                     broadcastPayload = { type: 'update_note', note: data.note };
                     break;
                 case 'request_delete_note':
                     state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
-                    renderCollaborationNotesGrid(); // Host UI update
+                    renderCollaborationNotesGrid();
                     broadcastPayload = { type: 'delete_note', noteId: data.noteId };
-                    break;
-                case 'update_peer_info': // HOST receives avatar update
-                    const currentInfo = state.peerInfo.get(fromPeerId) || { name: 'Unknown' };
-                    const updatedInfo = { ...currentInfo, ...data.payload };
-                    state.peerInfo.set(fromPeerId, updatedInfo);
-                    renderSessionInfo();
-                    broadcastPayload = { type: 'peer_info_changed', peerId: fromPeerId, info: updatedInfo };
-                    break;
-                case 'chat_message':
-                    state.peerInfo.set(fromPeerId, data.senderInfo);
-                    const chatMessage = { ...data, from: fromPeerId, timestamp: Date.now() };
-                    if (!state.chatLog.some(msg => msg.id === chatMessage.id)) {
-                        state.chatLog.push(chatMessage);
-                    }
-                    broadcastPayload = chatMessage;
-                    break;
-                case 'typing_start':
-                case 'typing_stop':
-                    broadcastPayload = { ...data, from: fromPeerId };
-                    break;
-                case 'request_start_share':
-                    const sharerInfo = state.peerInfo.get(fromPeerId);
-                    if (sharerInfo) {
-                        broadcastPayload = { type: 'screen_share_started', peerId: fromPeerId, info: sharerInfo };
-                    }
-                    break;
-                case 'request_stop_share':
-                    broadcastPayload = { type: 'screen_share_ended', peerId: fromPeerId };
                     break;
             }
             if (broadcastPayload) {
-                broadcastData(broadcastPayload);
+                // Host broadcasts the OFFICIAL state change to all peers.
+                broadcastToAllPeers(broadcastPayload);
             }
         }
 
         function handleReceivedData(data, fromPeerId) {
-            if (state.isHost && (data.type.startsWith('request_') || data.type === 'update_peer_info')) {
+            // Note actions are now only handled if they come from the host (the arbiter)
+            if (state.isHost && data.type.startsWith('request_')) {
                 handleHostAction(data, fromPeerId);
                 return;
             }
 
             switch(data.type) {
-                case 'full_sync':
+                case 'full_sync': // CLIENT receives this from HOST on initial connect
                     state.collaborationNotes = data.notes;
                     state.chatLog = data.chatLog;
                     state.peerInfo = new Map(Object.entries(data.peerInfo));
@@ -3200,42 +3145,60 @@
                     DOMElements.mainContent.style.paddingBottom = '60px';
                     showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                     playSound('https://www.niilow.com/join.mp3');
+
+                    // CLIENT: Connect to all other peers the host told you about
+                    data.otherPeerIds.forEach(peerId => {
+                        if (!state.connections.has(peerId) && peerId !== state.peer.id) {
+                            console.log(`Client connecting to existing peer: ${peerId}`);
+                            const conn = state.peer.connect(peerId, { 
+                                metadata: { userName: state.settings.userName, peerId: state.peer.id },
+                                reliable: true 
+                            });
+                            setupConnection(conn);
+                        }
+                    });
+                    break;
+                case 'new_peer_announcement': // ALL PEERS receive this when someone new joins
+                    if (!state.connections.has(data.peerId) && data.peerId !== state.peer.id) {
+                        console.log(`Connecting to new peer from announcement: ${data.peerId}`);
+                        const conn = state.peer.connect(data.peerId, { 
+                            metadata: { userName: state.settings.userName, peerId: state.peer.id },
+                            reliable: true 
+                        });
+                        setupConnection(conn);
+                    }
+                    state.peerInfo.set(data.peerId, data.info);
+                    renderSessionInfo();
                     break;
                 case 'add_note':
-                    if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
+                    if (fromPeerId === state.roomId && !state.collaborationNotes.some(n => n.id === data.note.id)) {
                         state.collaborationNotes.push(data.note);
+                        renderCollaborationNotesGrid();
                     }
-                    renderCollaborationNotesGrid();
                     break;
                 case 'update_note':
-                    const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
-                    if (noteIndex > -1) { state.collaborationNotes[noteIndex] = data.note; }
-                    renderCollaborationNotesGrid();
+                    if (fromPeerId === state.roomId) {
+                        const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
+                        if (noteIndex > -1) { state.collaborationNotes[noteIndex] = data.note; }
+                        renderCollaborationNotesGrid();
+                    }
                     break;
                 case 'delete_note':
-                    state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
-                    renderCollaborationNotesGrid();
-                    break;
-                case 'peer_joined':
-                    state.peerInfo.set(data.peerId, data.info);
-                    renderSessionInfo();
-                    break;
-                case 'peer_info_changed':
-                    state.peerInfo.set(data.peerId, data.info);
-                    renderSessionInfo();
+                    if (fromPeerId === state.roomId) {
+                        state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
+                        renderCollaborationNotesGrid();
+                    }
                     break;
                 case 'peer_left':
+                    state.connections.delete(data.peerId);
                     state.peerInfo.delete(data.peerId);
                     renderSessionInfo();
                     removeLiveShareCardFromGrid(data.peerId);
                     break;
-                case 'chat_message':
-                    if (data.from !== state.peer.id) {
-                        state.peerInfo.set(data.from, data.senderInfo);
-                        if (!state.chatLog.some(msg => msg.id === data.id)) {
-                            state.chatLog.push(data);
-                            renderChatLog();
-                        }
+                case 'chat_message': // CHAT is now P2P, no host check needed
+                    if (!state.chatLog.some(msg => msg.id === data.id)) {
+                        state.chatLog.push(data);
+                        renderChatLog();
                         displayChatBubble(data);
                         if (!state.isChatLogOpen) {
                             DOMElements.fabChatLogBtn.classList.add('has-unread');
@@ -3243,21 +3206,14 @@
                         playSound('https://www.niilow.com/chat.mp3');
                     }
                     break;
-                case 'typing_start':
-                    showTypingIndicator(data.from, true);
-                    break;
-                case 'typing_stop':
-                    showTypingIndicator(data.from, false);
-                    break;
+                // Screen share and video wall logic remains largely the same, broadcast to all
                 case 'screen_share_started':
                     addLiveShareCardToGrid(data.peerId, data.info);
                     DOMElements.startShareBtn.disabled = true;
                     DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
-
                     if (data.peerId === state.peer.id && state.localScreenStream) {
                         for (const peerId of state.peerInfo.keys()) {
                             if (peerId !== state.peer.id) {
-                                console.log(`Calling peer: ${peerId}`);
                                 state.peer.call(peerId, state.localScreenStream);
                             }
                         }
@@ -3276,10 +3232,10 @@
             }
         }
 
-        function broadcastData(data) {
-            console.log('Broadcasting data to all:', data);
-            for (const conn of state.connections.values()) {
-                if (conn && conn.open) {
+        function broadcastToAllPeers(data, exclude = []) {
+            console.log('Broadcasting data to all peers:', data);
+            for (const [peerId, conn] of state.connections.entries()) {
+                if (conn && conn.open && !exclude.includes(peerId)) {
                      conn.send(data);
                 }
             }
@@ -3345,26 +3301,21 @@
             const payload = {
                 type: 'chat_message',
                 id: messageId,
+                from: state.peer.id,
                 message: trimmedMessage,
-                senderInfo: senderInfo
+                senderInfo: senderInfo,
+                timestamp: Date.now()
             };
 
-            const localMessage = { ...payload, from: state.peer.id, timestamp: Date.now() };
-
-            if (!state.chatLog.some(msg => msg.id === localMessage.id)) {
-                state.chatLog.push(localMessage);
+            // Add to local log and display immediately
+            if (!state.chatLog.some(msg => msg.id === payload.id)) {
+                state.chatLog.push(payload);
                 renderChatLog();
-                displayChatBubble(localMessage);
+                displayChatBubble(payload);
             }
 
-            if (state.isHost) {
-                handleHostAction(payload, state.peer.id);
-            } else {
-                const hostConn = state.connections.get(state.roomId);
-                if (hostConn && hostConn.open) {
-                    hostConn.send(payload);
-                }
-            }
+            // Broadcast to all connected peers (the mesh)
+            broadcastToAllPeers(payload);
 
             if (inputElement) {
                 inputElement.value = '';
@@ -3440,19 +3391,9 @@
                 state.localScreenStream = stream;
 
                 stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
-
-                const request = { type: 'request_start_share' };
-                if (state.isHost) {
-                    handleHostAction(request, state.peer.id);
-                } else {
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send(request);
-                    } else {
-                        showNotification("Cannot start share: not connected to host.", "error");
-                        stopScreenShare(true); // Clean up local stream
-                    }
-                }
+                
+                const sharerInfo = { name: state.settings.userName, avatar: state.settings.userAvatar };
+                broadcastToAllPeers({ type: 'screen_share_started', peerId: state.peer.id, info: sharerInfo });
 
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
                 DOMElements.startShareBtn.title = "Stop Sharing";
@@ -3468,15 +3409,7 @@
                 state.localScreenStream.getTracks().forEach(track => track.stop());
                 state.localScreenStream = null;
 
-                const request = { type: 'request_stop_share' };
-                if (state.isHost) {
-                    handleHostAction(request, state.peer.id);
-                } else {
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send(request);
-                    }
-                }
+                broadcastToAllPeers({ type: 'screen_share_ended', peerId: state.peer.id });
 
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>`;
                 DOMElements.startShareBtn.title = "Share Screen";
