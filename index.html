@@ -1203,8 +1203,8 @@
             peerInfo: new Map(),
             chatLog: [],
             isChatLogOpen: false,
-            localScreenStream: null, // To hold our own screen share stream
-            activeCall: null, // To hold the active incoming call object
+            localScreenStream: null, 
+            activeCalls: new Map(), // MODIFIED: Store multiple calls
         };
         const defaultSettings = {
             title: 'Collections', bgColor: '#303030', sidebarColor: '#000000', fontColor: '#ffffff',
@@ -1214,7 +1214,7 @@
             footerText: 'Niilow 1.6', modalOpacity: 0.95, userName: 'User',
             sessionPassword: '',
             userAvatar: null,
-            videoWall: '', // New setting for video wall
+            videoWall: '', 
         };
         let autoSaveTimeout = null;
 
@@ -2920,15 +2920,37 @@
                 setupConnection(conn);
             });
 
+            // MODIFIED: Screen share call handler
             state.peer.on('call', call => {
-                call.answer(state.localScreenStream);
-                state.activeCall = call;
+                console.log('Receiving screen share call from', call.peer);
+                const sharerInfo = call.metadata.sharerInfo || { name: 'A user', avatar: null };
+                
+                // Answer the call without sending our own stream
+                call.answer(); 
+                state.activeCalls.set(call.peer, call);
+
+                addLiveShareCardToGrid(call.peer, sharerInfo);
+                DOMElements.startShareBtn.disabled = true;
+                DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
+
                 call.on('stream', remoteStream => {
+                    console.log('Received remote stream from', call.peer);
                     const liveCard = document.getElementById(`live-share-${call.peer}`);
                     if (liveCard) {
                         const videoEl = liveCard.querySelector('video');
                         videoEl.srcObject = remoteStream;
-                        videoEl.play();
+                        videoEl.play().catch(e => console.error("Video play failed", e));
+                    }
+                });
+
+                call.on('close', () => {
+                    console.log('Screen share call closed from', call.peer);
+                    removeLiveShareCardFromGrid(call.peer);
+                    state.activeCalls.delete(call.peer);
+                    // Only re-enable the share button if no other shares are active
+                    if (state.activeCalls.size === 0) {
+                        DOMElements.startShareBtn.disabled = false;
+                        DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
                     }
                 });
             });
@@ -3206,24 +3228,18 @@
                         playSound('https://www.niilow.com/chat.mp3');
                     }
                     break;
-                // Screen share and video wall logic remains largely the same, broadcast to all
-                case 'screen_share_started':
-                    addLiveShareCardToGrid(data.peerId, data.info);
-                    DOMElements.startShareBtn.disabled = true;
-                    DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
-                    if (data.peerId === state.peer.id && state.localScreenStream) {
-                        for (const peerId of state.peerInfo.keys()) {
-                            if (peerId !== state.peer.id) {
-                                state.peer.call(peerId, state.localScreenStream);
-                            }
-                        }
-                    }
-                    break;
+                // MODIFIED: screen_share_ended is the only screen share data message now
                 case 'screen_share_ended':
                     removeLiveShareCardFromGrid(data.peerId);
-                    stopScreenShare(false);
-                    DOMElements.startShareBtn.disabled = false;
-                    DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
+                    const call = state.activeCalls.get(data.peerId);
+                    if (call) {
+                        call.close();
+                        state.activeCalls.delete(data.peerId);
+                    }
+                     if (state.activeCalls.size === 0) {
+                        DOMElements.startShareBtn.disabled = false;
+                        DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
+                    }
                     break;
                 case 'video_wall_update':
                     state.settings.videoWall = data.url;
@@ -3378,7 +3394,7 @@
             }
         }
 
-        // --- Screen Share Implementation ---
+        // --- MODIFIED: Screen Share Implementation ---
 
         async function startScreenShare() {
             if (state.localScreenStream) {
@@ -3389,18 +3405,26 @@
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 state.localScreenStream = stream;
-
                 stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
                 
                 const sharerInfo = { name: state.settings.userName, avatar: state.settings.userAvatar };
-                broadcastToAllPeers({ type: 'screen_share_started', peerId: state.peer.id, info: sharerInfo });
+                addLiveShareCardToGrid(state.peer.id, sharerInfo);
+                
+                for (const peerId of state.connections.keys()) {
+                    console.log(`Calling peer ${peerId} for screen share.`);
+                    const call = state.peer.call(peerId, stream, { metadata: { sharerInfo } });
+                    state.activeCalls.set(peerId, call);
+                }
 
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
                 DOMElements.startShareBtn.title = "Stop Sharing";
+                DOMElements.startShareBtn.disabled = true;
+                DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
 
             } catch (err) {
                 showNotification('Could not start screen share.', 'error');
                 console.error("Screen share error:", err);
+                stopScreenShare(true); // Clean up if failed
             }
         }
 
@@ -3410,18 +3434,22 @@
                 state.localScreenStream = null;
 
                 broadcastToAllPeers({ type: 'screen_share_ended', peerId: state.peer.id });
+                
+                removeLiveShareCardFromGrid(state.peer.id);
 
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>`;
                 DOMElements.startShareBtn.title = "Share Screen";
             }
-
-            if (state.activeCall) {
-                state.activeCall.close();
-                state.activeCall = null;
+            
+            for(const call of state.activeCalls.values()){
+                call.close();
             }
+            state.activeCalls.clear();
 
             closeModal(DOMElements.screenShareModal);
             DOMElements.screenShareVideo.srcObject = null;
+            DOMElements.startShareBtn.disabled = false;
+            DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
         }
 
         function addLiveShareCardToGrid(peerId, info) {
