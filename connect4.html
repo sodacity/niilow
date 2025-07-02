@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Four</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #4a5568;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .cell.red {
+            background-color: #f56565;
+        }
+        .cell.yellow {
+            background-color: #f6e05e;
+        }
+        .column:hover .cell:not(.red):not(.yellow) {
+            background-color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg text-center">
+        <h1 class="text-3xl font-bold mb-4">Connect Four</h1>
+        <div id="game-controls" class="mb-4">
+            <button id="create-game" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Create Game
+            </button>
+            <div id="game-link-container" class="mt-4 hidden">
+                <p class="mb-2">Share this link with your friend:</p>
+                <input type="text" id="game-link" class="border p-2 rounded w-full" readonly>
+                <button id="copy-link" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">
+                    Copy Link
+                </button>
+            </div>
+             <div id="join-game-container" class="mt-4">
+                <input type="text" id="join-link" class="border p-2 rounded" placeholder="Paste game link to join">
+                <button id="join-game" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded ml-2">
+                    Join Game
+                </button>
+            </div>
+        </div>
+
+        <div id="game-board" class="grid grid-cols-7 gap-2 bg-gray-800 p-4 rounded-lg">
+            <!-- Game board will be generated here -->
+        </div>
+
+        <div id="game-status" class="mt-4 text-xl font-semibold">
+            <!-- Game status will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        const createGameBtn = document.getElementById('create-game');
+        const gameLinkContainer = document.getElementById('game-link-container');
+        const gameLinkInput = document.getElementById('game-link');
+        const copyLinkBtn = document.getElementById('copy-link');
+        const joinLinkInput = document.getElementById('join-link');
+        const joinGameBtn = document.getElementById('join-game');
+        const gameBoard = document.getElementById('game-board');
+        const gameStatus = document.getElementById('game-status');
+
+        const ROWS = 6;
+        const COLS = 7;
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPlayer = 'red';
+        let peerConnection;
+        let dataChannel;
+        let gameId = null;
+        let isHost = false;
+
+        // --- Game Logic ---
+        function createBoard() {
+            gameBoard.innerHTML = '';
+            for (let col = 0; col < COLS; col++) {
+                const column = document.createElement('div');
+                column.classList.add('column');
+                column.dataset.col = col;
+                for (let row = 0; row < ROWS; row++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    column.appendChild(cell);
+                }
+                column.addEventListener('click', () => handleColumnClick(col));
+                gameBoard.appendChild(column);
+            }
+        }
+        
+        function handleColumnClick(col) {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                const move = { type: 'move', col };
+                dataChannel.send(JSON.stringify(move));
+                applyMove(col);
+            } else if (isHost) {
+                applyMove(col);
+            }
+        }
+
+        function applyMove(col) {
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (!board[row][col]) {
+                    board[row][col] = currentPlayer;
+                    updateBoardUI();
+                    if (checkWin()) {
+                        gameStatus.textContent = `${currentPlayer.toUpperCase()} wins!`;
+                        endGame();
+                    } else {
+                        currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+                        gameStatus.textContent = `${currentPlayer.toUpperCase()}'s turn`;
+                    }
+                    return;
+                }
+            }
+        }
+
+        function updateBoardUI() {
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = gameBoard.querySelector(`[data-row='${row}'][data-col='${col}']`);
+                    if (board[row][col]) {
+                        cell.classList.add(board[row][col]);
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            // Check horizontal, vertical, and diagonal wins
+            const directions = [
+                [0, 1], [1, 0], [1, 1], [1, -1]
+            ];
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        for (const [dr, dc] of directions) {
+                            let count = 1;
+                            for (let i = 1; i < 4; i++) {
+                                const r = row + dr * i;
+                                const c = col + dc * i;
+                                if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === board[row][col]) {
+                                    count++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (count === 4) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        function endGame() {
+            // Disable further moves
+            const columns = document.querySelectorAll('.column');
+            columns.forEach(column => column.removeEventListener('click', handleColumnClick));
+        }
+
+
+        // --- WebRTC Logic ---
+        async function createGame() {
+            isHost = true;
+            gameId = btoa(Math.random().toString().substring(2, 12));
+            const gameLink = `${window.location.href.split('?')[0]}?gameId=${gameId}`;
+            gameLinkInput.value = gameLink;
+            gameLinkContainer.classList.remove('hidden');
+
+            peerConnection = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+
+            dataChannel = peerConnection.createDataChannel('game');
+            setupDataChannel();
+            
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    const offer = peerConnection.localDescription;
+                    gameLinkInput.value = `${gameLink}&offer=${btoa(JSON.stringify(offer))}`;
+                }
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+        }
+
+        async function joinGame() {
+            const urlParams = new URLSearchParams(joinLinkInput.value.split('?')[1]);
+            const offerString = urlParams.get('offer');
+            if (!offerString) {
+                alert('Invalid game link!');
+                return;
+            }
+            const offer = JSON.parse(atob(offerString));
+
+            peerConnection = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+
+            peerConnection.ondatachannel = event => {
+                dataChannel = event.channel;
+                setupDataChannel();
+            };
+
+            await peerConnection.setRemoteDescription(offer);
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    // This is where you would send the answer to the host.
+                    // For this example, we'll just log it.
+                    console.log('Answer created. Send this to the host:', btoa(JSON.stringify(peerConnection.localDescription)));
+                }
+            };
+        }
+        
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                gameStatus.textContent = "Connected! Red's turn.";
+                document.getElementById('game-controls').classList.add('hidden');
+            };
+            dataChannel.onmessage = event => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'move') {
+                    applyMove(data.col);
+                }
+            };
+        }
+
+        createGameBtn.addEventListener('click', createGame);
+        joinGameBtn.addEventListener('click', joinGame);
+        copyLinkBtn.addEventListener('click', () => {
+            gameLinkInput.select();
+            document.execCommand('copy');
+        });
+
+        createBoard();
+        gameStatus.textContent = "Create or join a game to start.";
+    </script>
+</body>
+</html>
