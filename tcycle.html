@@ -42,8 +42,7 @@
 <body class="flex flex-col h-full">
 
     <div id="main-container" class="w-screen h-screen p-4 flex flex-col relative">
-        <header class="flex justify-between items-center z-10">
-            <h1 class="text-2xl md:text-4xl font-bold">LIGHTCYCLES</h1>
+        <header class="flex justify-end items-center z-10 h-10">
             <button id="fullscreen-btn" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
                 Fullscreen
             </button>
@@ -51,8 +50,9 @@
 
         <div id="connection-setup" class="my-auto space-y-4 text-center z-10">
             <div id="status-text" class="text-xl h-8">Enter the Grid</div>
-            <div>
-                <input type="text" id="room-name" class="border-2 p-2 rounded w-full max-w-xs mx-auto text-center bg-black border-cyan-400 placeholder-cyan-600" placeholder="Enter Arena Name">
+            <div class="space-y-2">
+                 <input type="text" id="player-name" class="border-2 p-2 rounded w-full max-w-xs mx-auto text-center bg-black border-cyan-400 placeholder-cyan-600" placeholder="Enter Your Name">
+                 <input type="text" id="room-name" class="border-2 p-2 rounded w-full max-w-xs mx-auto text-center bg-black border-cyan-400 placeholder-cyan-600" placeholder="Enter Arena Name">
             </div>
             <div class="flex justify-center space-x-4">
                 <button id="create-room" class="bg-blue-600 hover:bg-blue-700 border border-blue-400 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
@@ -65,8 +65,9 @@
         </div>
 
         <!-- Game Over Screen -->
-        <div id="game-over-screen" class="hidden absolute inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-20">
-            <div id="winner-text" class="text-5xl font-bold mb-8"></div>
+        <!-- NEW: Added 'flex' class to ensure it works with class toggling -->
+        <div id="game-over-screen" class="hidden absolute inset-0 bg-black bg-opacity-80 flex flex-col justify-center items-center z-20">
+            <div id="winner-text" class="text-5xl font-bold mb-8 text-center"></div>
             <button id="play-again-btn" class="bg-green-500 hover:bg-green-600 border border-green-300 text-white font-bold py-3 px-6 rounded text-2xl">Play Again</button>
         </div>
 
@@ -89,6 +90,7 @@
     <script>
         // --- DOM Elements ---
         const connectionSetupDiv = document.getElementById('connection-setup');
+        const playerNameInput = document.getElementById('player-name');
         const roomNameInput = document.getElementById('room-name');
         const createRoomBtn = document.getElementById('create-room');
         const joinRoomBtn = document.getElementById('join-room');
@@ -103,15 +105,25 @@
         const ctx = gameCanvas.getContext('2d');
 
         // --- Game Constants & State ---
-        const GRID_SIZE = 4; // The size of each player/trail segment
+        const VIRTUAL_WIDTH = 1000;
+        const VIRTUAL_HEIGHT = 1000;
+        const STEP_SIZE = 5;
+
         let players = [];
         let peer, conn, myPlayerId;
+        let isHost = false;
         let gameActive = false;
         let animationFrameId;
 
+        let myRematchVote = false;
+        let opponentRematchVote = false;
+
+        let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
+
         class Player {
-            constructor(id, x, y, dir, color) {
+            constructor(id, name, x, y, dir, color) {
                 this.id = id;
+                this.name = name;
                 this.x = x;
                 this.y = y;
                 this.dir = dir;
@@ -121,11 +133,8 @@
             }
 
             changeDirection(newDir) {
-                // Prevent reversing direction
-                if ((this.dir === 'up' && newDir === 'down') ||
-                    (this.dir === 'down' && newDir === 'up') ||
-                    (this.dir === 'left' && newDir === 'right') ||
-                    (this.dir === 'right' && newDir === 'left')) {
+                if ((this.dir === 'up' && newDir === 'down') || (this.dir === 'down' && newDir === 'up') ||
+                    (this.dir === 'left' && newDir === 'right') || (this.dir === 'right' && newDir === 'left')) {
                     return;
                 }
                 this.dir = newDir;
@@ -133,40 +142,44 @@
 
             update() {
                 if (!this.isAlive) return;
-
                 switch (this.dir) {
-                    case 'up': this.y -= GRID_SIZE; break;
-                    case 'down': this.y += GRID_SIZE; break;
-                    case 'left': this.x -= GRID_SIZE; break;
-                    case 'right': this.x += GRID_SIZE; break;
+                    case 'up': this.y -= STEP_SIZE; break;
+                    case 'down': this.y += STEP_SIZE; break;
+                    case 'left': this.x -= STEP_SIZE; break;
+                    case 'right': this.x += STEP_SIZE; break;
                 }
                 this.trail.push({x: this.x, y: this.y});
             }
 
             draw() {
+                const scaleX = gameCanvas.width / VIRTUAL_WIDTH;
+                const scaleY = gameCanvas.height / VIRTUAL_HEIGHT;
+                const drawSizeX = STEP_SIZE * scaleX;
+                const drawSizeY = STEP_SIZE * scaleY;
+
                 ctx.fillStyle = this.color;
                 this.trail.forEach(segment => {
-                    ctx.fillRect(segment.x, segment.y, GRID_SIZE, GRID_SIZE);
+                    ctx.fillRect(segment.x * scaleX, segment.y * scaleY, drawSizeX, drawSizeY);
                 });
-                // Draw a brighter head
+                
                 ctx.fillStyle = lightenColor(this.color, 30);
-                ctx.fillRect(this.x, this.y, GRID_SIZE, GRID_SIZE);
+                ctx.fillRect(this.x * scaleX, this.y * scaleY, drawSizeX, drawSizeY);
             }
         }
 
         // --- PeerJS Setup ---
-        function initializePeer(isHost, roomName) {
+        function initializePeer(host, roomName) {
+            isHost = host;
             if (peer) peer.destroy();
             peer = isHost ? new Peer(roomName) : new Peer();
 
             peer.on('open', id => {
-                console.log('My peer ID is: ' + id);
+                myPlayerId = id;
                 statusText.textContent = isHost ? `Arena "${roomName}" created. Waiting...` : `Joining Arena "${roomName}"...`;
                 if (!isHost) connectToHost(roomName);
             });
 
             peer.on('connection', connection => {
-                console.log('Opponent entered the Grid.');
                 conn = connection;
                 setupConnection();
             });
@@ -184,15 +197,20 @@
 
         function setupConnection() {
             conn.on('open', () => {
-                myPlayerId = conn.peer;
-                conn.send({ type: 'sync', message: 'User connected, ready to sync.' });
+                if (!isHost) {
+                    const myName = playerNameInput.value.trim() || 'Program 2';
+                    conn.send({ type: 'ready', name: myName });
+                }
             });
 
             conn.on('data', data => {
                 switch (data.type) {
+                    case 'ready':
+                        if (isHost) initiateFirstGame(data.name);
+                        break;
                     case 'start':
-                        players = data.players.map(p => new Player(p.id, p.x, p.y, p.dir, p.color));
-                        startGame();
+                    case 'reset':
+                        resetGame(data.players);
                         break;
                     case 'directionChange':
                         const player = players.find(p => p.id === data.playerId);
@@ -201,23 +219,31 @@
                     case 'gameOver':
                         endGame(data.winnerId);
                         break;
-                    case 'reset':
-                        resetGame(data.players);
+                    case 'rematch_vote':
+                        opponentRematchVote = true;
+                        playAgainBtn.textContent = `${data.name} wants a rematch!`;
+                        playAgainBtn.disabled = false;
+                        checkAndStartRematch();
                         break;
                 }
             });
             
             conn.on('close', () => {
                 statusText.textContent = 'Opponent disconnected.';
-                if (gameActive) endGame(myPlayerId); // If game is active, I win
+                if (gameActive) endGame(myPlayerId);
             });
         }
         
         // --- Game Logic ---
+        function initiateFirstGame(guestName) {
+            if (!isHost) return;
+            initiateNewGame(true, guestName);
+        }
+
         function startGame() {
-            console.log("Game Starting!");
             gameActive = true;
             connectionSetupDiv.classList.add('hidden');
+            // NEW: Hide the game over screen using classes
             gameOverScreen.classList.add('hidden');
             if (isTouchDevice()) touchControls.style.display = 'block';
             
@@ -227,10 +253,8 @@
 
         function gameLoop() {
             if (!gameActive) return;
-
             updateGameState();
             drawGame();
-
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
@@ -242,16 +266,13 @@
         function checkCollisions() {
             players.forEach(player => {
                 if (!player.isAlive) return;
-
-                // Wall collision
-                if (player.x < 0 || player.x >= gameCanvas.width || player.y < 0 || player.y >= gameCanvas.height) {
+                if (player.x < 0 || player.x >= VIRTUAL_WIDTH || player.y < 0 || player.y >= VIRTUAL_HEIGHT) {
                     player.isAlive = false;
                 }
-
-                // Trail collision
                 players.forEach(otherPlayer => {
-                    otherPlayer.trail.slice(0, -1).forEach(segment => {
-                        if (player.x === segment.x && player.y === segment.y) {
+                    otherPlayer.trail.forEach(segment => {
+                        if (player === otherPlayer && segment === player.trail[player.trail.length - 1]) return;
+                        if (Math.abs(player.x - segment.x) < STEP_SIZE && Math.abs(player.y - segment.y) < STEP_SIZE) {
                             player.isAlive = false;
                         }
                     });
@@ -260,8 +281,8 @@
 
             const alivePlayers = players.filter(p => p.isAlive);
             if (alivePlayers.length <= 1) {
-                const winnerId = alivePlayers.length === 1 ? alivePlayers[0].id : null; // null for a draw
-                if (conn && conn.open) {
+                const winnerId = alivePlayers.length === 1 ? alivePlayers[0].id : null;
+                if (isHost) {
                     conn.send({ type: 'gameOver', winnerId: winnerId });
                 }
                 endGame(winnerId);
@@ -274,49 +295,61 @@
         }
 
         function endGame(winnerId) {
+            if (!gameActive) return;
             gameActive = false;
             cancelAnimationFrame(animationFrameId);
             
             const winner = players.find(p => p.id === winnerId);
             if (winner) {
-                winnerText.textContent = `${winner.color.toUpperCase()} WINS`;
-                winnerText.style.color = winner.color;
-                winnerText.style.textShadow = `0 0 10px ${winner.color}`;
+                winnerText.innerHTML = `<span style="color: ${winner.color}; text-shadow: 0 0 10px ${winner.color};">${winner.name.toUpperCase()}</span> WINS`;
             } else {
-                 winnerText.textContent = 'SIMULTANEOUS DEREZZING'; // Draw
-                 winnerText.style.color = '#fff';
-                 winnerText.style.textShadow = `0 0 10px #fff`;
+                 winnerText.textContent = 'SIMULTANEOUS DEREZZING';
             }
-            gameOverScreen.style.display = 'flex';
+            // NEW: Show the game over screen using classes
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function initiateNewGame(isFirstGame = false, guestName = '') {
+            const p1Start = { x: VIRTUAL_WIDTH * 0.1, y: VIRTUAL_HEIGHT * 0.1, dir: 'right' };
+            const p2Start = { x: VIRTUAL_WIDTH * 0.9, y: VIRTUAL_HEIGHT * 0.9, dir: 'left' };
+            
+            const myName = players.find(p => p.id === myPlayerId)?.name || playerNameInput.value.trim() || 'Program 1';
+            const opponentName = isFirstGame ? guestName : players.find(p => p.id !== myPlayerId)?.name || 'Program 2';
+
+            const initialPlayers = [
+                { id: myPlayerId, name: myName, ...p1Start, color: '#0ea5e9' },
+                { id: conn.peer, name: opponentName, ...p2Start, color: '#f97316' }
+            ];
+
+            const messageType = isFirstGame ? 'start' : 'reset';
+            conn.send({ type: messageType, players: initialPlayers });
+            resetGame(initialPlayers);
         }
 
         function resetGame(newPlayers) {
-             players = newPlayers.map(p => new Player(p.id, p.x, p.y, p.dir, p.color));
+             players = newPlayers.map(p => new Player(p.id, p.name, p.x, p.y, p.dir, p.color));
+             myRematchVote = false;
+             opponentRematchVote = false;
+             playAgainBtn.disabled = false;
+             playAgainBtn.textContent = 'Play Again';
              startGame();
         }
         
-        function initiateNewGame() {
-            const p1Start = { x: Math.floor(gameCanvas.width * 0.25 / GRID_SIZE) * GRID_SIZE, y: Math.floor(gameCanvas.height * 0.5 / GRID_SIZE) * GRID_SIZE };
-            const p2Start = { x: Math.floor(gameCanvas.width * 0.75 / GRID_SIZE) * GRID_SIZE, y: Math.floor(gameCanvas.height * 0.5 / GRID_SIZE) * GRID_SIZE };
-
-            const initialPlayers = [
-                { id: peer.id, x: p1Start.x, y: p1Start.y, dir: 'right', color: '#0ea5e9' }, // Blue
-                { id: conn.peer, x: p2Start.x, y: p2Start.y, dir: 'left', color: '#f97316' }  // Orange
-            ];
-            
-            if (conn && conn.open) conn.send({ type: 'reset', players: initialPlayers });
-            resetGame(initialPlayers);
+        function checkAndStartRematch() {
+            if (myRematchVote && opponentRematchVote) {
+                if (isHost) {
+                    initiateNewGame();
+                }
+            }
         }
 
         // --- Input Handling ---
         function handleInput(newDir) {
             if (!gameActive) return;
-            const myPlayer = players.find(p => p.id === peer.id);
+            const myPlayer = players.find(p => p.id === myPlayerId);
             if (myPlayer) {
                 myPlayer.changeDirection(newDir);
-                if (conn && conn.open) {
-                    conn.send({ type: 'directionChange', playerId: myPlayer.id, newDir: newDir });
-                }
+                conn.send({ type: 'directionChange', playerId: myPlayer.id, newDir: newDir });
             }
         }
 
@@ -328,6 +361,21 @@
                 case 'ArrowRight': case 'd': handleInput('right'); break;
             }
         });
+        
+        function handleSwipe() {
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            const minSwipeDistance = 30;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > minSwipeDistance) handleInput(dx > 0 ? 'right' : 'left');
+            } else {
+                if (Math.abs(dy) > minSwipeDistance) handleInput(dy > 0 ? 'down' : 'up');
+            }
+        }
+        
+        gameCanvas.addEventListener('touchstart', e => { e.preventDefault(); touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: false });
+        gameCanvas.addEventListener('touchend', e => { e.preventDefault(); touchEndX = e.changedTouches[0].clientX; touchEndY = e.changedTouches[0].clientY; handleSwipe(); }, { passive: false });
 
         document.getElementById('btn-up').addEventListener('click', () => handleInput('up'));
         document.getElementById('btn-down').addEventListener('click', () => handleInput('down'));
@@ -336,10 +384,10 @@
 
         // --- UI & Helpers ---
         function resizeCanvas() {
-            const containerSize = Math.min(gameContainer.clientWidth, gameContainer.clientHeight) * 0.95;
-            // Snap to grid size
-            gameCanvas.width = Math.floor(containerSize / GRID_SIZE) * GRID_SIZE;
-            gameCanvas.height = gameCanvas.width;
+            const availableHeight = gameContainer.clientHeight - (isTouchDevice() ? touchControls.offsetHeight : 0);
+            const containerSize = Math.min(gameContainer.clientWidth, availableHeight) * 0.95;
+            gameCanvas.width = containerSize;
+            gameCanvas.height = containerSize;
             if (gameActive) drawGame();
         }
 
@@ -350,15 +398,11 @@
         function lightenColor(hex, percent) {
             hex = hex.replace(/^\s*#|\s*$/g, '');
             if(hex.length == 3) hex = hex.replace(/(.)/g, '$1$1');
-            let r = parseInt(hex.substr(0, 2), 16),
-                g = parseInt(hex.substr(2, 2), 16),
-                b = parseInt(hex.substr(4, 2), 16);
-            
+            let r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
             const p = percent / 100;
             r = Math.min(255, Math.floor(r * (1 + p)));
             g = Math.min(255, Math.floor(g * (1 + p)));
             b = Math.min(255, Math.floor(b * (1 + p)));
-            
             return '#' + (r).toString(16).padStart(2, '0') + (g).toString(16).padStart(2, '0') + (b).toString(16).padStart(2, '0');
         }
 
@@ -373,7 +417,14 @@
         });
 
         playAgainBtn.addEventListener('click', () => {
-            initiateNewGame();
+            myRematchVote = true;
+            playAgainBtn.disabled = true;
+            playAgainBtn.textContent = 'Waiting for Opponent...';
+            
+            const myName = players.find(p => p.id === myPlayerId)?.name || 'A Program';
+            conn.send({ type: 'rematch_vote', name: myName });
+            
+            checkAndStartRematch();
         });
 
         fullscreenBtn.addEventListener('click', () => {
