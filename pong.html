@@ -85,10 +85,11 @@
         let animationFrameId;
 
         // Game objects
-        const paddleWidth = 10, paddleHeight = 100;
+        const paddleWidth = 10;
+        let paddleHeight = 100; // This will be relative to screen height
         let player1 = { x: 10, y: 0, score: 0 };
         let player2 = { x: 0, y: 0, score: 0 };
-        let ball = { x: 0, y: 0, dx: 5, dy: 5, radius: 7 };
+        let ball = { x: 0, y: 0, dx: 0, dy: 0, radius: 7 };
 
         // --- Utility Functions ---
         function showMessage(msg, isError = false) {
@@ -99,7 +100,7 @@
         function enterFullScreen() {
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
-                elem.requestFullscreen();
+                elem.requestFullscreen().catch(err => console.log(err.message));
             } else if (elem.mozRequestFullScreen) { /* Firefox */
                 elem.mozRequestFullScreen();
             } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
@@ -114,6 +115,11 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             
+            // Make paddle and ball size relative to screen
+            paddleHeight = canvas.height * 0.15;
+            ball.radius = canvas.width * 0.01;
+
+            // Set initial positions
             player1.y = canvas.height / 2 - paddleHeight / 2;
             player2.x = canvas.width - 20;
             player2.y = canvas.height / 2 - paddleHeight / 2;
@@ -126,8 +132,9 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            ball.dx = 5; 
-            ball.dy = Math.random() > 0.5 ? 5 : -5;
+            // Make ball speed relative to screen size
+            ball.dx = canvas.width * 0.005; 
+            ball.dy = (Math.random() > 0.5 ? 1 : -1) * (canvas.height * 0.005);
         }
 
         // --- PeerJS Setup ---
@@ -173,15 +180,17 @@
             });
 
             conn.on('data', data => {
+                // Host receives guest's normalized paddle position
                 if (isHost && data.type === 'paddle') {
-                    player2.y = data.y;
+                    player2.y = data.y * canvas.height; // De-normalize
                 }
+                // Guest receives all normalized game state
                 if (!isHost) {
                     if (data.type === 'paddle') {
-                        player1.y = data.y;
+                        player1.y = data.y * canvas.height; // De-normalize
                     } else if (data.type === 'ball') {
-                        ball.x = data.x;
-                        ball.y = data.y;
+                        ball.x = data.x * canvas.width; // De-normalize
+                        ball.y = data.y * canvas.height; // De-normalize
                     } else if (data.type === 'score') {
                         player1.score = data.p1;
                         player2.score = data.p2;
@@ -196,14 +205,16 @@
         }
         
         // --- Input Handlers ---
-        function updatePaddlePosition(y) {
+        function updatePaddlePosition(yPos) {
             let myPaddle = isHost ? player1 : player2;
-            myPaddle.y = y - paddleHeight / 2;
+            myPaddle.y = yPos - paddleHeight / 2;
             if (myPaddle.y < 0) myPaddle.y = 0;
             if (myPaddle.y > canvas.height - paddleHeight) myPaddle.y = canvas.height - paddleHeight;
             
             if (conn && conn.open) {
-                conn.send({ type: 'paddle', y: myPaddle.y });
+                // Send paddle position as a percentage of the screen height
+                const normalizedY = myPaddle.y / canvas.height;
+                conn.send({ type: 'paddle', y: normalizedY });
             }
         }
 
@@ -239,22 +250,26 @@
         }
 
         function update() {
+            // Only host runs the game physics
             if (!isHost) return;
 
             ball.x += ball.dx;
             ball.y += ball.dy;
 
+            // Wall collision (top/bottom)
             if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
                 ball.dy *= -1;
             }
 
+            // Paddle collision
             if (ball.dx < 0 && ball.x - ball.radius < player1.x + paddleWidth && ball.x - ball.radius > player1.x && ball.y > player1.y && ball.y < player1.y + paddleHeight) {
-                ball.dx *= -1;
+                ball.dx *= -1.1; // Speed up ball on hit
             }
             if (ball.dx > 0 && ball.x + ball.radius > player2.x && ball.x + ball.radius < player2.x + paddleWidth && ball.y > player2.y && ball.y < player2.y + paddleHeight) {
-                ball.dx *= -1;
+                ball.dx *= -1.1; // Speed up ball on hit
             }
 
+            // Score points
             if (ball.x + ball.radius < 0) {
                 player2.score++;
                 resetBall();
@@ -263,10 +278,14 @@
                 resetBall();
             }
             
+            // Send normalized state to guest
             if (conn && conn.open) {
-                conn.send({ type: 'ball', x: ball.x, y: ball.y });
+                const normalizedBall = { x: ball.x / canvas.width, y: ball.y / canvas.height };
+                const normalizedHostPaddle = { y: player1.y / canvas.height };
+                
+                conn.send({ type: 'ball', x: normalizedBall.x, y: normalizedBall.y });
                 conn.send({ type: 'score', p1: player1.score, p2: player2.score });
-                conn.send({ type: 'paddle', y: player1.y });
+                conn.send({ type: 'paddle', y: normalizedHostPaddle.y });
             }
         }
 
@@ -292,7 +311,6 @@
         window.addEventListener('resize', resizeCanvas);
         
         connectionSetupDiv.addEventListener('click', (event) => {
-            // Don't trigger fullscreen if a button or input is clicked
             if (event.target.tagName === 'BUTTON' || event.target.tagName === 'INPUT') {
                 return;
             }
