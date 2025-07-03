@@ -1,3 +1,20 @@
+Of course, Joel\! Adding a fullscreen feature is a great idea to make the game more immersive. Let's get that wired up.
+
+I've added a "Fullscreen" button to the top-right corner of the page and hooked it up with the necessary JavaScript. When you click it, the game will take over the whole screen. Click it again (or press the `Esc` key) to go back to normal.
+
+Here is the complete updated code. I've marked the new sections with \`\` and `// NEW` so you can easily see what's changed.
+
+### **How to Use It**
+
+1.  **Copy** the entire code block below.
+2.  **Paste** it into your `connect4 (1).html` file, replacing the old content.
+3.  **Open** the file in your browser, and you'll see the new fullscreen button\!
+
+-----
+
+### **Updated `connect4 (1).html` Code**
+
+```html
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -44,9 +61,13 @@
 </head>
 <body class="bg-gray-800">
 
-    <div class="w-screen h-screen p-4 text-center text-gray-100 flex flex-col">
-        <h1 class="text-2xl md:text-3xl font-bold">Connect Four</h1>
+    <div class="w-screen h-screen p-4 text-center text-gray-100 flex flex-col relative"> <h1 class="text-2xl md:text-3xl font-bold">Connect Four</h1>
 
+        <div class="absolute top-4 right-4">
+            <button id="fullscreen-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
+                Fullscreen
+            </button>
+        </div>
         <div id="connection-setup" class="my-4 space-y-4">
             <div>
                 <input type="text" id="room-name" class="border p-2 rounded w-full max-w-xs mx-auto text-center bg-gray-700 border-gray-600 placeholder-gray-400" placeholder="Enter a Room Name">
@@ -61,18 +82,14 @@
             </div>
         </div>
 
-        <!-- This wrapper makes the board grow and stay at the top-left of the available space -->
         <div class="flex-grow min-h-0">
-            <!-- This game board will now scale to fit the available space while maintaining its aspect ratio -->
             <div id="game-board" class="grid grid-cols-7 gap-1 md:gap-2 bg-gray-800 rounded-lg mx-auto" style="aspect-ratio: 7 / 6; height: 100%;">
-                <!-- Game board will be generated here -->
-            </div>
+                </div>
         </div>
 
 
         <div id="game-status" class="mt-auto text-lg md:text-xl font-semibold h-8">
-            <!-- Game status will be displayed here -->
-        </div>
+            </div>
         <button id="reset-game" class="hidden bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded mt-4 mx-auto">Play Again</button>
     </div>
 
@@ -85,6 +102,7 @@
         const gameBoardDiv = document.getElementById('game-board');
         const gameStatusP = document.getElementById('game-status');
         const resetGameBtn = document.getElementById('reset-game');
+        const fullscreenBtn = document.getElementById('fullscreen-btn'); // NEW
 
         // --- Game State ---
         const ROWS = 6;
@@ -97,6 +115,28 @@
         let conn;
         let gameActive = false;
         let isHost = false; // Flag to determine if the player is the host
+
+        // --- NEW: Fullscreen Logic ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function updateFullscreenButton() {
+            if (document.fullscreenElement) {
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                fullscreenBtn.textContent = 'Fullscreen';
+            }
+        }
+        // --- END NEW ---
 
         // --- PeerJS Setup ---
         function initializePeer(host, roomName) {
@@ -328,9 +368,15 @@
             }
         });
 
+        // NEW: Fullscreen Event Listeners
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        // END NEW
+
         // --- Initial Setup ---
         createBoardUI();
         gameStatusP.textContent = "Create or join a room to play.";
     </script>
 </body>
 </html>
+```
