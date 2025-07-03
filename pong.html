@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Pong</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden; /* Prevents scrollbars */
+        }
+        canvas {
+            background-color: #000;
+            display: block; /* Removes bottom margin */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div id="game-container" class="w-screen h-screen flex flex-col items-center justify-center">
+        
+        <div id="connection-setup" class="text-center space-y-4 p-4">
+            <h1 class="text-5xl uppercase">Pong</h1>
+            <div id="error-message" class="text-red-500 h-6"></div>
+            <div>
+                <input type="text" id="room-name" class="border-2 p-2 rounded w-full max-w-xs mx-auto text-center bg-gray-800 border-gray-600 placeholder-gray-400" placeholder="ENTER ROOM NAME">
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button id="create-room" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                    Create Room
+                </button>
+                <button id="join-room" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Join Room
+                </button>
+            </div>
+        </div>
+
+        <canvas id="pong-canvas" class="hidden"></canvas>
+        <div id="score-status" class="absolute top-4 text-3xl"></div>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const connectionSetupDiv = document.getElementById('connection-setup');
+        const roomNameInput = document.getElementById('room-name');
+        const createRoomBtn = document.getElementById('create-room');
+        const joinRoomBtn = document.getElementById('join-room');
+        const canvas = document.getElementById('pong-canvas');
+        const scoreStatus = document.getElementById('score-status');
+        const errorMessage = document.getElementById('error-message');
+        const ctx = canvas.getContext('2d');
+
+        // --- Game State ---
+        let peer, conn;
+        let isHost = false;
+        let gameActive = false;
+        let animationFrameId;
+
+        // Game objects
+        const paddleWidth = 10, paddleHeight = 100;
+        // Player 1 is always the left paddle (the host)
+        let player1 = { x: 10, y: 0, score: 0 };
+        // Player 2 is always the right paddle (the guest)
+        let player2 = { x: 0, y: 0, score: 0 };
+        let ball = { x: 0, y: 0, dx: 5, dy: 5, radius: 7 };
+
+        // --- Utility Functions ---
+        function showMessage(msg, isError = false) {
+            errorMessage.textContent = msg;
+            errorMessage.style.color = isError ? '#f56565' : '#a0aec0';
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            player1.y = canvas.height / 2 - paddleHeight / 2;
+            player2.x = canvas.width - 20; // player2 is always on the right
+            player2.y = canvas.height / 2 - paddleHeight / 2;
+            
+            if(isHost) {
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            // Randomize direction, but always start towards the guest
+            ball.dx = 5; 
+            ball.dy = Math.random() > 0.5 ? 5 : -5;
+        }
+
+        // --- PeerJS Setup ---
+        function initializePeer(host, roomName) {
+            isHost = host;
+            if (peer) peer.destroy();
+
+            peer = isHost ? new Peer(roomName) : new Peer();
+            
+            peer.on('open', id => {
+                if (isHost) {
+                    showMessage(`Room "${roomName}" created. Waiting for opponent...`);
+                } else {
+                    connectToHost(roomName);
+                }
+            });
+
+            peer.on('connection', connection => setupConnection(connection));
+            peer.on('error', err => {
+                console.error('PeerJS error:', err);
+                showMessage(`Error: ${err.message}`, true);
+                createRoomBtn.disabled = false;
+                joinRoomBtn.disabled = false;
+            });
+        }
+
+        function connectToHost(roomName) {
+            showMessage(`Joining room "${roomName}"...`);
+            conn = peer.connect(roomName);
+            setupConnection(conn);
+        }
+
+        function setupConnection(connection) {
+            conn = connection;
+            conn.on('open', () => {
+                connectionSetupDiv.classList.add('hidden');
+                canvas.classList.remove('hidden');
+                resizeCanvas();
+                startGameLoop();
+                
+                // Track mouse movement to control paddle
+                window.addEventListener('mousemove', handleMouseMove);
+            });
+
+            conn.on('data', data => {
+                // Host receives guest's paddle position
+                if (isHost && data.type === 'paddle') {
+                    player2.y = data.y;
+                }
+                // Guest receives host's paddle and all game state
+                if (!isHost) {
+                    if (data.type === 'paddle') {
+                        player1.y = data.y;
+                    } else if (data.type === 'ball') {
+                        ball.x = data.x;
+                        ball.y = data.y;
+                    } else if (data.type === 'score') {
+                        player1.score = data.p1;
+                        player2.score = data.p2;
+                    }
+                }
+            });
+
+            conn.on('close', () => {
+                stopGameLoop();
+                showMessage('Opponent disconnected.', true);
+                // Optionally show the connection screen again
+                // connectionSetupDiv.classList.remove('hidden');
+                // canvas.classList.add('hidden');
+            });
+        }
+        
+        function handleMouseMove(e) {
+            let myPaddle = isHost ? player1 : player2;
+            
+            myPaddle.y = e.clientY - paddleHeight / 2;
+             // Clamp paddle position to stay within canvas bounds
+            if (myPaddle.y < 0) myPaddle.y = 0;
+            if (myPaddle.y > canvas.height - paddleHeight) myPaddle.y = canvas.height - paddleHeight;
+            
+            if (conn && conn.open) {
+                conn.send({ type: 'paddle', y: myPaddle.y });
+            }
+        }
+
+
+        // --- Game Loop ---
+        function startGameLoop() {
+            gameActive = true;
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function stopGameLoop() {
+            gameActive = false;
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            update();
+            draw();
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Only host updates ball physics and sends state
+            if (!isHost) return;
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall collision (top/bottom)
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                ball.dy *= -1;
+            }
+
+            // Paddle collision detection
+            // Player 1 (Host)
+            if (ball.dx < 0 && ball.x - ball.radius < player1.x + paddleWidth && ball.x - ball.radius > player1.x && ball.y > player1.y && ball.y < player1.y + paddleHeight) {
+                ball.dx *= -1;
+            }
+            // Player 2 (Guest)
+            if (ball.dx > 0 && ball.x + ball.radius > player2.x && ball.x + ball.radius < player2.x + paddleWidth && ball.y > player2.y && ball.y < player2.y + paddleHeight) {
+                ball.dx *= -1;
+            }
+
+            // Score points
+            if (ball.x + ball.radius < 0) { // Player 2 scores
+                player2.score++;
+                resetBall();
+            } else if (ball.x - ball.radius > canvas.width) { // Player 1 scores
+                player1.score++;
+                resetBall();
+            }
+            
+            // Send authoritative game state to client
+            if (conn && conn.open) {
+                conn.send({ type: 'ball', x: ball.x, y: ball.y });
+                conn.send({ type: 'score', p1: player1.score, p2: player2.score });
+                // Also send host paddle position
+                conn.send({ type: 'paddle', y: player1.y });
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw paddles
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player1.x, player1.y, paddleWidth, paddleHeight);
+            ctx.fillRect(player2.x, player2.y, paddleWidth, paddleHeight);
+
+            // Draw ball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw middle line
+            ctx.beginPath();
+            ctx.setLineDash([10, 15]);
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = 'white';
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw scores
+            scoreStatus.textContent = `${player1.score} - ${player2.score}`;
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('resize', resizeCanvas);
+
+        createRoomBtn.addEventListener('click', () => {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showMessage('Please enter a room name.', true);
+                return;
+            }
+            createRoomBtn.disabled = true;
+            joinRoomBtn.disabled = true;
+            initializePeer(true, roomName);
+        });
+
+        joinRoomBtn.addEventListener('click', () => {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showMessage('Please enter a room name to join.', true);
+                return;
+            }
+            createRoomBtn.disabled = true;
+            joinRoomBtn.disabled = true;
+            initializePeer(false, roomName);
+        });
+
+    </script>
+</body>
+</html>
