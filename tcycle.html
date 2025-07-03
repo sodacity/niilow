@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lightcycles</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        body {
+            font-family: 'Orbitron', sans-serif;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+        }
+        canvas {
+            display: block;
+            background-color: #0a0a0a;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 15px #00ffff inset;
+        }
+        .touch-controls {
+            display: none; /* Hidden by default, shown via JS for touch devices */
+        }
+        .control-btn {
+            background-color: rgba(0, 255, 255, 0.2);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+            user-select: none; /* Prevents text selection on repeated taps */
+        }
+        .control-btn:active {
+            background-color: rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-full">
+
+    <div id="main-container" class="w-screen h-screen p-4 flex flex-col relative">
+        <header class="flex justify-between items-center z-10">
+            <h1 class="text-2xl md:text-4xl font-bold">LIGHTCYCLES</h1>
+            <button id="fullscreen-btn" class="bg-gray-800 hover:bg-gray-700 border border-cyan-400 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
+                Fullscreen
+            </button>
+        </header>
+
+        <div id="connection-setup" class="my-auto space-y-4 text-center z-10">
+            <div id="status-text" class="text-xl h-8">Enter the Grid</div>
+            <div>
+                <input type="text" id="room-name" class="border-2 p-2 rounded w-full max-w-xs mx-auto text-center bg-black border-cyan-400 placeholder-cyan-600" placeholder="Enter Arena Name">
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button id="create-room" class="bg-blue-600 hover:bg-blue-700 border border-blue-400 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
+                    Create Arena
+                </button>
+                <button id="join-room" class="bg-orange-600 hover:bg-orange-700 border border-orange-400 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105">
+                    Join Arena
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="hidden absolute inset-0 bg-black bg-opacity-80 flex-col justify-center items-center z-20">
+            <div id="winner-text" class="text-5xl font-bold mb-8"></div>
+            <button id="play-again-btn" class="bg-green-500 hover:bg-green-600 border border-green-300 text-white font-bold py-3 px-6 rounded text-2xl">Play Again</button>
+        </div>
+
+        <!-- Canvas container -->
+        <main id="game-container" class="absolute inset-0 w-full h-full flex justify-center items-center">
+            <canvas id="game-canvas"></canvas>
+        </main>
+
+        <!-- Touch Controls -->
+        <footer class="touch-controls mt-auto z-10">
+            <div class="w-48 h-48 mx-auto relative">
+                 <button id="btn-up" class="control-btn absolute top-0 left-1/2 -translate-x-1/2 w-16 h-16 rounded-lg">▲</button>
+                 <button id="btn-down" class="control-btn absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-16 rounded-lg">▼</button>
+                 <button id="btn-left" class="control-btn absolute left-0 top-1/2 -translate-y-1/2 w-16 h-16 rounded-lg">◀</button>
+                 <button id="btn-right" class="control-btn absolute right-0 top-1/2 -translate-y-1/2 w-16 h-16 rounded-lg">▶</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const connectionSetupDiv = document.getElementById('connection-setup');
+        const roomNameInput = document.getElementById('room-name');
+        const createRoomBtn = document.getElementById('create-room');
+        const joinRoomBtn = document.getElementById('join-room');
+        const gameCanvas = document.getElementById('game-canvas');
+        const gameContainer = document.getElementById('game-container');
+        const statusText = document.getElementById('status-text');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const winnerText = document.getElementById('winner-text');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const touchControls = document.querySelector('.touch-controls');
+        const ctx = gameCanvas.getContext('2d');
+
+        // --- Game Constants & State ---
+        const GRID_SIZE = 4; // The size of each player/trail segment
+        let players = [];
+        let peer, conn, myPlayerId;
+        let gameActive = false;
+        let animationFrameId;
+
+        class Player {
+            constructor(id, x, y, dir, color) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.dir = dir;
+                this.color = color;
+                this.trail = [{x, y}];
+                this.isAlive = true;
+            }
+
+            changeDirection(newDir) {
+                // Prevent reversing direction
+                if ((this.dir === 'up' && newDir === 'down') ||
+                    (this.dir === 'down' && newDir === 'up') ||
+                    (this.dir === 'left' && newDir === 'right') ||
+                    (this.dir === 'right' && newDir === 'left')) {
+                    return;
+                }
+                this.dir = newDir;
+            }
+
+            update() {
+                if (!this.isAlive) return;
+
+                switch (this.dir) {
+                    case 'up': this.y -= GRID_SIZE; break;
+                    case 'down': this.y += GRID_SIZE; break;
+                    case 'left': this.x -= GRID_SIZE; break;
+                    case 'right': this.x += GRID_SIZE; break;
+                }
+                this.trail.push({x: this.x, y: this.y});
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                this.trail.forEach(segment => {
+                    ctx.fillRect(segment.x, segment.y, GRID_SIZE, GRID_SIZE);
+                });
+                // Draw a brighter head
+                ctx.fillStyle = lightenColor(this.color, 30);
+                ctx.fillRect(this.x, this.y, GRID_SIZE, GRID_SIZE);
+            }
+        }
+
+        // --- PeerJS Setup ---
+        function initializePeer(isHost, roomName) {
+            if (peer) peer.destroy();
+            peer = isHost ? new Peer(roomName) : new Peer();
+
+            peer.on('open', id => {
+                console.log('My peer ID is: ' + id);
+                statusText.textContent = isHost ? `Arena "${roomName}" created. Waiting...` : `Joining Arena "${roomName}"...`;
+                if (!isHost) connectToHost(roomName);
+            });
+
+            peer.on('connection', connection => {
+                console.log('Opponent entered the Grid.');
+                conn = connection;
+                setupConnection();
+            });
+            
+            peer.on('error', err => {
+                console.error('PeerJS error:', err);
+                statusText.textContent = `Error: ${err.message}`;
+            });
+        }
+
+        function connectToHost(roomName) {
+            conn = peer.connect(roomName);
+            setupConnection();
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                myPlayerId = conn.peer;
+                conn.send({ type: 'sync', message: 'User connected, ready to sync.' });
+            });
+
+            conn.on('data', data => {
+                switch (data.type) {
+                    case 'start':
+                        players = data.players.map(p => new Player(p.id, p.x, p.y, p.dir, p.color));
+                        startGame();
+                        break;
+                    case 'directionChange':
+                        const player = players.find(p => p.id === data.playerId);
+                        if (player) player.changeDirection(data.newDir);
+                        break;
+                    case 'gameOver':
+                        endGame(data.winnerId);
+                        break;
+                    case 'reset':
+                        resetGame(data.players);
+                        break;
+                }
+            });
+            
+            conn.on('close', () => {
+                statusText.textContent = 'Opponent disconnected.';
+                if (gameActive) endGame(myPlayerId); // If game is active, I win
+            });
+        }
+        
+        // --- Game Logic ---
+        function startGame() {
+            console.log("Game Starting!");
+            gameActive = true;
+            connectionSetupDiv.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            if (isTouchDevice()) touchControls.style.display = 'block';
+            
+            resizeCanvas();
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            updateGameState();
+            drawGame();
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateGameState() {
+            players.forEach(p => p.update());
+            checkCollisions();
+        }
+        
+        function checkCollisions() {
+            players.forEach(player => {
+                if (!player.isAlive) return;
+
+                // Wall collision
+                if (player.x < 0 || player.x >= gameCanvas.width || player.y < 0 || player.y >= gameCanvas.height) {
+                    player.isAlive = false;
+                }
+
+                // Trail collision
+                players.forEach(otherPlayer => {
+                    otherPlayer.trail.slice(0, -1).forEach(segment => {
+                        if (player.x === segment.x && player.y === segment.y) {
+                            player.isAlive = false;
+                        }
+                    });
+                });
+            });
+
+            const alivePlayers = players.filter(p => p.isAlive);
+            if (alivePlayers.length <= 1) {
+                const winnerId = alivePlayers.length === 1 ? alivePlayers[0].id : null; // null for a draw
+                if (conn && conn.open) {
+                    conn.send({ type: 'gameOver', winnerId: winnerId });
+                }
+                endGame(winnerId);
+            }
+        }
+        
+        function drawGame() {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            players.forEach(p => p.draw());
+        }
+
+        function endGame(winnerId) {
+            gameActive = false;
+            cancelAnimationFrame(animationFrameId);
+            
+            const winner = players.find(p => p.id === winnerId);
+            if (winner) {
+                winnerText.textContent = `${winner.color.toUpperCase()} WINS`;
+                winnerText.style.color = winner.color;
+                winnerText.style.textShadow = `0 0 10px ${winner.color}`;
+            } else {
+                 winnerText.textContent = 'SIMULTANEOUS DEREZZING'; // Draw
+                 winnerText.style.color = '#fff';
+                 winnerText.style.textShadow = `0 0 10px #fff`;
+            }
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function resetGame(newPlayers) {
+             players = newPlayers.map(p => new Player(p.id, p.x, p.y, p.dir, p.color));
+             startGame();
+        }
+        
+        function initiateNewGame() {
+            const p1Start = { x: Math.floor(gameCanvas.width * 0.25 / GRID_SIZE) * GRID_SIZE, y: Math.floor(gameCanvas.height * 0.5 / GRID_SIZE) * GRID_SIZE };
+            const p2Start = { x: Math.floor(gameCanvas.width * 0.75 / GRID_SIZE) * GRID_SIZE, y: Math.floor(gameCanvas.height * 0.5 / GRID_SIZE) * GRID_SIZE };
+
+            const initialPlayers = [
+                { id: peer.id, x: p1Start.x, y: p1Start.y, dir: 'right', color: '#0ea5e9' }, // Blue
+                { id: conn.peer, x: p2Start.x, y: p2Start.y, dir: 'left', color: '#f97316' }  // Orange
+            ];
+            
+            if (conn && conn.open) conn.send({ type: 'reset', players: initialPlayers });
+            resetGame(initialPlayers);
+        }
+
+        // --- Input Handling ---
+        function handleInput(newDir) {
+            if (!gameActive) return;
+            const myPlayer = players.find(p => p.id === peer.id);
+            if (myPlayer) {
+                myPlayer.changeDirection(newDir);
+                if (conn && conn.open) {
+                    conn.send({ type: 'directionChange', playerId: myPlayer.id, newDir: newDir });
+                }
+            }
+        }
+
+        window.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowUp': case 'w': handleInput('up'); break;
+                case 'ArrowDown': case 's': handleInput('down'); break;
+                case 'ArrowLeft': case 'a': handleInput('left'); break;
+                case 'ArrowRight': case 'd': handleInput('right'); break;
+            }
+        });
+
+        document.getElementById('btn-up').addEventListener('click', () => handleInput('up'));
+        document.getElementById('btn-down').addEventListener('click', () => handleInput('down'));
+        document.getElementById('btn-left').addEventListener('click', () => handleInput('left'));
+        document.getElementById('btn-right').addEventListener('click', () => handleInput('right'));
+
+        // --- UI & Helpers ---
+        function resizeCanvas() {
+            const containerSize = Math.min(gameContainer.clientWidth, gameContainer.clientHeight) * 0.95;
+            // Snap to grid size
+            gameCanvas.width = Math.floor(containerSize / GRID_SIZE) * GRID_SIZE;
+            gameCanvas.height = gameCanvas.width;
+            if (gameActive) drawGame();
+        }
+
+        function isTouchDevice() {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        }
+
+        function lightenColor(hex, percent) {
+            hex = hex.replace(/^\s*#|\s*$/g, '');
+            if(hex.length == 3) hex = hex.replace(/(.)/g, '$1$1');
+            let r = parseInt(hex.substr(0, 2), 16),
+                g = parseInt(hex.substr(2, 2), 16),
+                b = parseInt(hex.substr(4, 2), 16);
+            
+            const p = percent / 100;
+            r = Math.min(255, Math.floor(r * (1 + p)));
+            g = Math.min(255, Math.floor(g * (1 + p)));
+            b = Math.min(255, Math.floor(b * (1 + p)));
+            
+            return '#' + (r).toString(16).padStart(2, '0') + (g).toString(16).padStart(2, '0') + (b).toString(16).padStart(2, '0');
+        }
+
+        createRoomBtn.addEventListener('click', () => {
+            const roomName = roomNameInput.value.trim();
+            if (roomName) initializePeer(true, roomName);
+        });
+
+        joinRoomBtn.addEventListener('click', () => {
+            const roomName = roomNameInput.value.trim();
+            if (roomName) initializePeer(false, roomName);
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+            initiateNewGame();
+        });
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenBtn.textContent = document.fullscreenElement ? 'Exit' : 'Fullscreen';
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        
+        // --- Initial Setup ---
+        resizeCanvas();
+    </script>
+</body>
+</html>
