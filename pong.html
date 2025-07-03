@@ -20,13 +20,31 @@
             background-color: #000;
             display: block; /* Removes bottom margin */
         }
+        /* Add a little pulse animation for the fullscreen prompt */
+        .pulse {
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
 
     <div id="game-container" class="w-screen h-screen flex flex-col items-center justify-center">
         
-        <div id="connection-setup" class="text-center space-y-4 p-4">
+        <div id="connection-setup" class="text-center space-y-4 p-4 cursor-pointer">
             <h1 class="text-5xl uppercase">Pong</h1>
             <div id="error-message" class="text-red-500 h-6"></div>
             <div>
@@ -40,6 +58,7 @@
                     Join Room
                 </button>
             </div>
+            <p id="fullscreen-prompt" class="text-gray-400 mt-8 pulse">Tap to go Fullscreen</p>
         </div>
 
         <canvas id="pong-canvas" class="hidden"></canvas>
@@ -56,6 +75,7 @@
         const canvas = document.getElementById('pong-canvas');
         const scoreStatus = document.getElementById('score-status');
         const errorMessage = document.getElementById('error-message');
+        const fullscreenPrompt = document.getElementById('fullscreen-prompt');
         const ctx = canvas.getContext('2d');
 
         // --- Game State ---
@@ -74,6 +94,20 @@
         function showMessage(msg, isError = false) {
             errorMessage.textContent = msg;
             errorMessage.style.color = isError ? '#f56565' : '#a0aec0';
+        }
+        
+        function enterFullScreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) { /* Firefox */
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE/Edge */
+                elem.msRequestFullscreen();
+            }
+            fullscreenPrompt.classList.add('hidden'); // Hide prompt after tapping
         }
 
         function resizeCanvas() {
@@ -134,7 +168,6 @@
                 resizeCanvas();
                 startGameLoop();
                 
-                // Add event listeners for both mouse and touch
                 window.addEventListener('mousemove', handleMouseMove);
                 window.addEventListener('touchmove', handleTouchMove, { passive: false });
             });
@@ -179,7 +212,6 @@
         }
 
         function handleTouchMove(e) {
-            // Prevent the page from scrolling on touch devices
             e.preventDefault();
             if (e.touches && e.touches.length > 0) {
                 updatePaddlePosition(e.touches[0].clientY);
@@ -258,6 +290,14 @@
 
         // --- Event Listeners ---
         window.addEventListener('resize', resizeCanvas);
+        
+        connectionSetupDiv.addEventListener('click', (event) => {
+            // Don't trigger fullscreen if a button or input is clicked
+            if (event.target.tagName === 'BUTTON' || event.target.tagName === 'INPUT') {
+                return;
+            }
+            enterFullScreen();
+        });
 
         createRoomBtn.addEventListener('click', () => {
             const roomName = roomNameInput.value.trim();
