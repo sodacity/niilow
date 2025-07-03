@@ -3405,26 +3405,45 @@
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 state.localScreenStream = stream;
+                
+                // This event listener is crucial for when the user clicks the browser's native "Stop sharing" button.
                 stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
                 
                 const sharerInfo = { name: state.settings.userName, avatar: state.settings.userAvatar };
+                
+                // --- DOM UPDATES HAPPEN FIRST ---
+                // Add the "Live" card to our own screen immediately.
                 addLiveShareCardToGrid(state.peer.id, sharerInfo);
                 
-                for (const peerId of state.connections.keys()) {
-                    console.log(`Calling peer ${peerId} for screen share.`);
-                    const call = state.peer.call(peerId, stream, { metadata: { sharerInfo } });
-                    state.activeCalls.set(peerId, call);
-                }
-
+                // Update the button to show it's in a "sharing" state.
                 DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
                 DOMElements.startShareBtn.title = "Stop Sharing";
                 DOMElements.startShareBtn.disabled = true;
                 DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
 
+                // --- THE FIX: DELAY THE NETWORKING ---
+                // We wait a fraction of a second to let the DOM updates finish before starting the calls.
+                setTimeout(() => {
+                    if (!state.localScreenStream) return; // Check if the user already stopped sharing in this tiny interval.
+                    
+                    // Now, call everyone else in the session.
+                    for (const peerId of state.connections.keys()) {
+                        console.log(`Calling peer ${peerId} for screen share.`);
+                        const call = state.peer.call(peerId, stream, { metadata: { sharerInfo } });
+                        if (call) {
+                           state.activeCalls.set(peerId, call);
+                        }
+                    }
+                    // Re-enable the button after the calls have been initiated so the user can click it to stop.
+                    DOMElements.startShareBtn.disabled = false;
+                    DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
+
+                }, 100); // A 100ms delay is tiny but effective.
+
             } catch (err) {
                 showNotification('Could not start screen share.', 'error');
                 console.error("Screen share error:", err);
-                stopScreenShare(true); // Clean up if failed
+                stopScreenShare(true); // Clean up if the user cancels the share prompt or an error occurs.
             }
         }
 
