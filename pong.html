@@ -2,7 +2,7 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Multiplayer Pong</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -11,6 +11,10 @@
         body {
             font-family: 'Press Start 2P', cursive;
             overflow: hidden; /* Prevents scrollbars */
+            /* Prevent text selection and callouts on mobile */
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none;
         }
         canvas {
             background-color: #000;
@@ -62,9 +66,7 @@
 
         // Game objects
         const paddleWidth = 10, paddleHeight = 100;
-        // Player 1 is always the left paddle (the host)
         let player1 = { x: 10, y: 0, score: 0 };
-        // Player 2 is always the right paddle (the guest)
         let player2 = { x: 0, y: 0, score: 0 };
         let ball = { x: 0, y: 0, dx: 5, dy: 5, radius: 7 };
 
@@ -79,7 +81,7 @@
             canvas.height = window.innerHeight;
             
             player1.y = canvas.height / 2 - paddleHeight / 2;
-            player2.x = canvas.width - 20; // player2 is always on the right
+            player2.x = canvas.width - 20;
             player2.y = canvas.height / 2 - paddleHeight / 2;
             
             if(isHost) {
@@ -90,7 +92,6 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
-            // Randomize direction, but always start towards the guest
             ball.dx = 5; 
             ball.dy = Math.random() > 0.5 ? 5 : -5;
         }
@@ -133,16 +134,15 @@
                 resizeCanvas();
                 startGameLoop();
                 
-                // Track mouse movement to control paddle
+                // Add event listeners for both mouse and touch
                 window.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('touchmove', handleTouchMove, { passive: false });
             });
 
             conn.on('data', data => {
-                // Host receives guest's paddle position
                 if (isHost && data.type === 'paddle') {
                     player2.y = data.y;
                 }
-                // Guest receives host's paddle and all game state
                 if (!isHost) {
                     if (data.type === 'paddle') {
                         player1.y = data.y;
@@ -159,17 +159,13 @@
             conn.on('close', () => {
                 stopGameLoop();
                 showMessage('Opponent disconnected.', true);
-                // Optionally show the connection screen again
-                // connectionSetupDiv.classList.remove('hidden');
-                // canvas.classList.add('hidden');
             });
         }
         
-        function handleMouseMove(e) {
+        // --- Input Handlers ---
+        function updatePaddlePosition(y) {
             let myPaddle = isHost ? player1 : player2;
-            
-            myPaddle.y = e.clientY - paddleHeight / 2;
-             // Clamp paddle position to stay within canvas bounds
+            myPaddle.y = y - paddleHeight / 2;
             if (myPaddle.y < 0) myPaddle.y = 0;
             if (myPaddle.y > canvas.height - paddleHeight) myPaddle.y = canvas.height - paddleHeight;
             
@@ -178,6 +174,17 @@
             }
         }
 
+        function handleMouseMove(e) {
+            updatePaddlePosition(e.clientY);
+        }
+
+        function handleTouchMove(e) {
+            // Prevent the page from scrolling on touch devices
+            e.preventDefault();
+            if (e.touches && e.touches.length > 0) {
+                updatePaddlePosition(e.touches[0].clientY);
+            }
+        }
 
         // --- Game Loop ---
         function startGameLoop() {
@@ -200,60 +207,45 @@
         }
 
         function update() {
-            // Only host updates ball physics and sends state
             if (!isHost) return;
 
             ball.x += ball.dx;
             ball.y += ball.dy;
 
-            // Wall collision (top/bottom)
             if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
                 ball.dy *= -1;
             }
 
-            // Paddle collision detection
-            // Player 1 (Host)
             if (ball.dx < 0 && ball.x - ball.radius < player1.x + paddleWidth && ball.x - ball.radius > player1.x && ball.y > player1.y && ball.y < player1.y + paddleHeight) {
                 ball.dx *= -1;
             }
-            // Player 2 (Guest)
             if (ball.dx > 0 && ball.x + ball.radius > player2.x && ball.x + ball.radius < player2.x + paddleWidth && ball.y > player2.y && ball.y < player2.y + paddleHeight) {
                 ball.dx *= -1;
             }
 
-            // Score points
-            if (ball.x + ball.radius < 0) { // Player 2 scores
+            if (ball.x + ball.radius < 0) {
                 player2.score++;
                 resetBall();
-            } else if (ball.x - ball.radius > canvas.width) { // Player 1 scores
+            } else if (ball.x - ball.radius > canvas.width) {
                 player1.score++;
                 resetBall();
             }
             
-            // Send authoritative game state to client
             if (conn && conn.open) {
                 conn.send({ type: 'ball', x: ball.x, y: ball.y });
                 conn.send({ type: 'score', p1: player1.score, p2: player2.score });
-                // Also send host paddle position
                 conn.send({ type: 'paddle', y: player1.y });
             }
         }
 
         function draw() {
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw paddles
             ctx.fillStyle = 'white';
             ctx.fillRect(player1.x, player1.y, paddleWidth, paddleHeight);
             ctx.fillRect(player2.x, player2.y, paddleWidth, paddleHeight);
-
-            // Draw ball
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Draw middle line
             ctx.beginPath();
             ctx.setLineDash([10, 15]);
             ctx.moveTo(canvas.width / 2, 0);
@@ -261,8 +253,6 @@
             ctx.strokeStyle = 'white';
             ctx.stroke();
             ctx.setLineDash([]);
-
-            // Draw scores
             scoreStatus.textContent = `${player1.score} - ${player2.score}`;
         }
 
