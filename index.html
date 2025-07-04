@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Niilow</title>
 
-    <meta name="theme-color" content="#3c6d5e">
+    <meta name="theme-color" content="#303030">
+    <link rel="manifest" href="manifest.json">
+    
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 50 50'%3e%3crect width='50' height='50' rx='10' fill='%233c6d5e'/%3e%3ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='28' font-weight='bold' fill='white'%3eN%3c/text%3e%3c/svg%3e">
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTmlpbG93IC0gTXkgSW50ZXJwcmV0ZXIiLCJzaG9ydF9uYW1lIjoiTmlpbG93IiwiZGVzY3JpcHRpb24iOiJZb3VyIHNpbXBsZSwgc2VjdXJlIG5vdGUtdGFraW5nIGFwcGxpY2F0aW9uLiIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMWYyOTM3IiwidGhlbWVfY29sb3IiOiIjM2M2ZDVlIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCUzY3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxOTInIGhlaWdodD0nMTkyJyB2aWV3Qm94PScwIDAgNTAgNTAnJTNFJTNDcmVjdCB3aWR0aD0nNTAnIGhlaWdodD0nNTAnIHJ4PScxMCcgZmlsbD0nJTIzM2M2ZDVlJy8lM0UlNUN0ZXh0IHg9JzUwJSUyNScgeT0nNTIlMjUnIGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJyBmb250LXNpemU9JzI4JyBmb250LXdlaWdodD0nYm9sZCcgZmlsbD0nd2hpdGUnJTNFTiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9LHsic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sJTNjdnZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIHZpZXdCb3g9JzAgMCA1MCA1MCclM0UlM0NyZWN0IHdpZHRoPSc1MCcgaGVpZ2h0PSc1MCcgcngPScxMCcgZmlsbD0nJTIzM2M2ZDVlJy8+lM0N0ZXh0IHg9JzUwJSUyNScgeT0nNTIlMjUnIGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJyBmb250LXNpemU9JzI4JyBmb250LXdlaWdodD0nYm9sZCcgZmlsbD0nd2hpdGUnJTNFTiUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9XX0=">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,7 +20,7 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="flex h-screen overflow-hidden bg-gray-900 text-white">
+<body class="flex h-screen overflow-hidden">
 
     <div id="video-wall-backdrop"></div>
 
@@ -221,7 +222,7 @@
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 class="text-2xl font-bold mb-4">Set Video Wall</h2>
             <p class="text-gray-400 mb-4">Enter a direct .mp4 URL or a YouTube video link.</p>
-            <input type="text" id="video-wall-url-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="https://example.com/video.mp4">
+            <input type="text" id="video-wall-url-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="https://example.com/video.mp4 or YouTube URL">
             <div class="flex justify-end gap-4">
                 <button id="cancel-video-wall-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
                 <button id="remove-video-wall-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Remove</button>
