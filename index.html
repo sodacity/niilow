@@ -6,9 +6,8 @@
     <title>Niilow</title>
 
     <meta name="theme-color" content="#303030">
-    <link rel="manifest" href="manifest.json">
-    
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 50 50'%3e%3crect width='50' height='50' rx='10' fill='%233c6d5e'/%3e%3ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='28' font-weight='bold' fill='white'%3eN%3c/text%3e%3c/svg%3e">
+    <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,11 +19,11 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="bg-gray-900 text-white flex h-screen overflow-hidden">
 
     <div id="video-wall-backdrop"></div>
 
-    <div id="notification" class="hidden fixed top-0 left-1/2 transform -translate-x-1/2 -translate-y-full text-white py-2 px-6 rounded-b-lg shadow-lg"></div>
+    <div id="notification" class="hidden fixed top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-green-500 text-white py-2 px-6 rounded-b-lg shadow-lg"></div>
 
     <div id="global-drop-zone" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4 pointer-events-none">
         <div class="text-center text-white border-4 border-dashed border-white rounded-lg p-12">
@@ -49,7 +48,7 @@
         <div class="flex flex-col flex-grow overflow-hidden">
              <div class="mb-4 search-container">
                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="filter" placeholder="Search" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="filter" placeholder="Search" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
              <div class="mb-4">
                  <a href="#" id="dashboard-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
@@ -117,7 +116,7 @@
             <div id="chat-container"></div>
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
-                    <input type="text" id="chat-input" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
+                    <input type="text" id="chat-input" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
                     <button id="video-wall-btn" class="bg-pink-600 hover:bg-pink-700 text-white font-bold p-2 rounded-full" title="Video Wall">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
                     </button>
@@ -176,7 +175,7 @@
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
             <h2 class="text-2xl font-bold mb-4">Real-Time Collaboration</h2>
             <p class="text-gray-400 mb-6">Enter a room name to create or join a session.</p>
-            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg" placeholder="e.g., ProjectPhoenix">
+            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg bg-gray-700" placeholder="e.g., ProjectPhoenix">
             <div class="flex justify-center gap-4">
                 <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Create & Host</button>
                 <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Join</button>
@@ -200,7 +199,7 @@
             <h2 class="text-2xl font-bold mb-4 text-white">Are you sure?</h2>
             <p class="text-white mb-4">This action is irreversible and will delete all your notes, settings, and shortcuts.</p>
             <p class="text-gray-300 mb-4">To confirm, please type <strong class="text-red-400 font-mono">DELETE</strong> into the box below.</p>
-            <input type="text" id="delete-confirmation-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="Type DELETE here">
+            <input type="text" id="delete-confirmation-input" class="text-input-field w-full p-2 rounded mb-6 text-center bg-gray-200 text-black" placeholder="Type DELETE here">
             <div class="flex justify-end gap-4">
                 <button id="cancel-clear-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
                 <button id="confirm-clear-action-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-not-allowed" disabled>Confirm Deletion</button>
@@ -222,7 +221,7 @@
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 class="text-2xl font-bold mb-4">Set Video Wall</h2>
             <p class="text-gray-400 mb-4">Enter a direct .mp4 URL or a YouTube video link.</p>
-            <input type="text" id="video-wall-url-input" class="text-input-field w-full p-2 rounded mb-6 text-center" placeholder="https://example.com/video.mp4 or YouTube URL">
+            <input type="text" id="video-wall-url-input" class="text-input-field w-full p-2 rounded mb-6 text-center bg-gray-700" placeholder="https://example.com/video.mp4">
             <div class="flex justify-end gap-4">
                 <button id="cancel-video-wall-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
                 <button id="remove-video-wall-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Remove</button>
@@ -235,7 +234,7 @@
     <div id="edit-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
         <div id="side-pane-resize-handle" class="hidden md:block"></div>
          <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
-            <input type="text" id="edit-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full text-white placeholder-gray-300 mb-4 flex-shrink-0">
+            <input type="text" id="edit-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full bg-gray-900 text-white placeholder-gray-300 mb-4 flex-shrink-0">
             <div id="edit-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
                 <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
                 <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
@@ -248,7 +247,7 @@
                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
                 </div>
             <div class="editor-container">
-                <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
+                <div id="edit-note-editor" contenteditable="true" class="editor w-full bg-gray-700"></div>
                 <div class="drop-zone-overlay">
                     <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
@@ -268,7 +267,7 @@
                         </button>
                     </div>
                     <div class="flex gap-2">
-                        <button id="archive-note" class="action-btn text-white" title="Archive">
+                        <button id="archive-note" class="action-btn bg-yellow-500 hover:bg-yellow-600 text-white" title="Archive">
                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
                         </button>
                          <button id="delete-note" class="action-btn bg-red-500 hover:bg-red-600 text-white" title="Delete">
@@ -289,7 +288,7 @@
     <div id="new-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
         <div id="bottom-resize-handle" class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-2 bg-gray-600 rounded-full cursor-ns-resize hidden md:block"></div>
         <div class="p-4 md:p-6 pt-8 flex flex-col h-full w-full overflow-hidden">
-            <input type="text" id="new-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full text-white placeholder-gray-300 mb-4 flex-shrink-0">
+            <input type="text" id="new-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full bg-gray-900 text-white placeholder-gray-300 mb-4 flex-shrink-0">
             <div id="new-note-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
                  <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
                 <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
@@ -302,7 +301,7 @@
                  <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
                 </div>
             <div class="editor-container">
-                <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
+                <div id="new-note-editor" contenteditable="true" class="editor w-full bg-gray-700"></div>
                 <div class="drop-zone-overlay">
                     <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
@@ -349,7 +348,7 @@
                 </div>
             </div>
             <p class="text-gray-400 mb-4">Paste your HTML embed code below, or use the iFrame builder.</p>
-            <textarea id="embed-code-input" class="text-input-field w-full p-2 rounded h-32" placeholder="<iframe ...></iframe> or <video ...>...</video>"></textarea>
+            <textarea id="embed-code-input" class="text-input-field w-full p-2 rounded h-32 bg-gray-700" placeholder="<iframe ...></iframe> or <video ...>...</video>"></textarea>
             <div class="flex justify-end gap-4 mt-6">
                 <button id="cancel-embed-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
                 <button id="save-embed-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Save</button>
@@ -363,15 +362,15 @@
             <div class="space-y-4">
                 <div>
                     <label for="iframe-url" class="block mb-2 font-semibold">URL</label>
-                    <input type="url" id="iframe-url" class="text-input-field w-full p-2 rounded" placeholder="https://example.com">
+                    <input type="url" id="iframe-url" class="text-input-field w-full p-2 rounded bg-gray-700" placeholder="https://example.com">
                 </div>
                  <div>
                     <label for="iframe-width" class="block mb-2 font-semibold">Width</label>
-                    <input type="number" id="iframe-width" class="text-input-field w-full p-2 rounded" value="500">
+                    <input type="number" id="iframe-width" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
                 </div>
                  <div>
                     <label for="iframe-height" class="block mb-2 font-semibold">Height</label>
-                    <input type="number" id="iframe-height" class="text-input-field w-full p-2 rounded" value="500">
+                    <input type="number" id="iframe-height" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
                 </div>
             </div>
             <div class="flex justify-end gap-4 mt-6">
@@ -387,15 +386,15 @@
             <div class="space-y-4">
                 <div>
                     <label for="video-url" class="block mb-2 font-semibold">Video URL (.mp4)</label>
-                    <input type="url" id="video-url" class="text-input-field w-full p-2 rounded" placeholder="https://example.com/video.mp4">
+                    <input type="url" id="video-url" class="text-input-field w-full p-2 rounded bg-gray-700" placeholder="https://example.com/video.mp4">
                 </div>
                  <div>
                     <label for="video-width" class="block mb-2 font-semibold">Width</label>
-                    <input type="number" id="video-width" class="text-input-field w-full p-2 rounded" value="500">
+                    <input type="number" id="video-width" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
                 </div>
                  <div>
                     <label for="video-height" class="block mb-2 font-semibold">Height</label>
-                    <input type="number" id="video-height" class="text-input-field w-full p-2 rounded" value="300">
+                    <input type="number" id="video-height" class="text-input-field w-full p-2 rounded bg-gray-700" value="300">
                 </div>
                 <div class="flex items-center">
                     <input type="checkbox" id="video-controls" class="mr-2" checked>
@@ -423,10 +422,14 @@
             </div>
             <div class="flex-grow overflow-y-auto custom-scrollbar pr-4">
                 <div class="space-y-4">
-                    <div><label for="user-name-setting" class="block mb-2 font-semibold">User Name</label><input type="text" id="user-name-setting" class="text-input-field w-full p-2 rounded text-white"></div>
-                    <div><label for="title-setting" class="block mb-2 font-semibold">App Title</label><input type="text" id="title-setting" class="text-input-field w-full p-2 rounded text-white"></div>
-                     <div><label for="footer-text-setting" class="block mb-2 font-semibold">Footer Text</label><input type="text" id="footer-text-setting" class="text-input-field w-full p-2 rounded text-white"></div>
-                     <div><label for="session-password-setting" class="block mb-2 font-semibold">Session Password (for secure export/import)</label><input type="password" id="session-password-setting" class="text-input-field w-full p-2 rounded text-white" placeholder="Set a password to secure backups"></div>
+                    <div><label for="user-name-setting" class="block mb-2 font-semibold">User Name</label><input type="text" id="user-name-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
+                    <div><label for="title-setting" class="block mb-2 font-semibold">App Title</label><input type="text" id="title-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
+                    <div><label for="footer-text-setting" class="block mb-2 font-semibold">Footer Text</label><input type="text" id="footer-text-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
+                    <div>
+                        <label for="video-wall-url-setting" class="block mb-2 font-semibold">Video Wall URL (.mp4 or YouTube)</label>
+                        <input type="text" id="video-wall-url-setting" class="text-input-field w-full p-2 rounded text-white bg-gray-700" placeholder="Enter video URL here">
+                    </div>
+                     <div><label for="session-password-setting" class="block mb-2 font-semibold">Session Password (for secure export/import)</label><input type="password" id="session-password-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white" placeholder="Set a password to secure backups"></div>
                      <hr>
                      <div>
                         <label class="block mb-2 font-semibold">Profile Avatar</label>
@@ -492,10 +495,10 @@
         </div>
     </div>
 
-    <button id="fab-add-note" title="New Note" class="fab-peek-btn">
+    <button id="fab-add-note" title="New Note" class="fab-peek-btn bg-blue-500 hover:bg-blue-600">
         <span>+</span>
     </button>
-    <button id="fab-chat-log" title="Chat Log" class="fab-peek-btn hidden">
+    <button id="fab-chat-log" title="Chat Log" class="fab-peek-btn bg-blue-500 hover:bg-blue-600 hidden">
         <div class="unread-dot"></div>
         <span>CHAT</span>
     </button>
@@ -513,7 +516,7 @@
                 </div>
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
-                    <input type="text" id="chat-log-input" class="text-input-field w-full p-2 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Send a message...">
+                    <input type="text" id="chat-log-input" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Send a message...">
                     <button id="send-chat-log-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
                 </div>
             </div>
