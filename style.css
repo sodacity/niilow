@@ -1,0 +1,522 @@
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+.sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+#sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2.5px;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+}
+#notification {
+    transition: opacity 0.5s, transform 0.5s;
+    z-index: 10000; /* Ensure it's on top of everything */
+}
+.editor-container {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* CRITICAL FIX for flexbox scrolling */
+}
+.editor {
+    flex-grow: 1;
+    overflow-y: auto;
+    outline: none;
+    transition: background-color 0.3s;
+    padding: 1rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    color: inherit;
+}
+.editor img, .editor video { max-width: 100%; height: auto; border-radius: 8px; }
+.editor iframe { max-width: 100%; border-radius: 8px; }
+.editor ul, .editor ol { padding-left: 2rem; }
+.editor ul { list-style: disc; }
+.editor ol { list-style: decimal; }
+.drop-zone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 150, 255, 0.2);
+    border: 2px dashed #0096ff;
+    border-radius: 8px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 100;
+}
+.drop-zone-active .drop-zone-overlay {
+    display: flex;
+}
+#global-drop-zone {
+    transition: opacity 0.2s;
+}
+.toolbar-btn {
+    background-color: transparent; border: 1px solid #4a5568; border-radius: 4px;
+    color: white; padding: 0.25rem 0.75rem; transition: background-color 0.2s;
+    font-size: 1rem; width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.toolbar-btn:hover { background-color: #4a5568; }
+.toolbar-btn.active { background-color: #4A90E2; }
+input[type="color"] { width: 38px; height: 38px; border: 1px solid #4a5568; border-radius: 4px; padding: 4px; background-color: #2d3748; cursor: pointer; }
+.modal { transition: opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.3s; }
+#notes-grid, #collaboration-notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+.note-card {
+    border: 2px solid transparent; /* Changed border to 2px for selection state */
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    height: 300px; /* Increased height */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: background-color 0.3s, transform 0.2s, border-color 0.2s, opacity 0.2s;
+}
+.note-card.is-archived {
+    opacity: 0.6;
+    border-style: dashed;
+}
+.note-card.selected {
+    border-color: #4A90E2;
+    transform: scale(0.95);
+}
+.in-select-mode .note-card:hover {
+    transform: scale(1.02); /* Different hover effect in select mode */
+}
+.note-card:not(.in-select-mode):hover { transform: translateY(-5px); }
+.note-card-title {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    flex-shrink: 0;
+}
+.note-card-content { flex-grow: 1; overflow: hidden; font-size: 0.9rem; }
+.note-card-content * { color: inherit; }
+
+/* --- Live Share Card Styles --- */
+.live-share-card {
+    position: relative;
+    border: 2px solid #f87171; /* red-400 */
+    box-shadow: 0 0 15px rgba(248, 113, 113, 0.5);
+}
+.live-share-card .live-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: #ef4444; /* red-500 */
+    color: white;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+.live-share-card .note-card-content {
+    background-color: #111827; /* gray-900 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.live-share-card video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* --- Checklist Styles --- */
+.editor ul li.task-item {
+    list-style-type: none; /* Hide the default bullet point */
+    position: relative;
+    padding-left: 28px; /* Make room for our custom checkbox */
+    margin-left: -28px; /* Pull it back in line with other text */
+}
+
+.editor ul li.task-item::before {
+    content: '☐'; /* The empty checkbox character */
+    position: absolute;
+    left: 0;
+    top: 2px;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #9ca3af; /* A nice gray color for the box */
+}
+
+.editor ul li.task-item.checked {
+    text-decoration: line-through;
+    color: #718096; /* Gray out the text when checked */
+}
+
+.editor ul li.task-item.checked::before {
+    content: '☑'; /* The checked checkbox character */
+    color: #4A90E2; /* A nice blue to show it's completed */
+}
+
+.sidebar-icon-btn { color: #9ca3af; transition: color 0.2s; }
+.sidebar-icon-btn:hover { color: white; }
+#edit-note-pane, #new-note-pane, #chat-log-pane {
+    position: fixed;
+    z-index: 50;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), background-color 0.3s;
+}
+#edit-note-pane {
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    transform: translateX(100%);
+}
+#chat-log-pane {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: translateX(-100%);
+}
+#side-pane-resize-handle {
+    position: absolute;
+    top: 0;
+    left: -2.5px;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+}
+#edit-note-pane.is-open, #chat-log-pane.is-open {
+    transform: translateX(0);
+}
+ #new-note-pane {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: translateY(100%);
+    height: 90vh;
+}
+#new-note-pane.is-open {
+    transform: translateY(0);
+}
+.text-input-field {
+    transition: background-color 0.3s, color 0.3s;
+}
+.recent-notes-container {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+}
+.recent-note-card {
+    flex: 0 0 220px;
+    height: 250px; /* Increased height */
+}
+.search-container {
+    position: relative;
+}
+.search-container svg {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+.search-container input {
+    padding-left: 2.5rem;
+}
+.action-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    transition: background-color 0.2s;
+}
+#qr-code-container, #collab-qr-code-container {
+    display: flex;
+    justify-content: center;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+.toggle-bg:checked ~ .dot {
+    transform: translateX(1.5rem);
+}
+ .toggle-bg:checked ~ .block {
+    background-color: #4A90E2;
+}
+#batch-action-bar {
+    transition: transform 0.3s ease-in-out;
+}
+ @media (min-width: 768px) {
+    #edit-note-pane, #chat-log-pane {
+        width: 50%;
+        max-width: 800px;
+    }
+    #new-note-pane {
+         height: 60vh;
+    }
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #4a5568; /* gray-700 */
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #718096; /* gray-600 */
+}
+
+/* --- New Chat Styles --- */
+#chat-container {
+    position: fixed;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    height: 300px;
+    pointer-events: none;
+    z-index: 45;
+    display: flex;
+    justify-content: center;
+}
+.floating-chat-bubble-container {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    animation: floatUp 8s linear forwards;
+    pointer-events: all;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.floating-chat-bubble-container img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+.chat-bubble {
+    background-color: rgba(31, 41, 55, 0.95);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1.5rem;
+    max-width: 250px;
+    word-wrap: break-word;
+    font-size: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.chat-bubble strong {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #a0aec0;
+}
+.typing-indicator {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4a5568;
+    border-radius: 1rem;
+    padding: 0.25rem 0.75rem;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.typing-indicator.visible {
+    opacity: 1;
+}
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    border-radius: 50%;
+    animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) { animation-delay: -1.0s; }
+.typing-indicator span:nth-child(3) { animation-delay: -0.8s; }
+
+@keyframes floatUp {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+    20% { transform: translate(-50%, -40px) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -280px) scale(1); }
+}
+
+@keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+}
+
+/* Chat Log Pane Styles */
+#chat-log-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+}
+.chat-log-line {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 75%;
+}
+.chat-log-line.is-self {
+    margin-left: auto;
+    flex-direction: row-reverse;
+}
+.chat-log-line img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.chat-log-bubble {
+    padding: 0.5rem 1rem;
+    border-radius: 1.25rem;
+}
+.chat-log-line.is-self .chat-log-bubble {
+    background-color: #2b6cb0; /* Blue 600 */
+}
+.chat-log-line:not(.is-self) .chat-log-bubble {
+    background-color: #4a5568; /* Gray 600 */
+}
+.chat-log-bubble strong {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    color: #cbd5e0; /* Gray 400 */
+}
+.fab-peek-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    width: 4rem;
+    height: 7rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s ease-in-out;
+}
+#fab-add-note {
+    right: 0;
+    border-radius: 1.5rem 0 0 1.5rem;
+    font-size: 2.5rem;
+    line-height: 1;
+}
+#fab-chat-log {
+    left: 0;
+    border-radius: 0 1.5rem 1.5rem 0;
+}
+#fab-chat-log .unread-dot {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 12px;
+    height: 12px;
+    background-color: #ef4444; /* red-500 */
+    border-radius: 50%;
+    border: 2px solid white;
+    display: none;
+}
+#fab-chat-log.has-unread .unread-dot {
+    display: block;
+}
+.fab-peek-btn span {
+    font-weight: bold;
+}
+#fab-chat-log span {
+     writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    letter-spacing: 0.1em;
+}
+#session-info-hub details > summary {
+    list-style: none;
+}
+#session-info-hub details > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* VIDEO WALL STYLES */
+#video-wall-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden; /* This is important! */
+}
+
+/* This rule is for direct .mp4 files */
+#video-wall-backdrop video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: fill; /* This will distort direct videos as you wanted */
+    transform: translate(-50%, -50%);
+}
+
+/* This new, separate rule is specifically for YouTube iframes */
+#video-wall-backdrop iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* These values force the iframe to be huge to hide black bars */
+    width: 178vh; /* 16:9 ratio using viewport height */
+    min-width: 100vw; 
+    height: 100vh;
+    min-height: 56.25vw; /* 16:9 ratio using viewport width */
+    transform: translate(-50%, -50%);
+}
+
+#video-wall-backdrop .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Tint */
+}
+
+#video-wall-mute-btn {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 45;
+}
