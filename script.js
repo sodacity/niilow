@@ -140,6 +140,7 @@
         removeVideoWallBtn: document.getElementById('remove-video-wall-btn'),
         saveVideoWallBtn: document.getElementById('save-video-wall-btn'),
         videoWallBackdrop: document.getElementById('video-wall-backdrop'),
+        videoWallUrlSetting: document.getElementById('video-wall-url-setting'),
     };
 
     // --- App State ---
@@ -413,6 +414,7 @@
             settingsModal.querySelector('#modal-opacity-setting').value = settings.modalOpacity;
             settingsModal.querySelector('#text-input-bg-color-setting').value = settings.textInputBgColor;
             settingsModal.querySelector('#text-input-font-color-setting').value = settings.textInputFontColor;
+            DOMElements.videoWallUrlSetting.value = settings.videoWall || '';
         }
     }
 
@@ -1186,11 +1188,14 @@
             renderNotesGrid();
             renderDashboard();
         }
-        if (key === 'videoWall' && state.isHost) {
-            broadcastToAllPeers({
-                type: 'video_wall_update',
-                url: value
-            });
+        if (key === 'videoWall') {
+            applyVideoWall();
+            if (state.isHost) {
+                broadcastToAllPeers({
+                    type: 'video_wall_update',
+                    url: value
+                });
+            }
         }
     }
 
@@ -1612,7 +1617,7 @@
 
         let videoElement;
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const videoIdMatch = url.match(/(?:v=|\/|embed\/|http:\/\/googleusercontent.com\/youtube.com\/1\/)([a-zA-Z0-9_-]{11})/);
+            const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
             if (videoId) {
                 const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&autohide=1&modestbranding=1&iv_load_policy=3`;
@@ -2543,7 +2548,9 @@
             }, {
                 el: DOMElements.settingsModal.querySelector('#text-input-font-color-setting'),
                 key: 'textInputFontColor'
-            }];
+            },
+            { el: DOMElements.settingsModal.querySelector('#video-wall-url-setting'), key: 'videoWall' }
+        ];
             settingsInputs.forEach(({
                 el,
                 key
