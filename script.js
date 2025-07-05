@@ -114,6 +114,9 @@
         chatInput: document.getElementById('chat-input'),
         sendChatBtn: document.getElementById('send-chat-btn'),
         startShareBtn: document.getElementById('start-share-btn'),
+        addGameBtn: document.getElementById('add-game-btn'),
+        addGameModal: document.getElementById('add-game-modal'),
+        cancelAddGameBtn: document.getElementById('cancel-add-game-btn'),
         collaborationStartModal: document.getElementById('collaboration-start-modal'),
         customRoomIdInput: document.getElementById('custom-room-id-input'),
         hostSessionBtn: document.getElementById('host-session-btn'),
@@ -163,6 +166,8 @@
         isChatLogOpen: false,
         localScreenStream: null,
         activeCalls: new Map(),
+        activeSharerPeerId: null,
+        activeSharerInfo: null,
     };
 
     const defaultSettings = {
@@ -375,14 +380,9 @@
         DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
         const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal].forEach(el => {
+        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal].forEach(el => {
             if (el) {
-                const inner = el.firstElementChild;
-                if (inner && (el.id.includes('-modal'))) {
-                    inner.style.backgroundColor = rgbaModalBg;
-                } else {
-                    el.style.backgroundColor = rgbaModalBg;
-                }
+                el.style.backgroundColor = rgbaModalBg;
             }
         });
 
@@ -1180,6 +1180,37 @@
         }
     }
 
+    function handleAddGameNote(gameUrl, gameTitle) {
+        const content = `<iframe src="${gameUrl}" width="500" height="500" style="border:0; width: 100%; height: 500px;" allowfullscreen="" loading="lazy"></iframe>`;
+        const now = new Date().toISOString();
+        const newNote = {
+            id: Date.now().toString(),
+            title: gameTitle,
+            content: content,
+            createdAt: now,
+            updatedAt: now,
+            archived: false,
+            label: 'Games',
+            color: '#4a5568', // A neutral gray
+            author: state.settings.userName
+        };
+
+        const action = {
+            type: 'request_add_note',
+            note: newNote
+        };
+        const hostConn = state.isHost ? null : state.connections.get(state.roomId);
+
+        if (state.isHost) {
+            handleHostAction(action, state.peer.id);
+        } else if (hostConn && hostConn.open) {
+            hostConn.send(action);
+        } else {
+            showNotification('Cannot add game. Not connected to host.', 'error');
+        }
+        closeModal(DOMElements.addGameModal);
+    }
+
     async function updateSetting(key, value) {
         state.settings[key] = value;
         await saveData();
@@ -1304,6 +1335,7 @@
             !DOMElements.collaborationStartModal.classList.contains('hidden') ||
             !DOMElements.saveCollabNotesModal.classList.contains('hidden') ||
             !DOMElements.videoWallModal.classList.contains('hidden') ||
+            !DOMElements.addGameModal.classList.contains('hidden') ||
             !DOMElements.screenShareModal.classList.contains('hidden');
 
         const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
@@ -1342,6 +1374,7 @@
         closeModal(DOMElements.screenShareModal);
         closeModal(DOMElements.saveCollabNotesModal);
         closeModal(DOMElements.videoWallModal);
+        closeModal(DOMElements.addGameModal);
         closeSidebarMobile();
     }
 
@@ -1880,6 +1913,33 @@
                     peerId: newPeerId,
                     info: newPeerInfo
                 }, [newPeerId]);
+                
+                // If a share is active, we need to get the new user into the stream.
+                if (state.activeSharerPeerId) {
+                    // Check if the sharer is someone else
+                    if (state.activeSharerPeerId !== state.peer.id) {
+                        const sharerConn = state.connections.get(state.activeSharerPeerId);
+                        if (sharerConn && sharerConn.open) {
+                            // Tell the sharer to call the new peer
+                            sharerConn.send({
+                                type: 'request_call_new_peer',
+                                newPeerId: peerId // The ID of the user who just joined
+                            });
+                        }
+                    } else { // The host is the one sharing
+                        if (state.localScreenStream) {
+                            // Call the new peer directly
+                            const call = state.peer.call(peerId, state.localScreenStream, {
+                                metadata: {
+                                    sharerInfo: state.activeSharerInfo
+                                }
+                            });
+                            if (call) {
+                                state.activeCalls.set(peerId, call);
+                            }
+                        }
+                    }
+                }
 
                 renderSessionInfo();
             }
@@ -2041,6 +2101,30 @@
                         DOMElements.fabChatLogBtn.classList.add('has-unread');
                     }
                     playSound('https://www.niilow.com/chat.mp3');
+                }
+                break;
+            case 'announce_share_start':
+                // A share has started, create the UI card in preparation for the call
+                if (data.sharerId !== state.peer.id) {
+                    console.log(`Receiving announcement for screen share from ${data.sharerId}`);
+                    addLiveShareCardToGrid(data.sharerId, data.sharerInfo);
+                    // Disable our own share button since someone else is sharing
+                    DOMElements.startShareBtn.disabled = true;
+                    DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
+                }
+                break;
+            case 'request_call_new_peer':
+                // Make sure the request comes from the host and we are the one sharing
+                if (fromPeerId === state.roomId && state.localScreenStream) {
+                    console.log(`Host requested a call to new peer: ${data.newPeerId}`);
+                    const call = state.peer.call(data.newPeerId, state.localScreenStream, {
+                        metadata: {
+                            sharerInfo: state.activeSharerInfo
+                        }
+                    });
+                    if (call) {
+                        state.activeCalls.set(data.newPeerId, call);
+                    }
                 }
                 break;
             case 'screen_share_ended':
@@ -2226,51 +2310,57 @@
             stopScreenShare(true);
             return;
         }
-
+    
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: true,
                 audio: true
             });
             state.localScreenStream = stream;
-
-            stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
-
-            const sharerInfo = {
+    
+            // Set the global state for who is sharing
+            state.activeSharerPeerId = state.peer.id;
+            state.activeSharerInfo = {
                 name: state.settings.userName,
                 avatar: state.settings.userAvatar
             };
-
-            addLiveShareCardToGrid(state.peer.id, sharerInfo);
-
+    
+            stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
+    
+            // 1. Announce to everyone that a share is starting
+            broadcastToAllPeers({
+                type: 'announce_share_start',
+                sharerId: state.activeSharerPeerId,
+                sharerInfo: state.activeSharerInfo
+            });
+    
+            // 2. Add the card locally for the sharer's own view
+            addLiveShareCardToGrid(state.peer.id, state.activeSharerInfo);
+    
+            // Update the button UI to show "Stop Sharing"
             DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
             DOMElements.startShareBtn.title = "Stop Sharing";
-            DOMElements.startShareBtn.disabled = true;
-            DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
-
+    
+            // 3. Call all connected peers after a short delay to let the announcement propagate
             setTimeout(() => {
                 if (!state.localScreenStream) return;
-
                 for (const peerId of state.connections.keys()) {
-                    console.log(`Calling peer ${peerId} for screen share.`);
-                    const call = state.peer.call(peerId, stream, {
+                    console.log(`Calling peer ${peerId} with screen share.`);
+                    const call = state.peer.call(peerId, state.localScreenStream, {
                         metadata: {
-                            sharerInfo
+                            sharerInfo: state.activeSharerInfo
                         }
                     });
                     if (call) {
                         state.activeCalls.set(peerId, call);
                     }
                 }
-                DOMElements.startShareBtn.disabled = false;
-                DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
-
-            }, 100);
-
+            }, 250); // A slightly longer delay for more reliability
+    
         } catch (err) {
             showNotification('Could not start screen share.', 'error');
             console.error("Screen share error:", err);
-            stopScreenShare(true);
+            stopScreenShare(true); // Clean up if it fails
         }
     }
 
@@ -2278,23 +2368,27 @@
         if (isLocalInitiated && state.localScreenStream) {
             state.localScreenStream.getTracks().forEach(track => track.stop());
             state.localScreenStream = null;
-
+    
             broadcastToAllPeers({
                 type: 'screen_share_ended',
                 peerId: state.peer.id
             });
-
+    
             removeLiveShareCardFromGrid(state.peer.id);
-
+    
             DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>`;
             DOMElements.startShareBtn.title = "Share Screen";
         }
-
+    
+        // Reset the state
+        state.activeSharerPeerId = null;
+        state.activeSharerInfo = null;
+    
         for (const call of state.activeCalls.values()) {
             call.close();
         }
         state.activeCalls.clear();
-
+    
         closeModal(DOMElements.screenShareModal);
         DOMElements.screenShareVideo.srcObject = null;
         DOMElements.startShareBtn.disabled = false;
@@ -2466,6 +2560,12 @@
         DOMElements.cancelVideoWallBtn.addEventListener('click', () => closeModal(DOMElements.videoWallModal));
         DOMElements.saveVideoWallBtn.addEventListener('click', handleSetVideoWall);
         DOMElements.removeVideoWallBtn.addEventListener('click', handleRemoveVideoWall);
+
+        DOMElements.addGameBtn.addEventListener('click', () => openModal(DOMElements.addGameModal));
+        DOMElements.cancelAddGameBtn.addEventListener('click', () => closeModal(DOMElements.addGameModal));
+        document.getElementById('add-game-connectfour').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/connectfour.html', 'Connect 4'));
+        document.getElementById('add-game-tcycle').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/tcycle.html', 'Tron'));
+        document.getElementById('add-game-pong').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/pong2.html', 'Pong'));
 
         const body = DOMElements.body;
         body.addEventListener('dragenter', (e) => {
