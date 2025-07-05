@@ -117,6 +117,9 @@
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
                     <input type="text" id="chat-input" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
+                    <button id="add-game-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2 rounded-full" title="Add a Game">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12M12 6v12"></path><rect x="3" y="3" width="18" height="18" rx="4"></rect></svg>
+                    </button>
                     <button id="video-wall-btn" class="bg-pink-600 hover:bg-pink-700 text-white font-bold p-2 rounded-full" title="Video Wall">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
                     </button>
@@ -184,6 +187,19 @@
         </div>
     </div>
 
+    <div id="add-game-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 text-center">
+            <h2 class="text-2xl font-bold mb-4">Add a Game to the Session</h2>
+            <p class="text-gray-400 mb-6">Choose a game to add as a new card.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button id="add-game-connectfour" class="game-btn bg-blue-500 hover:bg-blue-600">Connect 4</button>
+                <button id="add-game-tcycle" class="game-btn bg-red-500 hover:bg-red-600">Tron</button>
+                <button id="add-game-pong" class="game-btn bg-green-500 hover:bg-green-600">Pong</button>
+            </div>
+            <button id="cancel-add-game-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
+        </div>
+    </div>
+
     <div id="batch-delete-confirm-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
         <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
             <h2 class="text-2xl font-bold mb-4 text-white">Confirm Deletion</h2>
@@ -247,7 +263,7 @@
                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
                 </div>
             <div class="editor-container">
-                <div id="edit-note-editor" contenteditable="true" class="editor w-full bg-gray-700"></div>
+                <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
                 <div class="drop-zone-overlay">
                     <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
@@ -301,7 +317,7 @@
                  <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
                 </div>
             <div class="editor-container">
-                <div id="new-note-editor" contenteditable="true" class="editor w-full bg-gray-700"></div>
+                <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
                 <div class="drop-zone-overlay">
                     <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
