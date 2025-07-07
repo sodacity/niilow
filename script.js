@@ -173,6 +173,8 @@
         chatLog: [],
         isChatLogOpen: false,
         whiteboard: {
+            activeUsers: new Set(),
+            history: [],
             ctx: null,
             isDrawing: false,
             lastX: 0,
@@ -1783,6 +1785,7 @@
             console.error('PeerJS error:', err);
             
             if (err.type === 'unavailable-id' && state.isHost) {
+                // This means we tried to create a room that exists. We now become a joiner.
                 if (state.peer) state.peer.destroy();
                 state.isHost = false; 
                 initPeer(); 
@@ -1989,10 +1992,21 @@
                 broadcastPayload = { type: 'whiteboard_clear' };
                 break;
             }
+             case 'request_whiteboard_history': {
+                const conn = state.connections.get(fromPeerId);
+                if (conn && conn.open) {
+                    conn.send({ type: 'whiteboard_history_sync', history: state.whiteboard.history });
+                }
+                break;
+            }
         }
         if (broadcastPayload) {
             // Also handle it locally for the host immediately
             handleReceivedData(broadcastPayload, fromPeerId);
+             if (broadcastPayload.type === 'whiteboard_draw' || broadcastPayload.type === 'whiteboard_clear') {
+                 if (broadcastPayload.type === 'whiteboard_clear') state.whiteboard.history = [];
+                 else state.whiteboard.history.push(broadcastPayload.data);
+            }
             broadcastToAllPeers(broadcastPayload);
         }
     }
@@ -2097,6 +2111,18 @@
                 if(state.whiteboard.ctx) {
                     state.whiteboard.ctx.clearRect(0, 0, DOMElements.whiteboardCanvas.width, DOMElements.whiteboardCanvas.height);
                 }
+                break;
+            case 'whiteboard_status':
+                if (data.status === 'open') {
+                    state.whiteboard.activeUsers.add(data.from);
+                } else {
+                    state.whiteboard.activeUsers.delete(data.from);
+                }
+                updateWhiteboardIndicator();
+                break;
+            case 'whiteboard_history_sync':
+                data.history.forEach(drawData => drawOnCanvas(drawData));
+                state.whiteboard.history = data.history; // Sync local history
                 break;
         }
     }
@@ -2260,6 +2286,11 @@
     }
 
     // --- Whiteboard Functions ---
+    function updateWhiteboardIndicator() {
+        const live = state.whiteboard.activeUsers.size > 0;
+        DOMElements.whiteboardBtn.classList.toggle('is-live', live);
+    }
+    
     function initWhiteboard() {
         const canvas = DOMElements.whiteboardCanvas;
         const ctx = canvas.getContext('2d');
@@ -2269,6 +2300,8 @@
             const parent = canvas.parentElement;
             canvas.width = parent.clientWidth;
             canvas.height = parent.clientHeight;
+             // Redraw history after resize
+            state.whiteboard.history.forEach(data => drawOnCanvas(data));
         };
 
         const getCoords = (e) => {
@@ -2693,17 +2726,39 @@
 
         DOMElements.whiteboardBtn.addEventListener('click', () => {
             openModal(DOMElements.whiteboardModal);
+             // Request history only if we don't have it yet
+            if (state.whiteboard.history.length === 0 && !state.isHost) {
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) {
+                    hostConn.send({ type: 'request_whiteboard_history' });
+                }
+            }
             initWhiteboard();
+            const size = DOMElements.wbBrushSize.value;
+            DOMElements.wbBrushPreview.style.width = `${size}px`;
+            DOMElements.wbBrushPreview.style.height = `${size}px`;
+            DOMElements.wbBrushPreview.style.backgroundColor = DOMElements.wbColorPicker.value;
         });
-        DOMElements.wbCloseBtn.addEventListener('click', () => closeModal(DOMElements.whiteboardModal));
+        DOMElements.wbCloseBtn.addEventListener('click', () => {
+            broadcastToAllPeers({ type: 'whiteboard_status', status: 'closed' });
+            state.whiteboard.activeUsers.delete(state.peer.id);
+            updateWhiteboardIndicator();
+            closeModal(DOMElements.whiteboardModal);
+        });
         DOMElements.wbClearBtn.addEventListener('click', broadcastClear);
         DOMElements.wbBrushSize.addEventListener('input', (e) => {
             const size = e.target.value;
             DOMElements.wbBrushPreview.style.width = `${size}px`;
             DOMElements.wbBrushPreview.style.height = `${size}px`;
         });
+        
         DOMElements.wbColorPicker.addEventListener('input', (e) => {
             DOMElements.wbBrushPreview.style.backgroundColor = e.target.value;
+        });
+        
+        DOMElements.whiteboardModal.addEventListener('transitionend', () => {
+             if (DOMElements.whiteboardModal.classList.contains('hidden')) return;
+             broadcastToAllPeers({ type: 'whiteboard_status', status: 'open' });
         });
 
 
