@@ -269,8 +269,8 @@
     </div>
 
 
-    <div id="whiteboard-modal" class="hidden modal fixed inset-0 z-[60] bg-black bg-opacity-70 flex items-center justify-center p-4 transition-opacity">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full h-full p-4 flex flex-col">
+    <div id="whiteboard-modal" class="hidden modal fixed inset-0 z-[60] bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 transition-opacity">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full h-full p-2 sm:p-4 flex flex-col">
             <div id="whiteboard-toolbar" class="flex items-center gap-4 mb-2 p-2 bg-gray-900 rounded-lg flex-shrink-0">
                 <label for="wb-color-picker" class="font-semibold">Color:</label>
                 <input type="color" id="wb-color-picker" value="#FFFFFF" class="bg-gray-700 rounded">
@@ -282,7 +282,7 @@
                     <button id="wb-close-btn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded font-bold">Close</button>
                 </div>
             </div>
-            <div class="relative flex-grow rounded-lg overflow-hidden bg-white">
+            <div class="relative flex-grow rounded-lg overflow-hidden bg-white min-h-0">
                 <canvas id="whiteboard-canvas"></canvas>
             </div>
         </div>
