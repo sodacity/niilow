@@ -70,6 +70,11 @@ body {
 .toolbar-btn:hover { background-color: #4a5568; }
 .toolbar-btn.active { background-color: #4A90E2; }
 input[type="color"] { width: 38px; height: 38px; border: 1px solid #4a5568; border-radius: 4px; padding: 4px; background-color: #2d3748; cursor: pointer; }
+
+#whiteboard-btn.is-live {
+    animation: yellow-pulse 2s infinite;
+}
+
 .modal { transition: opacity 0.3s ease-out, transform 0.3s ease-out, background-color 0.3s; }
 #notes-grid, #collaboration-notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
 .note-card {
@@ -141,6 +146,11 @@ input[type="color"] { width: 38px; height: 38px; border: 1px solid #4a5568; bord
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
+}
+
+@keyframes yellow-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
+    50% { box-shadow: 0 0 16px rgba(250, 204, 21, 0.9); }
 }
 
 /* --- Checklist Styles --- */
