@@ -1677,7 +1677,7 @@
         if (!url) return;
 
         let videoElement;
-        if (url.includes('youtu.be0') || url.includes('youtu.be1')) {
+        if (url.includes('youtu.be') || url.includes('youtube.com')) {
             const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
             if (videoId) {
