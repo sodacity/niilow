@@ -23,10 +23,11 @@
             z-index: -1;
         }
         #game-board {
-            display: grid;
-            grid-template-rows: auto 1fr auto;
+            /* LAYOUT FIX: Using Flexbox for the most robust vertical scaling */
+            display: flex;
+            flex-direction: column;
             width: 100vw;
-            height: 100vh; /* Use 100vh and let JS adjust if needed */
+            height: 100vh; /* This will be overridden by JS for accuracy */
         }
         .card {
             width: 120px;
@@ -161,13 +162,12 @@
         }
         .floating-text {
             position: absolute;
-            /* STYLE CHANGE: Bigger font size and z-index */
             font-size: 3.5rem;
             font-weight: bold;
             pointer-events: none;
             text-shadow: 0 0 8px black;
             animation: float-up 2s ease-out forwards;
-            z-index: 100; /* Ensures text is on top of the card */
+            z-index: 100;
         }
         #shockwave {
             position: absolute;
@@ -224,15 +224,15 @@
     <canvas id="background-canvas"></canvas>
 
     <div id="game-board" class="p-2 sm:p-4">
-        <!-- Top Area (Grid Row 1) -->
+        <!-- Top Area -->
         <div id="top-area" class="w-full flex flex-col items-center flex-shrink-0">
             <h2 class="text-lg sm:text-xl font-bold mb-1">CPU</h2>
             <div class="hp-bar-container"><div id="cpu-hp-bar" class="hp-bar">100/100</div></div>
             <div id="cpu-hand" class="mt-1"></div>
         </div>
 
-        <!-- Field (Grid Row 2) -->
-        <div id="field" class="w-full flex flex-col items-center justify-around overflow-hidden">
+        <!-- Field -->
+        <div id="field" class="w-full flex flex-col items-center justify-around overflow-hidden flex-grow">
             <div id="cpu-field-card" class="relative"></div>
             <div class="flex flex-col items-center justify-center gap-2">
                 <div id="die-container"><div id="shockwave"></div></div>
@@ -241,7 +241,7 @@
             <div id="player-field-card" class="relative"></div>
         </div>
 
-        <!-- Bottom Area (Grid Row 3) -->
+        <!-- Bottom Area -->
         <div id="bottom-area" class="w-full flex flex-col items-center flex-shrink-0">
             <div id="player-hand" class="mb-1"></div>
             <h2 class="text-lg sm:text-xl font-bold mb-1">Player 1</h2>
