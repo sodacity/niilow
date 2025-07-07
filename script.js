@@ -113,7 +113,7 @@
         chatContainer: document.getElementById('chat-container'),
         chatInput: document.getElementById('chat-input'),
         sendChatBtn: document.getElementById('send-chat-btn'),
-        startShareBtn: document.getElementById('start-share-btn'),
+        whiteboardBtn: document.getElementById('whiteboard-btn'),
         addGameBtn: document.getElementById('add-game-btn'),
         addGameModal: document.getElementById('add-game-modal'),
         cancelAddGameBtn: document.getElementById('cancel-add-game-btn'),
@@ -137,10 +137,6 @@
         chatLogMessages: document.getElementById('chat-log-messages'),
         chatLogInput: document.getElementById('chat-log-input'),
         sendChatLogBtn: document.getElementById('send-chat-log-btn'),
-        screenShareModal: document.getElementById('screen-share-modal'),
-        screenShareVideo: document.getElementById('screen-share-video'),
-        sharerName: document.getElementById('sharer-name'),
-        closeShareModalBtn: document.getElementById('close-share-modal-btn'),
         videoWallBtn: document.getElementById('video-wall-btn'),
         videoWallModal: document.getElementById('video-wall-modal'),
         videoWallUrlInput: document.getElementById('video-wall-url-input'),
@@ -149,6 +145,13 @@
         saveVideoWallBtn: document.getElementById('save-video-wall-btn'),
         videoWallBackdrop: document.getElementById('video-wall-backdrop'),
         videoWallUrlSetting: document.getElementById('video-wall-url-setting'),
+        whiteboardModal: document.getElementById('whiteboard-modal'),
+        whiteboardCanvas: document.getElementById('whiteboard-canvas'),
+        wbColorPicker: document.getElementById('wb-color-picker'),
+        wbBrushSize: document.getElementById('wb-brush-size'),
+        wbBrushPreview: document.getElementById('wb-brush-preview'),
+        wbClearBtn: document.getElementById('wb-clear-btn'),
+        wbCloseBtn: document.getElementById('wb-close-btn'),
     };
 
     // --- App State ---
@@ -169,10 +172,12 @@
         peerInfo: new Map(),
         chatLog: [],
         isChatLogOpen: false,
-        localScreenStream: null,
-        activeCalls: new Map(),
-        activeSharerPeerId: null,
-        activeSharerInfo: null,
+        whiteboard: {
+            ctx: null,
+            isDrawing: false,
+            lastX: 0,
+            lastY: 0,
+        },
     };
 
     const defaultSettings = {
@@ -385,7 +390,7 @@
         DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
         const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.sessionManagementModal].forEach(el => {
+        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.sessionManagementModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.whiteboardModal].forEach(el => {
             if (el) {
                 el.style.backgroundColor = rgbaModalBg;
             }
@@ -655,14 +660,15 @@
                 type: 'request_add_note',
                 note: newNote
             };
-            const hostConn = state.isHost ? null : state.connections.get(state.roomId);
-
             if (state.isHost) {
                 handleHostAction(action, state.peer.id);
-            } else if (hostConn && hostConn.open) {
-                hostConn.send(action);
             } else {
-                showNotification('Cannot add note. Not connected to host.', 'error');
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) {
+                    hostConn.send(action);
+                } else {
+                    showNotification('Cannot add note. Not connected to host.', 'error');
+                }
             }
         } else {
             state.notes.push(newNote);
@@ -695,14 +701,15 @@
                 type: 'request_update_note',
                 note: updatedNote
             };
-            const hostConn = state.isHost ? null : state.connections.get(state.roomId);
-
             if (state.isHost) {
                 handleHostAction(action, state.peer.id);
-            } else if (hostConn && hostConn.open) {
-                hostConn.send(action);
             } else {
-                if (!silent) showNotification('Cannot send edit. Not connected to host.', 'error');
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) {
+                    hostConn.send(action);
+                } else {
+                    if (!silent) showNotification('Cannot send edit. Not connected to host.', 'error');
+                }
             }
         } else {
             state.notes[noteIndex] = updatedNote;
@@ -724,14 +731,15 @@
                 type: 'request_delete_note',
                 noteId: state.currentNoteId
             };
-            const hostConn = state.isHost ? null : state.connections.get(state.roomId);
-
             if (state.isHost) {
                 handleHostAction(action, state.peer.id);
-            } else if (hostConn && hostConn.open) {
-                hostConn.send(action);
             } else {
-                showNotification('Cannot send delete request. Not connected to host.', 'error');
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) {
+                    hostConn.send(action);
+                } else {
+                    showNotification('Cannot send delete request. Not connected to host.', 'error');
+                }
             }
         } else {
             state.notes = state.notes.filter(note => note.id !== state.currentNoteId);
@@ -1204,14 +1212,15 @@
             type: 'request_add_note',
             note: newNote
         };
-        const hostConn = state.isHost ? null : state.connections.get(state.roomId);
-
         if (state.isHost) {
             handleHostAction(action, state.peer.id);
-        } else if (hostConn && hostConn.open) {
-            hostConn.send(action);
         } else {
-            showNotification('Cannot add game. Not connected to host.', 'error');
+            const hostConn = state.connections.get(state.roomId);
+            if (hostConn && hostConn.open) {
+                hostConn.send(action);
+            } else {
+                showNotification('Cannot add game. Not connected to host.', 'error');
+            }
         }
         closeModal(DOMElements.addGameModal);
     }
@@ -1341,7 +1350,7 @@
             !DOMElements.saveCollabNotesModal.classList.contains('hidden') ||
             !DOMElements.videoWallModal.classList.contains('hidden') ||
             !DOMElements.addGameModal.classList.contains('hidden') ||
-            !DOMElements.screenShareModal.classList.contains('hidden');
+            !DOMElements.whiteboardModal.classList.contains('hidden');
 
         const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
 
@@ -1398,7 +1407,7 @@
         closeModal(DOMElements.collabQrCodeModal);
         closeModal(DOMElements.batchDeleteConfirmModal);
         closeModal(DOMElements.collaborationStartModal);
-        closeModal(DOMElements.screenShareModal);
+        closeModal(DOMElements.whiteboardModal);
         closeModal(DOMElements.saveCollabNotesModal);
         closeModal(DOMElements.videoWallModal);
         closeModal(DOMElements.addGameModal);
@@ -1770,58 +1779,19 @@
             setupConnection(conn);
         });
 
-        state.peer.on('call', call => {
-            console.log('Receiving screen share call from', call.peer);
-            const sharerInfo = call.metadata.sharerInfo || {
-                name: 'A user',
-                avatar: null
-            };
-
-            call.answer();
-            state.activeCalls.set(call.peer, call);
-
-            addLiveShareCardToGrid(call.peer, sharerInfo);
-            DOMElements.startShareBtn.disabled = true;
-            DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
-
-            call.on('stream', remoteStream => {
-                console.log('Received remote stream from', call.peer);
-                const liveCard = document.getElementById(`live-share-${call.peer}`);
-                if (liveCard) {
-                    const videoEl = liveCard.querySelector('video');
-                    videoEl.srcObject = remoteStream;
-                    videoEl.play().catch(e => console.error("Video play failed", e));
-                }
-            });
-
-            call.on('close', () => {
-                console.log('Screen share call closed from', call.peer);
-                removeLiveShareCardFromGrid(call.peer);
-                state.activeCalls.delete(call.peer);
-                if (state.activeCalls.size === 0) {
-                    DOMElements.startShareBtn.disabled = false;
-                    DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
-                }
-            });
-        });
-
         state.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
-            if (err.type === 'peer-unavailable' && !state.isHost) { // If trying to join a room that doesn't exist, create it instead.
-                showNotification('Channel Joined', 'success');
-                if (state.peer) state.peer.destroy(); // Clean up the failed peer
-                state.isHost = true;
-                initPeer();
-                showView('collaboration');
-                DOMElements.mainContent.style.paddingBottom = '60px';
-                renderCollaborationNotesGrid();
-                playSound('https://www.niilow.com/join.mp3');
-                return; // Prevent the default error notification
+            
+            if (err.type === 'unavailable-id' && state.isHost) {
+                if (state.peer) state.peer.destroy();
+                state.isHost = false; 
+                initPeer(); 
+                return;
             }
+
             let message = `Connection error: ${err.type}`;
-            if (err.type === 'unavailable-id') {
-                message = `Channel name "${state.roomId}" is already taken. Please try another one.`;
-                closeModal(DOMElements.collaborationStartModal);
+            if (err.type === 'peer-unavailable') {
+                message = `Channel "${state.roomId}" could not be found. Check the name and try again.`
             } else if (err.type === 'network') {
                 message = 'Network error. Please check your connection.';
             } else if (err.type === 'disconnected') {
@@ -1838,7 +1808,8 @@
             return;
         };
         closeModal(DOMElements.collaborationStartModal);
-        state.isHost = false;
+        // Always try to become the host first. The error handler will manage joining if the room already exists.
+        state.isHost = true;
         state.roomId = roomId;
         initPeer();
     }
@@ -1882,8 +1853,8 @@
     }
 
     function _finishLeaveSession() {
-        if (state.localScreenStream) {
-            stopScreenShare(true);
+        if (state.whiteboard.isDrawing) {
+            state.whiteboard.isDrawing = false;
         }
         if (state.peer) {
             state.peer.destroy();
@@ -1934,33 +1905,6 @@
                     peerId: newPeerId,
                     info: newPeerInfo
                 }, [newPeerId]);
-                
-                // If a share is active, we need to get the new user into the stream.
-                if (state.activeSharerPeerId) {
-                    // Check if the sharer is someone else
-                    if (state.activeSharerPeerId !== state.peer.id) {
-                        const sharerConn = state.connections.get(state.activeSharerPeerId);
-                        if (sharerConn && sharerConn.open) {
-                            // Tell the sharer to call the new peer
-                            sharerConn.send({
-                                type: 'request_call_new_peer',
-                                newPeerId: peerId // The ID of the user who just joined
-                            });
-                        }
-                    } else { // The host is the one sharing
-                        if (state.localScreenStream) {
-                            // Call the new peer directly
-                            const call = state.peer.call(peerId, state.localScreenStream, {
-                                metadata: {
-                                    sharerInfo: state.activeSharerInfo
-                                }
-                            });
-                            if (call) {
-                                state.activeCalls.set(peerId, call);
-                            }
-                        }
-                    }
-                }
 
                 renderSessionInfo();
             }
@@ -1987,8 +1931,6 @@
             });
 
             renderSessionInfo();
-            removeLiveShareCardFromGrid(peerId);
-            playSound('https://www.niilow.com/dismiss.mp3');
         });
 
         conn.on('error', (err) => {
@@ -1999,7 +1941,7 @@
     function handleHostAction(data, fromPeerId) {
         let broadcastPayload = null;
         switch (data.type) {
-            case 'request_add_note':
+            case 'request_add_note': {
                 if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
@@ -2009,7 +1951,8 @@
                     note: data.note
                 };
                 break;
-            case 'request_update_note':
+            }
+            case 'request_update_note': {
                 const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
                 if (noteIndex > -1) {
                     state.collaborationNotes[noteIndex] = data.note;
@@ -2020,16 +1963,36 @@
                     note: data.note
                 };
                 break;
-            case 'request_delete_note':
+            }
+            case 'request_delete_note': {
                 state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
                 renderCollaborationNotesGrid();
                 broadcastPayload = {
                     type: 'delete_note',
                     noteId: data.noteId
                 };
+                break;   
+            }
+            case 'request_send_chat': {
+                 // Re-package the chat message for broadcast
+                broadcastPayload = {
+                    type: 'chat_message',
+                    ...data.payload
+                };
                 break;
+            }
+            case 'request_whiteboard_draw': {
+                broadcastPayload = { type: 'whiteboard_draw', data: data.data };
+                break;
+            }
+            case 'request_whiteboard_clear': {
+                broadcastPayload = { type: 'whiteboard_clear' };
+                break;
+            }
         }
         if (broadcastPayload) {
+            // Also handle it locally for the host immediately
+            handleReceivedData(broadcastPayload, fromPeerId);
             broadcastToAllPeers(broadcastPayload);
         }
     }
@@ -2087,31 +2050,26 @@
                 renderSessionInfo();
                 break;
             case 'add_note':
-                if (fromPeerId === state.roomId && !state.collaborationNotes.some(n => n.id === data.note.id)) {
+                if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
                 }
                 break;
             case 'update_note':
-                if (fromPeerId === state.roomId) {
-                    const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
-                    if (noteIndex > -1) {
-                        state.collaborationNotes[noteIndex] = data.note;
-                    }
-                    renderCollaborationNotesGrid();
+                const noteIndex = state.collaborationNotes.findIndex(n => n.id === data.note.id);
+                if (noteIndex > -1) {
+                    state.collaborationNotes[noteIndex] = data.note;
                 }
+                renderCollaborationNotesGrid();
                 break;
             case 'delete_note':
-                if (fromPeerId === state.roomId) {
-                    state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
-                    renderCollaborationNotesGrid();
-                }
+                state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
+                renderCollaborationNotesGrid();
                 break;
             case 'peer_left':
                 state.connections.delete(data.peerId);
                 state.peerInfo.delete(data.peerId);
                 renderSessionInfo();
-                removeLiveShareCardFromGrid(data.peerId);
                 break;
             case 'chat_message':
                 if (!state.chatLog.some(msg => msg.id === data.id)) {
@@ -2121,54 +2079,31 @@
                     if (!state.isChatLogOpen) {
                         DOMElements.fabChatLogBtn.classList.add('has-unread');
                     }
-                    playSound('https://www.niilow.com/chat.mp3');
-                }
-                break;
-            case 'announce_share_start':
-                // A share has started, create the UI card in preparation for the call
-                if (data.sharerId !== state.peer.id) {
-                    console.log(`Receiving announcement for screen share from ${data.sharerId}`);
-                    addLiveShareCardToGrid(data.sharerId, data.sharerInfo);
-                    // Disable our own share button since someone else is sharing
-                    DOMElements.startShareBtn.disabled = true;
-                    DOMElements.startShareBtn.classList.add('cursor-not-allowed', 'opacity-50');
-                }
-                break;
-            case 'request_call_new_peer':
-                // Make sure the request comes from the host and we are the one sharing
-                if (fromPeerId === state.roomId && state.localScreenStream) {
-                    console.log(`Host requested a call to new peer: ${data.newPeerId}`);
-                    const call = state.peer.call(data.newPeerId, state.localScreenStream, {
-                        metadata: {
-                            sharerInfo: state.activeSharerInfo
-                        }
-                    });
-                    if (call) {
-                        state.activeCalls.set(data.newPeerId, call);
+                    if(data.from !== state.peer.id) {
+                         playSound('https://www.niilow.com/chat.mp3');
                     }
-                }
-                break;
-            case 'screen_share_ended':
-                removeLiveShareCardFromGrid(data.peerId);
-                const call = state.activeCalls.get(data.peerId);
-                if (call) {
-                    call.close();
-                    state.activeCalls.delete(data.peerId);
-                }
-                if (state.activeCalls.size === 0) {
-                    DOMElements.startShareBtn.disabled = false;
-                    DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
                 }
                 break;
             case 'video_wall_update':
                 state.settings.videoWall = data.url;
                 applyVideoWall();
                 break;
+            case 'whiteboard_draw':
+                if(data.from !== state.peer.id) {
+                    drawOnCanvas(data.data);
+                }
+                break;
+            case 'whiteboard_clear':
+                if(state.whiteboard.ctx) {
+                    state.whiteboard.ctx.clearRect(0, 0, DOMElements.whiteboardCanvas.width, DOMElements.whiteboardCanvas.height);
+                }
+                break;
         }
     }
 
     function broadcastToAllPeers(data, exclude = []) {
         console.log('Broadcasting data to all peers:', data);
+        data.from = state.peer.id; // Tag the data with the sender's ID
         for (const [peerId, conn] of state.connections.entries()) {
             if (conn && conn.open && !exclude.includes(peerId)) {
                 conn.send(data);
@@ -2178,10 +2113,7 @@
 
     function renderCollaborationNotesGrid() {
         if (DOMElements.collaborationNotesGrid) {
-            const liveCards = DOMElements.collaborationNotesGrid.querySelectorAll('.live-share-card');
             DOMElements.collaborationNotesGrid.innerHTML = '';
-            liveCards.forEach(card => DOMElements.collaborationNotesGrid.appendChild(card));
-
             state.collaborationNotes.forEach(note => {
                 const card = createNoteCard(note, openEditPane);
                 DOMElements.collaborationNotesGrid.appendChild(card);
@@ -2228,16 +2160,15 @@
 
     function sendChatMessage(message, inputElement) {
         const trimmedMessage = message.trim();
-        if (!trimmedMessage || !state.peer) return;
+        if (!trimmedMessage || !state.peer) return;    
 
         const messageId = state.peer.id + '-' + Date.now();
         const senderInfo = {
             name: state.settings.userName,
             avatar: state.settings.userAvatar
         };
-
-        const payload = {
-            type: 'chat_message',
+    
+        const chatPayload = {
             id: messageId,
             from: state.peer.id,
             message: trimmedMessage,
@@ -2245,14 +2176,26 @@
             timestamp: Date.now()
         };
 
-        if (!state.chatLog.some(msg => msg.id === payload.id)) {
-            state.chatLog.push(payload);
-            renderChatLog();
-            displayChatBubble(payload);
+        const request = {
+            type: 'request_send_chat',
+            payload: chatPayload
+        };
+
+        if (state.isHost) {
+            handleHostAction(request, state.peer.id);
+        } else {
+            const hostConn = state.connections.get(state.roomId);
+            if (hostConn && hostConn.open) {
+                hostConn.send(request);
+            }
+             // Also add to local UI immediately for responsiveness
+            if (!state.chatLog.some(msg => msg.id === chatPayload.id)) {
+                state.chatLog.push(chatPayload);
+                renderChatLog();
+                displayChatBubble(chatPayload);
+            }
         }
-
-        broadcastToAllPeers(payload);
-
+        
         if (inputElement) {
             inputElement.value = '';
         }
@@ -2316,142 +2259,95 @@
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
 
-    function showTypingIndicator(peerId, isTyping) {
-        const peerIconEl = document.getElementById(`peer-icon-${peerId}`);
-        if (peerIconEl) {
-            const indicator = peerIconEl.querySelector('.typing-indicator');
-            if (indicator) {
-                indicator.classList.toggle('visible', isTyping);
-            }
-        }
-    }
+    // --- Whiteboard Functions ---
+    function initWhiteboard() {
+        const canvas = DOMElements.whiteboardCanvas;
+        const ctx = canvas.getContext('2d');
+        state.whiteboard.ctx = ctx;
 
-    async function startScreenShare() {
-        if (state.localScreenStream) {
-            stopScreenShare(true);
-            return;
-        }
-    
-        try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
-            });
-            state.localScreenStream = stream;
-    
-            // Set the global state for who is sharing
-            state.activeSharerPeerId = state.peer.id;
-            state.activeSharerInfo = {
-                name: state.settings.userName,
-                avatar: state.settings.userAvatar
+        const resizeCanvas = () => {
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+        };
+
+        const getCoords = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
             };
-    
-            stream.getVideoTracks()[0].onended = () => stopScreenShare(true);
-    
-            // 1. Announce to everyone that a share is starting
-            broadcastToAllPeers({
-                type: 'announce_share_start',
-                sharerId: state.activeSharerPeerId,
-                sharerInfo: state.activeSharerInfo
-            });
-    
-            // 2. Add the card locally for the sharer's own view
-            addLiveShareCardToGrid(state.peer.id, state.activeSharerInfo);
-    
-            // Update the button UI to show "Stop Sharing"
-            DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>`;
-            DOMElements.startShareBtn.title = "Stop Sharing";
-    
-            // 3. Call all connected peers after a short delay to let the announcement propagate
-            setTimeout(() => {
-                if (!state.localScreenStream) return;
-                for (const peerId of state.connections.keys()) {
-                    console.log(`Calling peer ${peerId} with screen share.`);
-                    const call = state.peer.call(peerId, state.localScreenStream, {
-                        metadata: {
-                            sharerInfo: state.activeSharerInfo
-                        }
-                    });
-                    if (call) {
-                        state.activeCalls.set(peerId, call);
-                    }
-                }
-            }, 250); // A slightly longer delay for more reliability
-    
-        } catch (err) {
-            showNotification('Could not start screen share.', 'error');
-            console.error("Screen share error:", err);
-            stopScreenShare(true); // Clean up if it fails
-        }
-    }
+        };
 
-    function stopScreenShare(isLocalInitiated) {
-        if (isLocalInitiated && state.localScreenStream) {
-            state.localScreenStream.getTracks().forEach(track => track.stop());
-            state.localScreenStream = null;
-    
-            broadcastToAllPeers({
-                type: 'screen_share_ended',
-                peerId: state.peer.id
-            });
-    
-            removeLiveShareCardFromGrid(state.peer.id);
-    
-            DOMElements.startShareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.707 21.9 16V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8.083"></path><path d="m16 19-3-2-3 2v-6l3-2 3 2Z"></path></svg>`;
-            DOMElements.startShareBtn.title = "Share Screen";
-        }
-    
-        // Reset the state
-        state.activeSharerPeerId = null;
-        state.activeSharerInfo = null;
-    
-        for (const call of state.activeCalls.values()) {
-            call.close();
-        }
-        state.activeCalls.clear();
-    
-        closeModal(DOMElements.screenShareModal);
-        DOMElements.screenShareVideo.srcObject = null;
-        DOMElements.startShareBtn.disabled = false;
-        DOMElements.startShareBtn.classList.remove('cursor-not-allowed', 'opacity-50');
-    }
+        const startDrawing = (e) => {
+            e.preventDefault();
+            state.whiteboard.isDrawing = true;
+            const coords = getCoords(e);
+            [state.whiteboard.lastX, state.whiteboard.lastY] = [coords.x, coords.y];
+        };
 
-    function addLiveShareCardToGrid(peerId, info) {
-        removeLiveShareCardFromGrid(peerId);
+        const stopDrawing = () => {
+            state.whiteboard.isDrawing = false;
+        };
 
-        const card = document.createElement('div');
-        card.id = `live-share-${peerId}`;
-        card.className = 'note-card live-share-card';
-
-        const title = document.createElement('div');
-        title.className = 'note-card-title';
-        title.textContent = `${info.name}'s Screen`;
-
-        const content = document.createElement('div');
-        content.className = 'note-card-content';
-        content.innerHTML = `<video muted playsinline></video>`;
-
-        const badge = document.createElement('div');
-        badge.className = 'live-badge';
-        badge.textContent = 'LIVE';
-
-        card.append(title, content, badge);
-        DOMElements.collaborationNotesGrid.prepend(card);
-
-        card.addEventListener('click', () => {
-            const videoEl = card.querySelector('video');
-            if (videoEl.srcObject) {
-                DOMElements.screenShareVideo.srcObject = videoEl.srcObject;
-                DOMElements.sharerName.textContent = `${info.name}'s Screen`;
-                openModal(DOMElements.screenShareModal);
+        const draw = (e) => {
+            if (!state.whiteboard.isDrawing) return;
+            e.preventDefault();
+            const coords = getCoords(e);
+            const drawData = {
+                x0: state.whiteboard.lastX,
+                y0: state.whiteboard.lastY,
+                x1: coords.x,
+                y1: coords.y,
+                color: DOMElements.wbColorPicker.value,
+                size: DOMElements.wbBrushSize.value,
+            };
+            drawOnCanvas(drawData); // Draw locally
+            const request = { type: 'request_whiteboard_draw', data: drawData };
+            if (state.isHost) {
+                handleHostAction(request, state.peer.id);
+            } else {
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) hostConn.send(request);
             }
-        });
+            [state.whiteboard.lastX, state.whiteboard.lastY] = [coords.x, coords.y];
+        };
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
     }
 
-    function removeLiveShareCardFromGrid(peerId) {
-        const card = document.getElementById(`live-share-${peerId}`);
-        if (card) {
-            card.remove();
+    function drawOnCanvas({ x0, y0, x1, y1, color, size }) {
+        const ctx = state.whiteboard.ctx;
+        if (!ctx) return;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    }
+
+    function broadcastClear() {
+        if(state.whiteboard.ctx) {
+            state.whiteboard.ctx.clearRect(0, 0, DOMElements.whiteboardCanvas.width, DOMElements.whiteboardCanvas.height);
+            const request = { type: 'request_whiteboard_clear' };
+            if (state.isHost) {
+                handleHostAction(request, state.peer.id);
+            } else {
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) hostConn.send(request);
+            }
         }
     }
     
@@ -2795,8 +2691,21 @@
             if (e.key === 'Enter') sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput);
         });
 
-        DOMElements.startShareBtn.addEventListener('click', startScreenShare);
-        DOMElements.closeShareModalBtn.addEventListener('click', () => stopScreenShare(false));
+        DOMElements.whiteboardBtn.addEventListener('click', () => {
+            openModal(DOMElements.whiteboardModal);
+            initWhiteboard();
+        });
+        DOMElements.wbCloseBtn.addEventListener('click', () => closeModal(DOMElements.whiteboardModal));
+        DOMElements.wbClearBtn.addEventListener('click', broadcastClear);
+        DOMElements.wbBrushSize.addEventListener('input', (e) => {
+            const size = e.target.value;
+            DOMElements.wbBrushPreview.style.width = `${size}px`;
+            DOMElements.wbBrushPreview.style.height = `${size}px`;
+        });
+        DOMElements.wbColorPicker.addEventListener('input', (e) => {
+            DOMElements.wbBrushPreview.style.backgroundColor = e.target.value;
+        });
+
 
         DOMElements.confirmSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(true));
         DOMElements.declineSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(false));
