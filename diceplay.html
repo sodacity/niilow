@@ -11,21 +11,28 @@
         body {
             font-family: 'Inter', sans-serif;
             overflow: hidden;
-            background-color: #111827; /* bg-gray-900 */
-            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+            background-color: #111827;
+            overscroll-behavior: none;
+        }
+        #background-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
         }
         #game-board {
-            /* Use min-height to prevent content from being cut off by mobile browser UI */
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            width: 100vw;
+            height: 100vh; /* Use 100vh and let JS adjust if needed */
         }
         .card {
-            /* Responsive card sizes */
             width: 120px;
             height: 168px;
-            background-color: #374151; /* bg-gray-700 */
-            border: 2px solid #9ca3af; /* border-gray-400 */
+            background-color: #374151;
+            border: 2px solid #9ca3af;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -37,7 +44,7 @@
             position: relative;
             z-index: 10;
         }
-        @media (min-width: 640px) { /* sm breakpoint */
+        @media (min-width: 640px) {
             .card {
                 width: 150px;
                 height: 210px;
@@ -58,7 +65,7 @@
             }
         }
         .hand-card.selected {
-            border-color: #6366f1; /* indigo-500 */
+            border-color: #6366f1;
             transform: translateY(-10px) scale(1.05);
             box-shadow: 0 0 20px #6366f1;
         }
@@ -67,6 +74,7 @@
             height: 120px;
             cursor: grab;
             z-index: 1;
+            position: relative;
         }
         @media (min-width: 640px) {
             #die-container {
@@ -140,7 +148,7 @@
             }
         }
         #card-tooltip {
-            position: fixed; /* Use fixed for better positioning relative to viewport */
+            position: fixed;
             display: none;
             width: 200px;
             background-color: rgba(17, 24, 39, 0.9);
@@ -151,8 +159,52 @@
             z-index: 100;
             pointer-events: none;
         }
+        .floating-text {
+            position: absolute;
+            /* STYLE CHANGE: Bigger font size and z-index */
+            font-size: 3.5rem;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 0 8px black;
+            animation: float-up 2s ease-out forwards;
+            z-index: 100; /* Ensures text is on top of the card */
+        }
+        #shockwave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: transparent;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .action-button {
+            transition: transform 0.1s ease, filter 0.2s ease;
+        }
+        .action-button:hover {
+            filter: brightness(1.2);
+        }
+        .action-button:active {
+            transform: scale(0.95);
+        }
         
-        /* Animations */
+        /* --- Animations --- */
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-80px); opacity: 0; }
+        }
+        @keyframes shockwave-anim {
+            0% { width: 10px; height: 10px; opacity: 0.8; border: 2px solid white; }
+            100% { width: 200px; height: 200px; opacity: 0; border: 1px solid white; }
+        }
+        .shockwave-effect { animation: shockwave-anim 0.5s ease-out; }
+        @keyframes shield-flash-anim {
+            0%, 100% { box-shadow: none; }
+            50% { box-shadow: inset 0 0 20px 5px rgba(59, 130, 246, 0.7); }
+        }
+        .shielding { animation: shield-flash-anim 0.6s ease-in-out; }
         @keyframes player-boomerang-attack { 0% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-50px, -25vh) rotate(360deg) scale(1.1); } 100% { transform: translate(0, 0) rotate(720deg); } }
         .player-attacking { animation: player-boomerang-attack 1.2s ease-in-out; }
         @keyframes cpu-boomerang-attack { 0% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(50px, 25vh) rotate(360deg) scale(1.1); } 100% { transform: translate(0, 0) rotate(720deg); } }
@@ -169,32 +221,34 @@
 </head>
 <body class="text-white">
 
-    <div id="game-board" class="w-screen p-2 sm:p-4">
-        <!-- Top Area -->
+    <canvas id="background-canvas"></canvas>
+
+    <div id="game-board" class="p-2 sm:p-4">
+        <!-- Top Area (Grid Row 1) -->
         <div id="top-area" class="w-full flex flex-col items-center flex-shrink-0">
             <h2 class="text-lg sm:text-xl font-bold mb-1">CPU</h2>
             <div class="hp-bar-container"><div id="cpu-hp-bar" class="hp-bar">100/100</div></div>
             <div id="cpu-hand" class="mt-1"></div>
         </div>
 
-        <!-- Field -->
-        <div id="field" class="flex-grow w-full flex flex-col items-center justify-around">
+        <!-- Field (Grid Row 2) -->
+        <div id="field" class="w-full flex flex-col items-center justify-around overflow-hidden">
             <div id="cpu-field-card" class="relative"></div>
             <div class="flex flex-col items-center justify-center gap-2">
-                <div id="die-container"></div>
+                <div id="die-container"><div id="shockwave"></div></div>
                 <div id="message-log" class="text-base sm:text-lg text-center h-12 font-semibold text-yellow-300"></div>
             </div>
             <div id="player-field-card" class="relative"></div>
         </div>
 
-        <!-- Bottom Area -->
+        <!-- Bottom Area (Grid Row 3) -->
         <div id="bottom-area" class="w-full flex flex-col items-center flex-shrink-0">
             <div id="player-hand" class="mb-1"></div>
             <h2 class="text-lg sm:text-xl font-bold mb-1">Player 1</h2>
             <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar">100/100</div></div>
             <div id="player-controls" class="mt-2 sm:mt-4 flex justify-center gap-4">
-                <button id="attack-btn" class="px-4 py-2 sm:px-6 sm:py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Attack</button>
-                <button id="defend-btn" class="px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Defend</button>
+                <button id="attack-btn" class="action-button px-4 py-2 sm:px-6 sm:py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Attack</button>
+                <button id="defend-btn" class="action-button px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Defend</button>
             </div>
         </div>
     </div>
@@ -204,6 +258,49 @@
     <div id="game-over-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"></div>
 
     <script>
+        // --- Animated Background ---
+        const bgCanvas = document.getElementById('background-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        let stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * bgCanvas.width,
+                y: Math.random() * bgCanvas.height,
+                radius: Math.random() * 1.5,
+                speed: Math.random() * 0.5 + 0.2
+            });
+        }
+        function drawStars() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = 'white';
+            stars.forEach(star => {
+                bgCtx.beginPath();
+                bgCtx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                bgCtx.fill();
+                star.y += star.speed;
+                if (star.y > bgCanvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * bgCanvas.width;
+                }
+            });
+            requestAnimationFrame(drawStars);
+        }
+        drawStars();
+        window.addEventListener('resize', () => {
+             bgCanvas.width = window.innerWidth;
+             bgCanvas.height = window.innerHeight;
+        });
+
+        // --- Mobile Scaling & UI Setup ---
+        const gameBoard = document.getElementById('game-board');
+        function setGameBoardHeight() {
+            gameBoard.style.height = `${window.innerHeight}px`;
+        }
+        setGameBoardHeight();
+        window.addEventListener('resize', setGameBoardHeight);
+
         // --- THREE.JS 3D Die Setup ---
         const dieContainer = document.getElementById('die-container');
         const scene = new THREE.Scene();
@@ -234,12 +331,15 @@
             context.fillText(number, 128, 128);
             return new THREE.CanvasTexture(canvas);
         }
-        const materials = [
-            new THREE.MeshStandardMaterial({ map: createNumberTexture('1') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('6') }),
-            new THREE.MeshStandardMaterial({ map: createNumberTexture('2') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('5') }),
-            new THREE.MeshStandardMaterial({ map: createNumberTexture('3') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('4') }),
+        const dieMaterials = [
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('1'), metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('6'), metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('2'), metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('5'), metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('3'), metalness: 0.8, roughness: 0.2 }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('4'), metalness: 0.8, roughness: 0.2 }),
         ];
-        const die = new THREE.Mesh(geometry, materials);
+        const die = new THREE.Mesh(geometry, dieMaterials);
         scene.add(die);
         camera.position.z = 4;
         function animateDie() { requestAnimationFrame(animateDie); renderer.render(scene, camera); }
@@ -254,7 +354,7 @@
             { id: 'c4', name: 'Decimate ⚔️', effect: 'addAttack', value: 2, description: 'Adds +2 to your next Attack action.' },
             { id: 'c5', name: 'Chance 🎲', effect: 'chance', description: 'Even: heal roll value. Odd: take roll value as damage. Ends turn.'},
             { id: 'c6', name: 'Gamble 🎰', effect: 'gamble', description: 'Attack only. Even: deal 2x roll damage. Odd: take roll damage.'},
-            { id: 'c7', name: 'Soul Tax 💸', effect: 'soulTax', description: 'Attack only. Even: steal 20% of opponent\'s current HP. Odd: Attack fails.'}
+            { id: 'c7', name: 'Soul Tax 💸', effect: 'soulTax', description: 'Attack only. Even: steal 20% of opponent\'s HP. Odd: give 20% of your HP.'}
         ];
         let playerState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'Player 1', icon: '🧑‍🚀' }};
         let cpuState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'CPU', icon: '🤖' }};
@@ -272,6 +372,7 @@
         const cpuFieldDiv = document.getElementById('cpu-field-card');
         const messageLog = document.getElementById('message-log');
         const tooltip = document.getElementById('card-tooltip');
+        const shockwaveEl = document.getElementById('shockwave');
         
         // --- UI & Card Logic ---
         function createCardDOM(cardData, isHandCard = false) {
@@ -328,7 +429,6 @@
             let top = cardRect.top - tooltip.offsetHeight - 10;
             let left = cardRect.left + (cardRect.width / 2) - (tooltip.offsetWidth / 2);
 
-            // Prevent tooltip from going off-screen
             if (top < 0) top = cardRect.bottom + 10;
             if (left < 0) left = 5;
             if (left + tooltip.offsetWidth > window.innerWidth) {
@@ -390,6 +490,7 @@
                 messageLog.textContent = `You play ${usedCard.name}!`;
                 if (usedCard.effect === 'heal') {
                     playerState.hp = Math.min(MAX_HP, playerState.hp + usedCard.value);
+                    showFloatingText(playerFieldDiv, `+${usedCard.value}`, '#10b981');
                     animateSelfEffect(playerFieldDiv, 'healing');
                     updateUI();
                 }
@@ -424,6 +525,7 @@
                         }
                         if (roll % 2 !== 0) {
                             playerState.hp = Math.max(0, playerState.hp - roll);
+                            showFloatingText(playerFieldDiv, `-${roll}`, '#ef4444');
                             messageLog.textContent = `Gamble failed! Rolled odd ${roll}, took ${roll} damage!`;
                             animateSelfEffect(playerFieldDiv, 'damage');
                             endTurnSequence('cpu');
@@ -451,6 +553,7 @@
                         const damageDealt = Math.max(0, attackPower - cpuState.defense);
                         cpuState.hp = Math.max(0, cpuState.hp - damageDealt);
                         cpuState.defense = 0;
+                        if (damageDealt > 0) showFloatingText(cpuFieldDiv, `-${damageDealt}`, '#ef4444');
                         animateAction(playerFieldDiv, 'player-attacking', `${message} You dealt ${damageDealt} damage!`);
                     } else {
                         playerState.defense = finalRoll;
@@ -458,6 +561,7 @@
                             playerState.defense += usedCard.value;
                             animateSelfEffect(playerFieldDiv, 'buffing');
                         }
+                        animateSelfEffect(playerFieldDiv, 'shielding');
                         messageLog.textContent = `You defend for ${playerState.defense}!`;
                     }
                     
@@ -504,6 +608,7 @@
                 messageLog.textContent = `CPU plays ${usedCard.name}!`;
                 if (usedCard.effect === 'heal') {
                     cpuState.hp = Math.min(MAX_HP, cpuState.hp + usedCard.value);
+                    showFloatingText(cpuFieldDiv, `+${usedCard.value}`, '#10b981');
                     animateSelfEffect(cpuFieldDiv, 'healing');
                 }
             }
@@ -531,6 +636,7 @@
                     if (usedCard?.effect === 'gamble') {
                         if (roll % 2 !== 0) {
                             cpuState.hp = Math.max(0, cpuState.hp - roll);
+                            showFloatingText(cpuFieldDiv, `-${roll}`, '#ef4444');
                             messageLog.textContent = `CPU's Gamble failed! Took ${roll} damage!`;
                             animateSelfEffect(cpuFieldDiv, 'damage');
                             endTurnSequence('player');
@@ -550,6 +656,7 @@
                         const damageDealt = Math.max(0, attackPower - playerState.defense);
                         playerState.hp = Math.max(0, playerState.hp - damageDealt);
                         playerState.defense = 0;
+                        if (damageDealt > 0) showFloatingText(playerFieldDiv, `-${damageDealt}`, '#ef4444');
                         animateAction(cpuFieldDiv, 'cpu-attacking', `CPU dealt ${damageDealt} damage!`);
                     } else {
                         cpuState.defense = finalRoll;
@@ -557,6 +664,7 @@
                             cpuState.defense += usedCard.value;
                             animateSelfEffect(cpuFieldDiv, 'buffing');
                         }
+                        animateSelfEffect(cpuFieldDiv, 'shielding');
                         messageLog.textContent = `CPU defends for ${cpuState.defense}!`;
                     }
                     
@@ -566,27 +674,41 @@
         }
 
         function handleChanceEffect(player, roll, playerName = 'You') {
-            if (roll % 2 === 0) {
+            const targetEl = playerName === 'You' ? playerFieldDiv : cpuFieldDiv;
+            if (roll % 2 === 0) { // Even
                 player.hp = Math.min(MAX_HP, player.hp + roll);
+                showFloatingText(targetEl, `+${roll}`, '#10b981');
                 messageLog.textContent = `${playerName} rolled an even ${roll}! Healed for ${roll}!`;
-                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'healing');
-            } else {
+                animateSelfEffect(targetEl, 'healing');
+            } else { // Odd
                 player.hp = Math.max(0, player.hp - roll);
+                showFloatingText(targetEl, `-${roll}`, '#ef4444');
                 messageLog.textContent = `${playerName} rolled an odd ${roll}! Took ${roll} damage!`;
-                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'damage');
+                animateSelfEffect(targetEl, 'damage');
             }
         }
 
         function handleSoulTaxEffect(player, opponent, roll, playerName = 'You') {
-            if (roll % 2 === 0) {
+            const playerEl = playerName === 'You' ? playerFieldDiv : cpuFieldDiv;
+            const opponentEl = playerName === 'You' ? cpuFieldDiv : playerFieldDiv;
+            if (roll % 2 === 0) { // Even success
                 const stolenHp = Math.floor(opponent.hp * 0.20);
                 opponent.hp = Math.max(0, opponent.hp - stolenHp);
                 player.hp = Math.min(MAX_HP, player.hp + stolenHp);
-                messageLog.textContent = `Soul Tax success! Stole ${stolenHp} HP!`;
-                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'healing');
-                animateSelfEffect(playerName === 'You' ? cpuFieldDiv : playerFieldDiv, 'damage');
-            } else {
-                messageLog.textContent = `Soul Tax failed! The roll was odd.`;
+                messageLog.textContent = `Soul Tax success! ${playerName} stole ${stolenHp} HP!`;
+                showFloatingText(playerEl, `+${stolenHp}`, '#10b981');
+                showFloatingText(opponentEl, `-${stolenHp}`, '#ef4444');
+                animateSelfEffect(playerEl, 'healing');
+                animateSelfEffect(opponentEl, 'damage');
+            } else { // Odd failure - NEW LOGIC
+                const givenHp = Math.floor(player.hp * 0.20);
+                player.hp = Math.max(0, player.hp - givenHp);
+                opponent.hp = Math.min(MAX_HP, opponent.hp + givenHp);
+                messageLog.textContent = `Soul Tax backfired! ${playerName} gave ${givenHp} HP!`;
+                showFloatingText(playerEl, `-${givenHp}`, '#ef4444');
+                showFloatingText(opponentEl, `+${givenHp}`, '#10b981');
+                animateSelfEffect(playerEl, 'damage');
+                animateSelfEffect(opponentEl, 'healing');
             }
         }
 
@@ -599,7 +721,7 @@
                 if (nextPlayer === 'cpu') {
                     drawCard('cpu');
                     setTimeout(cpuTurn, 2000);
-                } else {
+                } else { // player
                     drawCard('player');
                     isActionInProgress = false;
                     isPlayerTurn = true;
@@ -633,6 +755,15 @@
             fieldCard.addEventListener('animationend', () => {
                 fieldCard.classList.remove(animationClass);
             }, { once: true });
+        }
+
+        function showFloatingText(targetElement, text, color) {
+            const textEl = document.createElement('div');
+            textEl.className = 'floating-text';
+            textEl.textContent = text;
+            textEl.style.color = color;
+            targetElement.appendChild(textEl);
+            setTimeout(() => textEl.remove(), 2000); // Increased duration to match animation
         }
 
         function updateUI() {
@@ -720,6 +851,10 @@
                                 requestAnimationFrame(animateSnap);
                             } else {
                                 die.rotation.set(targetRotation.x, targetRotation.y, targetRotation.z);
+                                // Die landing shockwave
+                                shockwaveEl.classList.remove('shockwave-effect');
+                                void shockwaveEl.offsetWidth; // Trigger reflow
+                                shockwaveEl.classList.add('shockwave-effect');
                                 resolve(roll);
                             }
                         }
