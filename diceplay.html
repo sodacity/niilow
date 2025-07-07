@@ -23,15 +23,15 @@
             z-index: -1;
         }
         #game-board {
-            /* LAYOUT FIX: Using Flexbox for the most robust vertical scaling */
             display: flex;
             flex-direction: column;
             width: 100vw;
-            height: 100vh; /* This will be overridden by JS for accuracy */
+            height: 100vh;
         }
+        /* --- SCALING FIX: Using explicit pixel sizes with media queries for robust responsiveness --- */
         .card {
-            width: 120px;
-            height: 168px;
+            width: 150px;
+            height: 210px;
             background-color: #374151;
             border: 2px solid #9ca3af;
             border-radius: 12px;
@@ -45,25 +45,13 @@
             position: relative;
             z-index: 10;
         }
-        @media (min-width: 640px) {
-            .card {
-                width: 150px;
-                height: 210px;
-            }
-        }
         .hand-card {
-            width: 80px;
-            height: 112px;
-            font-size: 0.7rem;
+            width: 90px;
+            height: 126px;
+            font-size: 12px;
             border-radius: 8px;
             cursor: pointer;
             border: 3px solid transparent;
-        }
-        @media (min-width: 640px) {
-            .hand-card {
-                width: 90px;
-                height: 126px;
-            }
         }
         .hand-card.selected {
             border-color: #6366f1;
@@ -71,17 +59,11 @@
             box-shadow: 0 0 20px #6366f1;
         }
         #die-container {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             cursor: grab;
             z-index: 1;
             position: relative;
-        }
-        @media (min-width: 640px) {
-            #die-container {
-                width: 150px;
-                height: 150px;
-            }
         }
         .hp-bar-container {
             width: 100%;
@@ -100,6 +82,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 14px;
         }
         .shield-icon {
             position: absolute;
@@ -113,7 +96,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.875rem;
+            font-size: 14px;
             font-weight: bold;
             border: 2px solid white;
             box-shadow: 0 0 10px #3b82f6;
@@ -126,27 +109,16 @@
         #player-hand, #cpu-hand {
             display: flex;
             gap: 8px;
-            min-height: 120px;
+            min-height: 140px;
             align-items: center;
             justify-content: center;
         }
-        @media (min-width: 640px) {
-            #player-hand, #cpu-hand {
-                min-height: 140px;
-            }
-        }
         .cpu-card-back {
-            width: 80px;
-            height: 112px;
+            width: 90px;
+            height: 126px;
             background: linear-gradient(145deg, #4f46e5, #c026d3);
             border: 2px solid #e5e7eb;
             border-radius: 8px;
-        }
-         @media (min-width: 640px) {
-            .cpu-card-back {
-                width: 90px;
-                height: 126px;
-            }
         }
         #card-tooltip {
             position: fixed;
@@ -159,6 +131,7 @@
             padding: 12px;
             z-index: 100;
             pointer-events: none;
+            font-size: 14px;
         }
         .floating-text {
             position: absolute;
@@ -189,7 +162,17 @@
         .action-button:active {
             transform: scale(0.95);
         }
-        
+
+        /* Media query for smaller screens */
+        @media (max-width: 768px) {
+            .card { width: 120px; height: 168px; }
+            .hand-card { width: 80px; height: 112px; }
+            .cpu-card-back { width: 80px; height: 112px; }
+            #die-container { width: 120px; height: 120px; }
+            #player-hand, #cpu-hand { min-height: 120px; }
+            .floating-text { font-size: 2.5rem; }
+        }
+
         /* --- Animations --- */
         @keyframes float-up {
             0% { transform: translateY(0); opacity: 1; }
@@ -247,8 +230,8 @@
             <h2 class="text-lg sm:text-xl font-bold mb-1">Player 1</h2>
             <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar">100/100</div></div>
             <div id="player-controls" class="mt-2 sm:mt-4 flex justify-center gap-4">
-                <button id="attack-btn" class="action-button px-4 py-2 sm:px-6 sm:py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Attack</button>
-                <button id="defend-btn" class="action-button px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Defend</button>
+                <button id="attack-btn" class="action-button px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-lg shadow-lg">Attack</button>
+                <button id="defend-btn" class="action-button px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-lg shadow-lg">Defend</button>
             </div>
         </div>
     </div>
@@ -308,7 +291,7 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         
         function resizeDie() {
-            const size = window.innerWidth < 640 ? 120 : 150;
+            const size = window.innerWidth < 768 ? 120 : 150;
             renderer.setSize(size, size);
         }
         resizeDie();
@@ -381,7 +364,7 @@
             if(isHandCard) {
                  cardDiv.innerHTML = `<div class="font-bold text-center">${cardData.name}</div>`;
             } else {
-                 cardDiv.innerHTML = `<div class="text-4xl sm:text-5xl">${cardData.icon}</div><div id="${cardData.name.toLowerCase().replace(/\s+/g, '-')}-shield" class="shield-icon">0</div>`;
+                 cardDiv.innerHTML = `<div class="text-5xl">${cardData.icon}</div><div id="${cardData.name.toLowerCase().replace(/\s+/g, '-')}-shield" class="shield-icon">0</div>`;
             }
             return cardDiv;
         }
@@ -700,7 +683,7 @@
                 showFloatingText(opponentEl, `-${stolenHp}`, '#ef4444');
                 animateSelfEffect(playerEl, 'healing');
                 animateSelfEffect(opponentEl, 'damage');
-            } else { // Odd failure - NEW LOGIC
+            } else { // Odd failure
                 const givenHp = Math.floor(player.hp * 0.20);
                 player.hp = Math.max(0, player.hp - givenHp);
                 opponent.hp = Math.min(MAX_HP, opponent.hp + givenHp);
@@ -763,7 +746,7 @@
             textEl.textContent = text;
             textEl.style.color = color;
             targetElement.appendChild(textEl);
-            setTimeout(() => textEl.remove(), 2000); // Increased duration to match animation
+            setTimeout(() => textEl.remove(), 2000);
         }
 
         function updateUI() {
