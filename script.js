@@ -2057,33 +2057,8 @@
                 DOMElements.mainContent.style.paddingBottom = '60px';
                 showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
-
-                data.otherPeerIds.forEach(peerId => {
-                    if (!state.connections.has(peerId) && peerId !== state.peer.id) {
-                        console.log(`Client connecting to existing peer: ${peerId}`);
-                        const conn = state.peer.connect(peerId, {
-                            metadata: {
-                                userName: state.settings.userName,
-                                peerId: state.peer.id
-                            },
-                            reliable: true
-                        });
-                        setupConnection(conn);
-                    }
-                });
                 break;
             case 'new_peer_announcement':
-                if (!state.connections.has(data.peerId) && data.peerId !== state.peer.id) {
-                    console.log(`Connecting to new peer from announcement: ${data.peerId}`);
-                    const conn = state.peer.connect(data.peerId, {
-                        metadata: {
-                            userName: state.settings.userName,
-                            peerId: state.peer.id
-                        },
-                        reliable: true
-                    });
-                    setupConnection(conn);
-                }
                 state.peerInfo.set(data.peerId, data.info);
                 renderSessionInfo();
                 break;
