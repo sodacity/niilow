@@ -117,6 +117,11 @@
         addGameBtn: document.getElementById('add-game-btn'),
         addGameModal: document.getElementById('add-game-modal'),
         cancelAddGameBtn: document.getElementById('cancel-add-game-btn'),
+        addYoutubeBtn: document.getElementById('add-youtube-btn'),
+        youtubeModal: document.getElementById('youtube-modal'),
+        youtubeUrlInput: document.getElementById('youtube-url-input'),
+        confirmYoutubeAddBtn: document.getElementById('confirm-youtube-add-btn'),
+        cancelYoutubeAddBtn: document.getElementById('cancel-youtube-add-btn'),
         collaborationStartModal: document.getElementById('collaboration-start-modal'),
         customRoomIdInput: document.getElementById('custom-room-id-input'),
         joinSessionBtn: document.getElementById('join-session-btn'),
@@ -172,6 +177,8 @@
         peerInfo: new Map(),
         chatLog: [],
         isChatLogOpen: false,
+        youtubePlayers: new Map(),
+        isYTPlayerSyncing: false,
         whiteboard: {
             activeUsers: new Set(),
             history: [],
@@ -392,7 +399,7 @@
         DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
         const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.sessionManagementModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.whiteboardModal].forEach(el => {
+        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.sessionManagementModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.whiteboardModal, DOMElements.youtubeModal].forEach(el => {
             if (el) {
                 el.style.backgroundColor = rgbaModalBg;
             }
@@ -1352,7 +1359,8 @@
             !DOMElements.saveCollabNotesModal.classList.contains('hidden') ||
             !DOMElements.videoWallModal.classList.contains('hidden') ||
             !DOMElements.addGameModal.classList.contains('hidden') ||
-            !DOMElements.whiteboardModal.classList.contains('hidden');
+            !DOMElements.whiteboardModal.classList.contains('hidden') ||
+            !DOMElements.youtubeModal.classList.contains('hidden');
 
         const isSidebarOpen = !DOMElements.sidebar.classList.contains('-translate-x-full');
 
@@ -1413,6 +1421,7 @@
         closeModal(DOMElements.saveCollabNotesModal);
         closeModal(DOMElements.videoWallModal);
         closeModal(DOMElements.addGameModal);
+        closeModal(DOMElements.youtubeModal);
         closeModal(DOMElements.sessionManagementModal);
         closeSidebarMobile();
     }
@@ -1992,6 +2001,11 @@
                 broadcastPayload = { type: 'whiteboard_clear' };
                 break;
             }
+            case 'request_youtube_state_change': {
+                // The host just relays this state change to everyone
+                broadcastPayload = { type: 'youtube_state_change', ...data.payload };
+                break;
+            }
              case 'request_whiteboard_history': {
                 const conn = state.connections.get(fromPeerId);
                 if (conn && conn.open) {
@@ -2120,6 +2134,15 @@
                 }
                 updateWhiteboardIndicator();
                 break;
+            case 'youtube_state_change':
+                // Only process if the event is from someone else
+                if (data.from !== state.peer.id) {
+                    const player = state.youtubePlayers.get(data.noteId);
+                    if (player) {
+                        handleYoutubeStateSync(player, data.newState, data.time);
+                    }
+                }
+                break;
             case 'whiteboard_history_sync':
                 data.history.forEach(drawData => drawOnCanvas(drawData));
                 state.whiteboard.history = data.history; // Sync local history
@@ -2143,6 +2166,10 @@
             state.collaborationNotes.forEach(note => {
                 const card = createNoteCard(note, openEditPane);
                 DOMElements.collaborationNotesGrid.appendChild(card);
+                // After card is in DOM, check if it's a YouTube note and initialize player
+                if (note.type === 'youtube-sync' && note.videoId) {
+                    createYouTubePlayer(note.id, note.videoId);
+                }
             });
         }
     }
@@ -2284,6 +2311,97 @@
         });
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
+
+    // --- YouTube Sync Functions ---
+    function getYouTubeVideoId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    function handleAddYouTubeNote() {
+        const url = DOMElements.youtubeUrlInput.value.trim();
+        const videoId = getYouTubeVideoId(url);
+
+        if (!videoId) {
+            showNotification("Invalid YouTube URL. Please try again.", "error");
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const newNote = {
+            id: Date.now().toString(),
+            title: "YouTube Sync",
+            content: `<div id="player-${Date.now()}" class="youtube-player-container"></div>`,
+            createdAt: now,
+            updatedAt: now,
+            archived: false,
+            label: "YouTube",
+            color: '#c4302b',
+            type: 'youtube-sync',
+            videoId: videoId
+        };
+
+        const action = { type: 'request_add_note', note: newNote };
+        if (state.isHost) {
+            handleHostAction(action, state.peer.id);
+        } else {
+            const hostConn = state.connections.get(state.roomId);
+            if (hostConn && hostConn.open) hostConn.send(action);
+        }
+
+        DOMElements.youtubeUrlInput.value = '';
+        closeModal(DOMElements.youtubeModal);
+    }
+
+    function onYouTubePlayerStateChange(event, noteId) {
+        if (state.isYTPlayerSyncing) return;
+
+        const payload = {
+            noteId: noteId,
+            newState: event.data,
+            time: event.target.getCurrentTime(),
+        };
+        
+        const request = { type: 'request_youtube_state_change', payload: payload };
+
+        if(state.isHost) {
+            handleHostAction(request, state.peer.id);
+        } else {
+            const hostConn = state.connections.get(state.roomId);
+            if (hostConn && hostConn.open) hostConn.send(request);
+        }
+    }
+    
+    function handleYoutubeStateSync(player, newState, time) {
+        state.isYTPlayerSyncing = true;
+        const currentTime = player.getCurrentTime();
+        // Only seek if the time difference is significant, to avoid choppy playback
+        if (Math.abs(currentTime - time) > 1.5) {
+            player.seekTo(time, true);
+        }
+
+        if (newState === YT.PlayerState.PLAYING && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+            player.playVideo();
+        } else if (newState === YT.PlayerState.PAUSED && player.getPlayerState() !== YT.PlayerState.PAUSED) {
+            player.pauseVideo();
+        }
+
+        setTimeout(() => { state.isYTPlayerSyncing = false; }, 200);
+    }
+
+    function createYouTubePlayer(noteId, videoId) {
+        const playerId = `player-${noteId}`;
+        const playerContainer = document.getElementById(playerId);
+        if (!playerContainer || state.youtubePlayers.has(noteId)) return;
+
+        const player = new YT.Player(playerId, {
+            height: '100%', width: '100%', videoId: videoId,
+            events: { 'onStateChange': (e) => onYouTubePlayerStateChange(e, noteId) }
+        });
+        state.youtubePlayers.set(noteId, player);
+    }
+
 
     // --- Whiteboard Functions ---
     function updateWhiteboardIndicator() {
@@ -2528,7 +2646,10 @@
         DOMElements.cancelAddGameBtn.addEventListener('click', () => closeModal(DOMElements.addGameModal));
         document.getElementById('add-game-connectfour').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/connectfour.html', 'Connect 4'));
         document.getElementById('add-game-tcycle').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/tcycle.html', 'Tron'));
-        document.getElementById('add-game-pong').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/pong2.html', 'Pong'));
+        
+        DOMElements.addYoutubeBtn.addEventListener('click', () => openModal(DOMElements.youtubeModal));
+        DOMElements.cancelYoutubeAddBtn.addEventListener('click', () => closeModal(DOMElements.youtubeModal));
+        DOMElements.confirmYoutubeAddBtn.addEventListener('click', handleAddYouTubeNote);
 
         const body = DOMElements.body;
         body.addEventListener('dragenter', (e) => {
@@ -2831,6 +2952,11 @@
             db.put('settings', false, 'firstVisit');
         }
     }
+    
+    // This global function is required by the YouTube IFrame Player API
+    window.onYouTubeIframeAPIReady = function() {
+        // The API is ready, but we will initialize players as their notes are rendered.
+    };
 
     init();
 
