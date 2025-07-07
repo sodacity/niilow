@@ -382,11 +382,11 @@
                 playerHandDiv.appendChild(cardEl);
             });
             
+            // BUG FIX: Create a simple div for the card back, don't use the complex function
             cpuHandDiv.innerHTML = '';
             cpuState.hand.forEach(() => {
-                const cardBack = createCardDOM({}, true);
-                cardBack.classList.remove('card', 'hand-card');
-                cardBack.classList.add('cpu-card-back');
+                const cardBack = document.createElement('div');
+                cardBack.className = 'cpu-card-back';
                 cpuHandDiv.appendChild(cardBack);
             });
         }
