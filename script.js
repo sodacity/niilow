@@ -1771,6 +1771,10 @@
                 state.roomId = id;
                 renderSessionInfo();
                 showNotification('Channel Joined', 'success');
+                showView('collaboration');
+                DOMElements.mainContent.style.paddingBottom = '60px';
+                renderCollaborationNotesGrid();
+                playSound('https://www.niilow.com/join.mp3');
             } else {
                 if (state.roomId) {
                     const conn = state.peer.connect(state.roomId, {
