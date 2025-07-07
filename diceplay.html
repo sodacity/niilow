@@ -12,10 +12,18 @@
             font-family: 'Inter', sans-serif;
             overflow: hidden;
             background-color: #111827; /* bg-gray-900 */
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+        }
+        #game-board {
+            /* Use min-height to prevent content from being cut off by mobile browser UI */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .card {
-            width: 150px;
-            height: 210px;
+            /* Responsive card sizes */
+            width: 120px;
+            height: 168px;
             background-color: #374151; /* bg-gray-700 */
             border: 2px solid #9ca3af; /* border-gray-400 */
             border-radius: 12px;
@@ -29,13 +37,25 @@
             position: relative;
             z-index: 10;
         }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .card {
+                width: 150px;
+                height: 210px;
+            }
+        }
         .hand-card {
-            width: 90px;
-            height: 126px;
-            font-size: 0.75rem;
+            width: 80px;
+            height: 112px;
+            font-size: 0.7rem;
             border-radius: 8px;
             cursor: pointer;
             border: 3px solid transparent;
+        }
+        @media (min-width: 640px) {
+            .hand-card {
+                width: 90px;
+                height: 126px;
+            }
         }
         .hand-card.selected {
             border-color: #6366f1; /* indigo-500 */
@@ -43,10 +63,16 @@
             box-shadow: 0 0 20px #6366f1;
         }
         #die-container {
-            width: 150px;
-            height: 150px;
+            width: 120px;
+            height: 120px;
             cursor: grab;
             z-index: 1;
+        }
+        @media (min-width: 640px) {
+            #die-container {
+                width: 150px;
+                height: 150px;
+            }
         }
         .hp-bar-container {
             width: 100%;
@@ -91,24 +117,35 @@
         #player-hand, #cpu-hand {
             display: flex;
             gap: 8px;
-            height: 140px;
+            min-height: 120px;
             align-items: center;
             justify-content: center;
         }
+        @media (min-width: 640px) {
+            #player-hand, #cpu-hand {
+                min-height: 140px;
+            }
+        }
         .cpu-card-back {
-            width: 90px;
-            height: 126px;
+            width: 80px;
+            height: 112px;
             background: linear-gradient(145deg, #4f46e5, #c026d3);
             border: 2px solid #e5e7eb;
             border-radius: 8px;
         }
+         @media (min-width: 640px) {
+            .cpu-card-back {
+                width: 90px;
+                height: 126px;
+            }
+        }
         #card-tooltip {
-            position: absolute;
+            position: fixed; /* Use fixed for better positioning relative to viewport */
             display: none;
             width: 200px;
-            background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 with opacity */
+            background-color: rgba(17, 24, 39, 0.9);
             backdrop-filter: blur(5px);
-            border: 1px solid #4b5563; /* border-gray-600 */
+            border: 1px solid #4b5563;
             border-radius: 8px;
             padding: 12px;
             z-index: 100;
@@ -132,9 +169,9 @@
 </head>
 <body class="text-white">
 
-    <div id="game-board" class="w-screen h-screen flex flex-col items-center p-2 sm:p-4">
+    <div id="game-board" class="w-screen p-2 sm:p-4">
         <!-- Top Area -->
-        <div id="top-area" class="w-full flex flex-col items-center">
+        <div id="top-area" class="w-full flex flex-col items-center flex-shrink-0">
             <h2 class="text-lg sm:text-xl font-bold mb-1">CPU</h2>
             <div class="hp-bar-container"><div id="cpu-hp-bar" class="hp-bar">100/100</div></div>
             <div id="cpu-hand" class="mt-1"></div>
@@ -151,7 +188,7 @@
         </div>
 
         <!-- Bottom Area -->
-        <div id="bottom-area" class="w-full flex flex-col items-center">
+        <div id="bottom-area" class="w-full flex flex-col items-center flex-shrink-0">
             <div id="player-hand" class="mb-1"></div>
             <h2 class="text-lg sm:text-xl font-bold mb-1">Player 1</h2>
             <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar">100/100</div></div>
@@ -172,7 +209,14 @@
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(150, 150);
+        
+        function resizeDie() {
+            const size = window.innerWidth < 640 ? 120 : 150;
+            renderer.setSize(size, size);
+        }
+        resizeDie();
+        window.addEventListener('resize', resizeDie);
+
         dieContainer.appendChild(renderer.domElement);
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
@@ -233,7 +277,6 @@
         function createCardDOM(cardData, isHandCard = false) {
             const cardDiv = document.createElement('div');
             cardDiv.className = `card text-center ${isHandCard ? 'hand-card' : 'field-card'}`;
-            // Hand cards only show name, field cards show icon
             if(isHandCard) {
                  cardDiv.innerHTML = `<div class="font-bold text-center">${cardData.name}</div>`;
             } else {
@@ -248,10 +291,8 @@
                 const cardEl = createCardDOM(card, true);
                 if (index === selectedCardIndex) cardEl.classList.add('selected');
                 
-                // Desktop Hover Events
-                cardEl.addEventListener('mouseenter', (e) => showTooltip(card, e));
+                cardEl.addEventListener('mouseenter', (e) => showTooltip(card, e.currentTarget));
                 cardEl.addEventListener('mouseleave', hideTooltip);
-                // Mobile Tap Events
                 cardEl.addEventListener('click', () => handleCardTap(index));
 
                 playerHandDiv.appendChild(cardEl);
@@ -259,33 +300,43 @@
             
             cpuHandDiv.innerHTML = '';
             cpuState.hand.forEach(() => {
-                const cardBack = document.createElement('div');
-                cardBack.className = 'cpu-card-back';
+                const cardBack = createCardDOM({}, true);
+                cardBack.classList.remove('card', 'hand-card');
+                cardBack.classList.add('cpu-card-back');
                 cpuHandDiv.appendChild(cardBack);
             });
         }
         
         function handleCardTap(index) {
             if (tappedCardIndex === index) {
-                // Second tap: select the card
                 selectCard(index);
-                tappedCardIndex = null; // Reset tap state
+                tappedCardIndex = null;
                 hideTooltip();
             } else {
-                // First tap: show tooltip
                 tappedCardIndex = index;
                 const cardData = playerState.hand[index];
                 const cardEl = playerHandDiv.children[index];
-                showTooltip(cardData, { clientX: cardEl.getBoundingClientRect().left, clientY: cardEl.getBoundingClientRect().top });
+                showTooltip(cardData, cardEl);
             }
         }
 
-        function showTooltip(card, event) {
+        function showTooltip(card, cardElement) {
             tooltip.innerHTML = `<h3 class="font-bold text-indigo-300 mb-1">${card.name}</h3><p class="text-sm text-gray-200">${card.description}</p>`;
+            const cardRect = cardElement.getBoundingClientRect();
             tooltip.style.display = 'block';
-            // Position tooltip above the card
-            tooltip.style.left = `${event.clientX - (tooltip.offsetWidth / 2)}px`;
-            tooltip.style.top = `${event.clientY - tooltip.offsetHeight - 10}px`;
+            
+            let top = cardRect.top - tooltip.offsetHeight - 10;
+            let left = cardRect.left + (cardRect.width / 2) - (tooltip.offsetWidth / 2);
+
+            // Prevent tooltip from going off-screen
+            if (top < 0) top = cardRect.bottom + 10;
+            if (left < 0) left = 5;
+            if (left + tooltip.offsetWidth > window.innerWidth) {
+                left = window.innerWidth - tooltip.offsetWidth - 5;
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
         }
 
         function hideTooltip() {
@@ -298,8 +349,6 @@
             renderHands();
         }
         
-        // ... (Rest of the game logic: handlePlayerAction, cpuTurn, etc. remains the same) ...
-
         function renderField() {
             playerFieldDiv.innerHTML = '';
             cpuFieldDiv.innerHTML = '';
@@ -315,13 +364,10 @@
             }
             const randomCard = { ...CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)] };
             hand.push(randomCard);
-
+            renderHands();
             if(target === 'player') {
-                renderHands();
                 const newCardEl = playerHandDiv.lastChild;
                 if(newCardEl) newCardEl.classList.add('drawing');
-            } else {
-                renderHands();
             }
         }
         
@@ -406,7 +452,7 @@
                         cpuState.hp = Math.max(0, cpuState.hp - damageDealt);
                         cpuState.defense = 0;
                         animateAction(playerFieldDiv, 'player-attacking', `${message} You dealt ${damageDealt} damage!`);
-                    } else { // Defend
+                    } else {
                         playerState.defense = finalRoll;
                         if(usedCard?.effect === 'addDefense') {
                             playerState.defense += usedCard.value;
@@ -465,7 +511,6 @@
             updateUI();
 
             if (usedCard?.effect === 'chance' || usedCard?.effect === 'soulTax') {
-                let action = (usedCard.effect === 'soulTax') ? 'attack' : 'none';
                 setTimeout(() => {
                      rollDie().then(roll => {
                         if (usedCard.effect === 'chance') {
