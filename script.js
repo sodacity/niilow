@@ -157,6 +157,7 @@
         wbBrushPreview: document.getElementById('wb-brush-preview'),
         wbClearBtn: document.getElementById('wb-clear-btn'),
         wbCloseBtn: document.getElementById('wb-close-btn'),
+        loadingOverlay: document.getElementById('loading-overlay'),
     };
 
     // --- App State ---
@@ -1772,6 +1773,7 @@
                 renderSessionInfo();
                 showNotification('Channel Joined', 'success');
                 showView('collaboration');
+                DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
                 renderCollaborationNotesGrid();
                 playSound('https://www.niilow.com/join.mp3');
@@ -1796,6 +1798,7 @@
 
         state.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
+            DOMElements.loadingOverlay.classList.add('hidden');
             
             if (err.type === 'unavailable-id' && state.isHost) {
                 // This means we tried to create a room that exists. We now become a joiner.
@@ -1818,9 +1821,11 @@
     }
 
     function joinSession(roomIdFromUrl = null) {
+        DOMElements.loadingOverlay.classList.remove('hidden');
         const roomId = roomIdFromUrl || DOMElements.customRoomIdInput.value.trim();
         if (!roomId) {
             showNotification("Please enter a room name to join.", "error");
+            DOMElements.loadingOverlay.classList.add('hidden');
             return;
         };
         closeModal(DOMElements.collaborationStartModal);
@@ -2048,6 +2053,7 @@
                 renderChatLog();
                 renderSessionInfo();
                 showView('collaboration');
+                DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
                 showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
