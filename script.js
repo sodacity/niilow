@@ -119,10 +119,15 @@
         cancelAddGameBtn: document.getElementById('cancel-add-game-btn'),
         collaborationStartModal: document.getElementById('collaboration-start-modal'),
         customRoomIdInput: document.getElementById('custom-room-id-input'),
-        hostSessionBtn: document.getElementById('host-session-btn'),
         joinSessionBtn: document.getElementById('join-session-btn'),
         cancelCollaborationStartBtn: document.getElementById('cancel-collaboration-start-btn'),
         saveCollabNotesModal: document.getElementById('save-collab-notes-modal'),
+        sessionManagementModal: document.getElementById('session-management-modal'),
+        sessionModalPeerList: document.getElementById('session-modal-peer-list'),
+        sessionModalRoomId: document.getElementById('session-modal-room-id'),
+        sessionModalCopyBtn: document.getElementById('session-modal-copy-btn'),
+        sessionModalLeaveBtn: document.getElementById('session-modal-leave-btn'),
+        sessionModalCloseBtn: document.getElementById('session-modal-close-btn'),
         confirmSaveCollabBtn: document.getElementById('confirm-save-collab-btn'),
         declineSaveCollabBtn: document.getElementById('decline-save-collab-btn'),
         fabChatLogBtn: document.getElementById('fab-chat-log'),
@@ -380,7 +385,7 @@
         DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
         const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal].forEach(el => {
+        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.screenShareModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.sessionManagementModal].forEach(el => {
             if (el) {
                 el.style.backgroundColor = rgbaModalBg;
             }
@@ -1356,6 +1361,28 @@
         }
     }
 
+    function openSessionManagementModal() {
+        if (!state.peer) return;
+
+        DOMElements.sessionModalRoomId.textContent = state.roomId;
+        const peerListContainer = DOMElements.sessionModalPeerList;
+        peerListContainer.innerHTML = '';
+
+        for (const [peerId, info] of state.peerInfo.entries()) {
+            const isSelf = peerId === state.peer.id;
+            const peerName = isSelf ? `${info.name} (You)` : info.name;
+            const peerEl = document.createElement('div');
+            peerEl.className = 'flex items-center gap-2 text-sm';
+            peerEl.innerHTML = `
+                <img src="${info.avatar || 'https://www.niilow.com/logo.png'}" class="w-6 h-6 rounded-full">
+                <span>${peerName}</span>
+            `;
+            peerListContainer.appendChild(peerEl);
+        }
+
+        openModal(DOMElements.sessionManagementModal);
+    }
+
     function closeAllPopups() {
         closeNewNotePane();
         closeEditPane();
@@ -1375,6 +1402,7 @@
         closeModal(DOMElements.saveCollabNotesModal);
         closeModal(DOMElements.videoWallModal);
         closeModal(DOMElements.addGameModal);
+        closeModal(DOMElements.sessionManagementModal);
         closeSidebarMobile();
     }
 
@@ -1649,7 +1677,7 @@
         if (!url) return;
 
         let videoElement;
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        if (url.includes('youtu.be0') || url.includes('youtu.be1')) {
             const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
             if (videoId) {
@@ -1679,7 +1707,7 @@
     function generateCollabQrCode() {
         if (!state.roomId) return;
         const baseUrl = window.location.origin + window.location.pathname;
-        const inviteLink = `${baseUrl}?collab=${state.roomId}`;
+        const inviteLink = `${baseUrl}?channel=${state.roomId}`;
 
         DOMElements.collabInviteLinkDisplay.textContent = inviteLink;
         DOMElements.collabQrCodeContainer.innerHTML = '';
@@ -1722,7 +1750,7 @@
             if (state.isHost) {
                 state.roomId = id;
                 renderSessionInfo();
-                showNotification(`Session "${id}" is live! Share the name.`, 'success');
+                showNotification('Channel Joined', 'success');
             } else {
                 if (state.roomId) {
                     const conn = state.peer.connect(state.roomId, {
@@ -1779,12 +1807,21 @@
 
         state.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
+            if (err.type === 'peer-unavailable' && !state.isHost) { // If trying to join a room that doesn't exist, create it instead.
+                showNotification('Channel Joined', 'success');
+                if (state.peer) state.peer.destroy(); // Clean up the failed peer
+                state.isHost = true;
+                initPeer();
+                showView('collaboration');
+                DOMElements.mainContent.style.paddingBottom = '60px';
+                renderCollaborationNotesGrid();
+                playSound('https://www.niilow.com/join.mp3');
+                return; // Prevent the default error notification
+            }
             let message = `Connection error: ${err.type}`;
             if (err.type === 'unavailable-id') {
-                message = `Room name "${state.roomId}" is already taken. Please try another one.`;
+                message = `Channel name "${state.roomId}" is already taken. Please try another one.`;
                 closeModal(DOMElements.collaborationStartModal);
-            } else if (err.type === 'peer-unavailable') {
-                message = `Could not find room "${state.roomId}". Please check the name.`;
             } else if (err.type === 'network') {
                 message = 'Network error. Please check your connection.';
             } else if (err.type === 'disconnected') {
@@ -1792,22 +1829,6 @@
             }
             showNotification(message, 'error');
         });
-    }
-
-    function hostSession() {
-        const roomId = DOMElements.customRoomIdInput.value.trim();
-        if (!roomId) {
-            showNotification("Please enter a room name to host.", "error");
-            return;
-        }
-        closeModal(DOMElements.collaborationStartModal);
-        state.isHost = true;
-        state.roomId = roomId;
-        initPeer();
-        showView('collaboration');
-        DOMElements.mainContent.style.paddingBottom = '60px';
-        renderCollaborationNotesGrid();
-        playSound('https://www.niilow.com/join.mp3');
     }
 
     function joinSession(roomIdFromUrl = null) {
@@ -2527,7 +2548,20 @@
         } else {
             DOMElements.collaborationLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                openModal(DOMElements.collaborationStartModal);
+                if (state.peer) {
+                    // If we are already in a session...
+                    const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+                    if (inCollabView) {
+                        // and on the collab screen, open the management modal.
+                        openSessionManagementModal();
+                    } else {
+                        // otherwise, just switch to the collab view.
+                        showView('collaboration');
+                    }
+                } else {
+                    // If not in a session, open the modal to start one.
+                    openModal(DOMElements.collaborationStartModal);
+                }
                 closeSidebarMobile();
             });
         }
@@ -2741,7 +2775,6 @@
             });
         });
 
-        DOMElements.hostSessionBtn.addEventListener('click', hostSession);
         DOMElements.joinSessionBtn.addEventListener('click', () => joinSession());
         DOMElements.cancelCollaborationStartBtn.addEventListener('click', () => closeModal(DOMElements.collaborationStartModal));
 
@@ -2767,6 +2800,18 @@
 
         DOMElements.confirmSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(true));
         DOMElements.declineSaveCollabBtn.addEventListener('click', () => handleSaveCollabNotes(false));
+
+        DOMElements.sessionModalCloseBtn.addEventListener('click', () => closeModal(DOMElements.sessionManagementModal));
+        DOMElements.sessionModalLeaveBtn.addEventListener('click', () => {
+            closeModal(DOMElements.sessionManagementModal);
+            leaveSession();
+        });
+        DOMElements.sessionModalCopyBtn.addEventListener('click', () => {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const inviteLink = `${baseUrl}?channel=${state.roomId}`;
+            navigator.clipboard.writeText(inviteLink)
+                .then(() => showNotification('Invite link copied to clipboard!', 'success'));
+        });
     }
 
     async function init() {
@@ -2785,12 +2830,12 @@
 
         const currentUrl = new URL(window.location.href);
         const dataFromUrl = currentUrl.searchParams.get('data');
-        const collabRoomId = currentUrl.searchParams.get('collab');
+        const channelRoomId = currentUrl.searchParams.get('channel');
         const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
 
-        if (collabRoomId) {
-            showNotification(`Attempting to join collaboration room: ${collabRoomId}`, 'info');
-            joinSession(collabRoomId);
+        if (channelRoomId) {
+            showNotification(`Attempting to join channel: ${channelRoomId}`, 'info');
+            joinSession(channelRoomId);
             history.replaceState({}, document.title, window.location.pathname);
         } else if (dataFromUrl) {
             let password = currentUrl.searchParams.get('sesh-ID');
