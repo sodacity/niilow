@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1v1 Card Battler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        .card {
+            width: 150px;
+            height: 210px;
+            background-color: #374151; /* bg-gray-700 */
+            border: 2px solid #9ca3af; /* border-gray-400 */
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            z-index: 10;
+        }
+        .hand-card {
+            width: 90px;
+            height: 126px;
+            font-size: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+        .hand-card.selected {
+            border-color: #6366f1; /* indigo-500 */
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 0 20px #6366f1;
+        }
+        #die-container {
+            width: 150px;
+            height: 150px;
+            cursor: grab;
+            z-index: 1;
+        }
+        .hp-bar-container {
+            width: 100%;
+            max-width: 300px;
+            background-color: #374151;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .hp-bar {
+            height: 24px;
+            background: linear-gradient(90deg, #ef4444, #f87171);
+            transition: width 0.5s ease-in-out;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .shield-icon {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: bold;
+            border: 2px solid white;
+            box-shadow: 0 0 10px #3b82f6;
+            transform: scale(0);
+            transition: transform 0.3s ease-in-out;
+        }
+        .shield-icon.active {
+            transform: scale(1);
+        }
+        #player-hand, #cpu-hand {
+            display: flex;
+            gap: 8px;
+            height: 140px;
+            align-items: center;
+            justify-content: center;
+        }
+        .cpu-card-back {
+            width: 90px;
+            height: 126px;
+            background: linear-gradient(145deg, #4f46e5, #c026d3);
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        #card-tooltip {
+            position: absolute;
+            display: none;
+            width: 200px;
+            background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 with opacity */
+            backdrop-filter: blur(5px);
+            border: 1px solid #4b5563; /* border-gray-600 */
+            border-radius: 8px;
+            padding: 12px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        /* Animations */
+        @keyframes player-boomerang-attack { 0% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-50px, -25vh) rotate(360deg) scale(1.1); } 100% { transform: translate(0, 0) rotate(720deg); } }
+        .player-attacking { animation: player-boomerang-attack 1.2s ease-in-out; }
+        @keyframes cpu-boomerang-attack { 0% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(50px, 25vh) rotate(360deg) scale(1.1); } 100% { transform: translate(0, 0) rotate(720deg); } }
+        .cpu-attacking { animation: cpu-boomerang-attack 1.2s ease-in-out; }
+        @keyframes damage-flash { 50% { filter: brightness(2) drop-shadow(0 0 5px #ef4444); } }
+        .damage { animation: damage-flash 0.4s ease-out; }
+        @keyframes draw-card-anim { from { transform: translateY(100%) scale(0.5); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .drawing { animation: draw-card-anim 0.5s ease-out; }
+        @keyframes self-heal-anim { 50% { box-shadow: 0 0 25px 5px #10b981; transform: scale(1.05); } }
+        .healing { animation: self-heal-anim 0.6s ease-in-out; }
+        @keyframes self-buff-anim { 50% { box-shadow: 0 0 25px 5px #3b82f6; transform: scale(1.05); } }
+        .buffing { animation: self-buff-anim 0.6s ease-in-out; }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="game-board" class="w-screen h-screen flex flex-col items-center p-2 sm:p-4">
+        <!-- Top Area -->
+        <div id="top-area" class="w-full flex flex-col items-center">
+            <h2 class="text-lg sm:text-xl font-bold mb-1">CPU</h2>
+            <div class="hp-bar-container"><div id="cpu-hp-bar" class="hp-bar">100/100</div></div>
+            <div id="cpu-hand" class="mt-1"></div>
+        </div>
+
+        <!-- Field -->
+        <div id="field" class="flex-grow w-full flex flex-col items-center justify-around">
+            <div id="cpu-field-card" class="relative"></div>
+            <div class="flex flex-col items-center justify-center gap-2">
+                <div id="die-container"></div>
+                <div id="message-log" class="text-base sm:text-lg text-center h-12 font-semibold text-yellow-300"></div>
+            </div>
+            <div id="player-field-card" class="relative"></div>
+        </div>
+
+        <!-- Bottom Area -->
+        <div id="bottom-area" class="w-full flex flex-col items-center">
+            <div id="player-hand" class="mb-1"></div>
+            <h2 class="text-lg sm:text-xl font-bold mb-1">Player 1</h2>
+            <div class="hp-bar-container"><div id="player-hp-bar" class="hp-bar">100/100</div></div>
+            <div id="player-controls" class="mt-2 sm:mt-4 flex justify-center gap-4">
+                <button id="attack-btn" class="px-4 py-2 sm:px-6 sm:py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Attack</button>
+                <button id="defend-btn" class="px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-base sm:text-lg shadow-lg">Defend</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip & Game Over Modal -->
+    <div id="card-tooltip"></div>
+    <div id="game-over-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"></div>
+
+    <script>
+        // --- THREE.JS 3D Die Setup ---
+        const dieContainer = document.getElementById('die-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(150, 150);
+        dieContainer.appendChild(renderer.domElement);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
+        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+        function createNumberTexture(number) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#f3f4f6'; context.fillRect(0, 0, 256, 256);
+            context.font = 'bold 180px Inter'; context.fillStyle = '#1f2937';
+            context.textAlign = 'center'; context.textBaseline = 'middle';
+            context.fillText(number, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+        const materials = [
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('1') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('6') }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('2') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('5') }),
+            new THREE.MeshStandardMaterial({ map: createNumberTexture('3') }), new THREE.MeshStandardMaterial({ map: createNumberTexture('4') }),
+        ];
+        const die = new THREE.Mesh(geometry, materials);
+        scene.add(die);
+        camera.position.z = 4;
+        function animateDie() { requestAnimationFrame(animateDie); renderer.render(scene, camera); }
+        animateDie();
+
+        // --- Game Data & State ---
+        const MAX_HP = 100;
+        const CARD_DECK = [
+            { id: 'c1', name: 'Double Dice 🎲🎲', effect: 'doubleRoll', description: 'Doubles your next roll\'s value.' },
+            { id: 'c2', name: 'Reinforce 🛡️', effect: 'addDefense', value: 3, description: 'Adds +3 to your next Defend action.' },
+            { id: 'c3', name: 'First Aid ❤️', effect: 'heal', value: 2, description: 'Restores 2 HP.' },
+            { id: 'c4', name: 'Decimate ⚔️', effect: 'addAttack', value: 2, description: 'Adds +2 to your next Attack action.' },
+            { id: 'c5', name: 'Chance 🎲', effect: 'chance', description: 'Even: heal roll value. Odd: take roll value as damage. Ends turn.'},
+            { id: 'c6', name: 'Gamble 🎰', effect: 'gamble', description: 'Attack only. Even: deal 2x roll damage. Odd: take roll damage.'},
+            { id: 'c7', name: 'Soul Tax 💸', effect: 'soulTax', description: 'Attack only. Even: steal 20% of opponent\'s current HP. Odd: Attack fails.'}
+        ];
+        let playerState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'Player 1', icon: '🧑‍🚀' }};
+        let cpuState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'CPU', icon: '🤖' }};
+        let selectedCardIndex = null;
+        let tappedCardIndex = null;
+        let isPlayerTurn = true;
+        let isActionInProgress = false;
+        
+        // --- DOM Elements ---
+        const playerHpBar = document.getElementById('player-hp-bar');
+        const cpuHpBar = document.getElementById('cpu-hp-bar');
+        const playerHandDiv = document.getElementById('player-hand');
+        const cpuHandDiv = document.getElementById('cpu-hand');
+        const playerFieldDiv = document.getElementById('player-field-card');
+        const cpuFieldDiv = document.getElementById('cpu-field-card');
+        const messageLog = document.getElementById('message-log');
+        const tooltip = document.getElementById('card-tooltip');
+        
+        // --- UI & Card Logic ---
+        function createCardDOM(cardData, isHandCard = false) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `card text-center ${isHandCard ? 'hand-card' : 'field-card'}`;
+            // Hand cards only show name, field cards show icon
+            if(isHandCard) {
+                 cardDiv.innerHTML = `<div class="font-bold text-center">${cardData.name}</div>`;
+            } else {
+                 cardDiv.innerHTML = `<div class="text-4xl sm:text-5xl">${cardData.icon}</div><div id="${cardData.name.toLowerCase().replace(/\s+/g, '-')}-shield" class="shield-icon">0</div>`;
+            }
+            return cardDiv;
+        }
+
+        function renderHands() {
+            playerHandDiv.innerHTML = '';
+            playerState.hand.forEach((card, index) => {
+                const cardEl = createCardDOM(card, true);
+                if (index === selectedCardIndex) cardEl.classList.add('selected');
+                
+                // Desktop Hover Events
+                cardEl.addEventListener('mouseenter', (e) => showTooltip(card, e));
+                cardEl.addEventListener('mouseleave', hideTooltip);
+                // Mobile Tap Events
+                cardEl.addEventListener('click', () => handleCardTap(index));
+
+                playerHandDiv.appendChild(cardEl);
+            });
+            
+            cpuHandDiv.innerHTML = '';
+            cpuState.hand.forEach(() => {
+                const cardBack = document.createElement('div');
+                cardBack.className = 'cpu-card-back';
+                cpuHandDiv.appendChild(cardBack);
+            });
+        }
+        
+        function handleCardTap(index) {
+            if (tappedCardIndex === index) {
+                // Second tap: select the card
+                selectCard(index);
+                tappedCardIndex = null; // Reset tap state
+                hideTooltip();
+            } else {
+                // First tap: show tooltip
+                tappedCardIndex = index;
+                const cardData = playerState.hand[index];
+                const cardEl = playerHandDiv.children[index];
+                showTooltip(cardData, { clientX: cardEl.getBoundingClientRect().left, clientY: cardEl.getBoundingClientRect().top });
+            }
+        }
+
+        function showTooltip(card, event) {
+            tooltip.innerHTML = `<h3 class="font-bold text-indigo-300 mb-1">${card.name}</h3><p class="text-sm text-gray-200">${card.description}</p>`;
+            tooltip.style.display = 'block';
+            // Position tooltip above the card
+            tooltip.style.left = `${event.clientX - (tooltip.offsetWidth / 2)}px`;
+            tooltip.style.top = `${event.clientY - tooltip.offsetHeight - 10}px`;
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+        
+        function selectCard(index) {
+            if (!isPlayerTurn || isActionInProgress) return;
+            selectedCardIndex = (selectedCardIndex === index) ? null : index;
+            renderHands();
+        }
+        
+        // ... (Rest of the game logic: handlePlayerAction, cpuTurn, etc. remains the same) ...
+
+        function renderField() {
+            playerFieldDiv.innerHTML = '';
+            cpuFieldDiv.innerHTML = '';
+            playerFieldDiv.appendChild(createCardDOM(playerState.cardOnField));
+            cpuFieldDiv.appendChild(createCardDOM(cpuState.cardOnField));
+        }
+        
+        function drawCard(target) {
+            const hand = target === 'player' ? playerState.hand : cpuState.hand;
+            if (hand.length >= 4) {
+                if(target === 'player') messageLog.textContent = "Your hand is full!";
+                return;
+            }
+            const randomCard = { ...CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)] };
+            hand.push(randomCard);
+
+            if(target === 'player') {
+                renderHands();
+                const newCardEl = playerHandDiv.lastChild;
+                if(newCardEl) newCardEl.classList.add('drawing');
+            } else {
+                renderHands();
+            }
+        }
+        
+        document.getElementById('attack-btn').addEventListener('click', () => handlePlayerAction('attack'));
+        document.getElementById('defend-btn').addEventListener('click', () => handlePlayerAction('defend'));
+
+        function handlePlayerAction(action) {
+            if (!isPlayerTurn || isActionInProgress) return;
+            isActionInProgress = true;
+            hideTooltip();
+            
+            let usedCard = null;
+            if (selectedCardIndex !== null) {
+                usedCard = playerState.hand.splice(selectedCardIndex, 1)[0];
+                selectedCardIndex = null;
+            }
+            renderHands();
+
+            if (usedCard) {
+                messageLog.textContent = `You play ${usedCard.name}!`;
+                if (usedCard.effect === 'heal') {
+                    playerState.hp = Math.min(MAX_HP, playerState.hp + usedCard.value);
+                    animateSelfEffect(playerFieldDiv, 'healing');
+                    updateUI();
+                }
+            }
+
+            if (usedCard?.effect === 'chance' || usedCard?.effect === 'soulTax') {
+                setTimeout(() => {
+                    rollDie().then(roll => {
+                        if (usedCard.effect === 'chance') {
+                            handleChanceEffect(playerState, roll);
+                        } else if (usedCard.effect === 'soulTax') {
+                             if (action !== 'attack') {
+                                messageLog.textContent = 'Soul Tax can only be used with an Attack!';
+                            } else {
+                                handleSoulTaxEffect(playerState, cpuState, roll);
+                            }
+                        }
+                        endTurnSequence('cpu');
+                    });
+                }, 800);
+                return;
+            }
+
+            setTimeout(() => {
+                messageLog.textContent = 'Rolling the die...';
+                rollDie().then(roll => {
+                    if (usedCard?.effect === 'gamble') {
+                        if (action !== 'attack') {
+                            messageLog.textContent = 'Gamble can only be used with an Attack!';
+                            endTurnSequence('cpu');
+                            return;
+                        }
+                        if (roll % 2 !== 0) {
+                            playerState.hp = Math.max(0, playerState.hp - roll);
+                            messageLog.textContent = `Gamble failed! Rolled odd ${roll}, took ${roll} damage!`;
+                            animateSelfEffect(playerFieldDiv, 'damage');
+                            endTurnSequence('cpu');
+                            return;
+                        }
+                    }
+
+                    let finalRoll = roll;
+                    let message = `You rolled a ${roll}!`;
+
+                    if (usedCard?.effect === 'doubleRoll') {
+                        finalRoll *= 2;
+                        message = `Used Double Dice! Rolled ${roll}x2 = ${finalRoll}!`;
+                    } else if (usedCard?.effect === 'addAttack' && action === 'attack') {
+                        finalRoll += usedCard.value;
+                        message = `Used Decimate! Rolled ${roll}+${usedCard.value} = ${finalRoll}!`;
+                    }
+                    
+                    if (action === 'attack') {
+                        let attackPower = finalRoll;
+                        if (usedCard?.effect === 'gamble' && roll % 2 === 0) {
+                            attackPower = roll * 2;
+                            message = `Gamble success! Rolled even ${roll} for ${attackPower} damage!`;
+                        }
+                        const damageDealt = Math.max(0, attackPower - cpuState.defense);
+                        cpuState.hp = Math.max(0, cpuState.hp - damageDealt);
+                        cpuState.defense = 0;
+                        animateAction(playerFieldDiv, 'player-attacking', `${message} You dealt ${damageDealt} damage!`);
+                    } else { // Defend
+                        playerState.defense = finalRoll;
+                        if(usedCard?.effect === 'addDefense') {
+                            playerState.defense += usedCard.value;
+                            animateSelfEffect(playerFieldDiv, 'buffing');
+                        }
+                        messageLog.textContent = `You defend for ${playerState.defense}!`;
+                    }
+                    
+                    endTurnSequence('cpu');
+                });
+            }, usedCard ? 800 : 0);
+        }
+        
+        function cpuTurn() {
+            messageLog.textContent = 'CPU is thinking...';
+            
+            let usedCard = null;
+            let cardToUseIndex = -1;
+
+            if (cpuState.hand.length > 0 && Math.random() < 0.9) { 
+                 const soulTaxIndex = cpuState.hand.findIndex(c => c.effect === 'soulTax');
+                 if (soulTaxIndex > -1 && playerState.hp > 60) {
+                     cardToUseIndex = soulTaxIndex;
+                 } else {
+                    const chanceIndex = cpuState.hand.findIndex(c => c.effect === 'chance');
+                    if (chanceIndex > -1 && cpuState.hp < 40) {
+                        cardToUseIndex = chanceIndex;
+                    } else {
+                        const wantsToAttack = (cpuState.hp > 60 || playerState.defense > 4 || cpuState.hp > playerState.hp);
+                        if (wantsToAttack) {
+                            cardToUseIndex = cpuState.hand.findIndex(c => c.effect === 'gamble' || c.effect === 'doubleRoll' || c.effect === 'addAttack');
+                        } else {
+                            cardToUseIndex = cpuState.hand.findIndex(c => c.effect === 'addDefense');
+                        }
+
+                        if (cardToUseIndex === -1) {
+                            const healCardIndex = cpuState.hand.findIndex(c => c.effect === 'heal');
+                            if (healCardIndex > -1 && cpuState.hp < 50) cardToUseIndex = healCardIndex;
+                        }
+                    }
+                 }
+                
+                if (cardToUseIndex > -1) {
+                    usedCard = cpuState.hand.splice(cardToUseIndex, 1)[0];
+                }
+            }
+            
+            if(usedCard) {
+                messageLog.textContent = `CPU plays ${usedCard.name}!`;
+                if (usedCard.effect === 'heal') {
+                    cpuState.hp = Math.min(MAX_HP, cpuState.hp + usedCard.value);
+                    animateSelfEffect(cpuFieldDiv, 'healing');
+                }
+            }
+            renderHands();
+            updateUI();
+
+            if (usedCard?.effect === 'chance' || usedCard?.effect === 'soulTax') {
+                let action = (usedCard.effect === 'soulTax') ? 'attack' : 'none';
+                setTimeout(() => {
+                     rollDie().then(roll => {
+                        if (usedCard.effect === 'chance') {
+                            handleChanceEffect(cpuState, roll, 'CPU');
+                        } else if (usedCard.effect === 'soulTax') {
+                            handleSoulTaxEffect(cpuState, playerState, roll, 'CPU');
+                        }
+                        endTurnSequence('player');
+                    });
+                }, 800);
+                return;
+            }
+
+            setTimeout(() => {
+                let action = (usedCard?.effect === 'gamble') ? 'attack' : (cpuState.hp > 60 || playerState.defense > 4 || cpuState.hp > playerState.hp) ? 'attack' : 'defend';
+
+                rollDie().then(roll => {
+                    if (usedCard?.effect === 'gamble') {
+                        if (roll % 2 !== 0) {
+                            cpuState.hp = Math.max(0, cpuState.hp - roll);
+                            messageLog.textContent = `CPU's Gamble failed! Took ${roll} damage!`;
+                            animateSelfEffect(cpuFieldDiv, 'damage');
+                            endTurnSequence('player');
+                            return;
+                        }
+                    }
+
+                    let finalRoll = roll;
+                    if (usedCard?.effect === 'doubleRoll') finalRoll *= 2;
+                    if (usedCard?.effect === 'addAttack' && action === 'attack') finalRoll += usedCard.value;
+                    
+                    if (action === 'attack') {
+                        let attackPower = finalRoll;
+                        if (usedCard?.effect === 'gamble' && roll % 2 === 0) {
+                            attackPower = roll * 2;
+                        }
+                        const damageDealt = Math.max(0, attackPower - playerState.defense);
+                        playerState.hp = Math.max(0, playerState.hp - damageDealt);
+                        playerState.defense = 0;
+                        animateAction(cpuFieldDiv, 'cpu-attacking', `CPU dealt ${damageDealt} damage!`);
+                    } else {
+                        cpuState.defense = finalRoll;
+                        if(usedCard?.effect === 'addDefense') {
+                            cpuState.defense += usedCard.value;
+                            animateSelfEffect(cpuFieldDiv, 'buffing');
+                        }
+                        messageLog.textContent = `CPU defends for ${cpuState.defense}!`;
+                    }
+                    
+                    endTurnSequence('player');
+                });
+            }, usedCard ? 800 : 0);
+        }
+
+        function handleChanceEffect(player, roll, playerName = 'You') {
+            if (roll % 2 === 0) {
+                player.hp = Math.min(MAX_HP, player.hp + roll);
+                messageLog.textContent = `${playerName} rolled an even ${roll}! Healed for ${roll}!`;
+                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'healing');
+            } else {
+                player.hp = Math.max(0, player.hp - roll);
+                messageLog.textContent = `${playerName} rolled an odd ${roll}! Took ${roll} damage!`;
+                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'damage');
+            }
+        }
+
+        function handleSoulTaxEffect(player, opponent, roll, playerName = 'You') {
+            if (roll % 2 === 0) {
+                const stolenHp = Math.floor(opponent.hp * 0.20);
+                opponent.hp = Math.max(0, opponent.hp - stolenHp);
+                player.hp = Math.min(MAX_HP, player.hp + stolenHp);
+                messageLog.textContent = `Soul Tax success! Stole ${stolenHp} HP!`;
+                animateSelfEffect(playerName === 'You' ? playerFieldDiv : cpuFieldDiv, 'healing');
+                animateSelfEffect(playerName === 'You' ? cpuFieldDiv : playerFieldDiv, 'damage');
+            } else {
+                messageLog.textContent = `Soul Tax failed! The roll was odd.`;
+            }
+        }
+
+        function endTurnSequence(nextPlayer) {
+            const delay = 1200;
+            setTimeout(() => {
+                updateUI();
+                if (checkGameOver()) return;
+
+                if (nextPlayer === 'cpu') {
+                    drawCard('cpu');
+                    setTimeout(cpuTurn, 2000);
+                } else {
+                    drawCard('player');
+                    isActionInProgress = false;
+                    isPlayerTurn = true;
+                    messageLog.textContent = "Your turn! Choose an action.";
+                }
+            }, delay);
+        }
+
+        function animateAction(element, animationClass, msg) {
+            const fieldCard = element.firstChild;
+            if (!fieldCard) return;
+            const originalPosition = fieldCard.style.position;
+            const originalZIndex = fieldCard.style.zIndex;
+            fieldCard.style.position = 'relative'; 
+            fieldCard.style.zIndex = '100';
+            fieldCard.classList.add(animationClass);
+            fieldCard.addEventListener('animationend', () => {
+                fieldCard.classList.remove(animationClass);
+                fieldCard.style.position = originalPosition;
+                fieldCard.style.zIndex = originalZIndex;
+                messageLog.textContent = msg;
+                const targetCard = animationClass === 'player-attacking' ? cpuFieldDiv : playerFieldDiv;
+                targetCard.classList.add('damage');
+                setTimeout(() => targetCard.classList.remove('damage'), 400);
+            }, { once: true });
+        }
+
+        function animateSelfEffect(element, animationClass) {
+            const fieldCard = element.firstChild;
+            fieldCard.classList.add(animationClass);
+            fieldCard.addEventListener('animationend', () => {
+                fieldCard.classList.remove(animationClass);
+            }, { once: true });
+        }
+
+        function updateUI() {
+            playerHpBar.style.width = `${(playerState.hp / MAX_HP) * 100}%`;
+            playerHpBar.textContent = `${playerState.hp}/${MAX_HP}`;
+            cpuHpBar.style.width = `${(cpuState.hp / MAX_HP) * 100}%`;
+            cpuHpBar.textContent = `${cpuState.hp}/${MAX_HP}`;
+            
+            const playerShield = document.getElementById('player-1-shield');
+            if(playerShield) {
+                playerShield.textContent = playerState.defense;
+                playerShield.classList.toggle('active', playerState.defense > 0);
+            }
+            const cpuShield = document.getElementById('cpu-shield');
+            if(cpuShield) {
+                cpuShield.textContent = cpuState.defense;
+                cpuShield.classList.toggle('active', cpuState.defense > 0);
+            }
+            renderHands();
+        }
+
+        function checkGameOver() {
+            if (playerState.hp <= 0 || cpuState.hp <= 0) {
+                isActionInProgress = true;
+                const modal = document.getElementById('game-over-modal');
+                const winner = playerState.hp > 0 ? 'You' : 'CPU';
+                modal.innerHTML = `<div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center">
+                    <h2 class="text-2xl sm:text-4xl font-bold mb-4">${winner} Won!</h2>
+                    <button id="play-again-btn" class="px-6 py-3 sm:px-8 sm:py-4 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-lg sm:text-xl">Play Again</button>
+                </div>`;
+                modal.classList.remove('hidden');
+                document.getElementById('play-again-btn').addEventListener('click', resetGame);
+                return true;
+            }
+            return false;
+        }
+        
+        function resetGame() {
+            playerState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'Player 1', icon: '🧑‍🚀' }};
+            cpuState = { hp: MAX_HP, defense: 0, hand: [], cardOnField: { name: 'CPU', icon: '🤖' }};
+            selectedCardIndex = null;
+            tappedCardIndex = null;
+            isPlayerTurn = true;
+            isActionInProgress = false;
+            
+            document.getElementById('game-over-modal').classList.add('hidden');
+            renderField();
+            messageLog.textContent = 'A new game begins! Your turn.';
+            updateUI();
+        }
+
+        function rollDie() {
+            return new Promise(resolve => {
+                let spin = { x: Math.random() * 20 + 15, y: Math.random() * 20 + 15 };
+                const rollDuration = 1200;
+                const startTime = performance.now();
+                function animateRoll(currentTime) {
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / rollDuration, 1);
+                    const easeOutProgress = 1 - Math.pow(1 - progress, 4);
+                    const damping = 1 - easeOutProgress;
+                    die.rotation.x += spin.x * damping * 0.01;
+                    die.rotation.y += spin.y * damping * 0.01;
+                    if (progress < 1) {
+                        requestAnimationFrame(animateRoll);
+                    } else {
+                        const roll = Math.floor(Math.random() * 6) + 1;
+                        const finalRotations = {
+                            1: { x: 0, y: -Math.PI / 2, z: 0 }, 6: { x: 0, y: Math.PI / 2, z: 0 },
+                            2: { x: Math.PI / 2, y: 0, z: 0 }, 5: { x: -Math.PI / 2, y: 0, z: 0 },
+                            3: { x: 0, y: 0, z: 0 }, 4: { x: 0, y: Math.PI, z: 0 },
+                        };
+                        const targetRotation = finalRotations[roll];
+                        const startRotation = { x: die.rotation.x, y: die.rotation.y, z: die.rotation.z };
+                        const snapDuration = 400;
+                        const snapStartTime = performance.now();
+                        function animateSnap(snapTime) {
+                            const snapElapsed = snapTime - snapStartTime;
+                            const snapProgress = Math.min(snapElapsed / snapDuration, 1);
+                            const snapEase = 1 - Math.pow(1 - snapProgress, 2);
+                            die.rotation.x = THREE.MathUtils.lerp(startRotation.x, targetRotation.x, snapEase);
+                            die.rotation.y = THREE.MathUtils.lerp(startRotation.y, targetRotation.y, snapEase);
+                            die.rotation.z = THREE.MathUtils.lerp(startRotation.z, targetRotation.z, snapEase);
+                            if (snapProgress < 1) {
+                                requestAnimationFrame(animateSnap);
+                            } else {
+                                die.rotation.set(targetRotation.x, targetRotation.y, targetRotation.z);
+                                resolve(roll);
+                            }
+                        }
+                        requestAnimationFrame(animateSnap);
+                    }
+                }
+                requestAnimationFrame(animateRoll);
+            });
+        }
+        
+        resetGame(); // Start the game!
+    </script>
+</body>
+</html>
