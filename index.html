@@ -175,14 +175,11 @@
     </div>
     
     <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-8 text-center">
-            <h2 class="text-2xl font-bold mb-4">Real-Time Collaboration</h2>
-            <p class="text-gray-400 mb-6">Enter a room name to create or join a session.</p>
+        <div class="rounded-lg shadow-xl w-full max-w-md p-8 text-center">
+            <h2 class="text-2xl font-bold mb-4">Channel</h2>
+            <p class="text-gray-400 mb-6">Enter a channel name to create or join a session.</p>
             <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg bg-gray-700" placeholder="e.g., ProjectPhoenix">
-            <div class="flex justify-center gap-4">
-                <button id="host-session-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Create & Host</button>
-                <button id="join-session-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg flex-1">Join</button>
-            </div>
+            <button id="join-session-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Join</button>
              <button id="cancel-collaboration-start-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
@@ -243,6 +240,25 @@
                 <button id="remove-video-wall-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Remove</button>
                 <button id="save-video-wall-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Set Video</button>
             </div>
+        </div>
+    </div>
+
+    <div id="session-management-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4 text-center">Channel Info</h2>
+            <div class="mb-4">
+                <h3 class="font-semibold mb-2 border-b border-gray-600 pb-1">Participants:</h3>
+                <div id="session-modal-peer-list" class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar"></div>
+            </div>
+            <div class="flex items-center text-sm mb-6">
+                <span class="mr-2">Channel Name:</span>
+                <span id="session-modal-room-id" class="font-mono p-1 bg-gray-700 rounded"></span>
+            </div>
+            <div class="flex flex-col gap-4">
+                <button id="session-modal-copy-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Copy Invite Link</button>
+                <button id="session-modal-leave-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">Leave Channel</button>
+            </div>
+            <button id="session-modal-close-btn" class="mt-6 text-gray-400 hover:text-white w-full">Close</button>
         </div>
     </div>
 
