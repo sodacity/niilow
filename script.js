@@ -124,7 +124,7 @@
         sessionModalPeerList: document.getElementById('session-modal-peer-list'),
         sessionModalRoomId: document.getElementById('session-modal-room-id'),
         sessionModalCopyBtn: document.getElementById('session-modal-copy-btn'),
-        sessionModalQrBtn: document.getElementById('session-modal-qr-btn'), // New Button
+        sessionModalQrBtn: document.getElementById('session-modal-qr-btn'),
         sessionModalLeaveBtn: document.getElementById('session-modal-leave-btn'),
         sessionModalCloseBtn: document.getElementById('session-modal-close-btn'),
         confirmSaveCollabBtn: document.getElementById('confirm-save-collab-btn'),
@@ -152,14 +152,12 @@
         wbClearBtn: document.getElementById('wb-clear-btn'),
         wbCloseBtn: document.getElementById('wb-close-btn'),
         loadingOverlay: document.getElementById('loading-overlay'),
-        // Session Injector
         importLocalNoteBtn: document.getElementById('import-local-note-btn'),
         importLocalNoteModal: document.getElementById('import-local-note-modal'),
         importNoteSearch: document.getElementById('import-note-search'),
         importNoteList: document.getElementById('import-note-list'),
         cancelImportLocalNoteBtn: document.getElementById('cancel-import-local-note-btn'),
         confirmImportLocalNoteBtn: document.getElementById('confirm-import-local-note-btn'),
-        // Grouped Toolbar Actions
         collabActionsBtn: document.getElementById('collab-actions-btn'),
         collabActionsMenu: document.getElementById('collab-actions-menu'),
     };
@@ -206,7 +204,7 @@
         modalBgColor: '#000000',
         textInputBgColor: '#ffffff',
         textInputFontColor: '#000000',
-        footerText: 'Niilow 1.7',
+        footerText: 'Niilow 1.8',
         modalOpacity: 0.95,
         userName: 'User',
         sessionPassword: '',
@@ -2531,7 +2529,14 @@
             }, 400);
         });
 
-        DOMElements.modalOverlay.addEventListener('click', closeAllPopups);
+        DOMElements.modalOverlay.addEventListener('click', (e) => {
+            // Close collab actions menu if open
+            if (!DOMElements.collabActionsMenu.classList.contains('hidden')) {
+                DOMElements.collabActionsMenu.classList.add('hidden');
+            } else {
+                closeAllPopups();
+            }
+        });
 
         DOMElements.dashboardLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -2584,17 +2589,14 @@
         DOMElements.videoHelperBtn.addEventListener('click', () => openModal(DOMElements.videoHelperModal));
         DOMElements.addVideoBtn.addEventListener('click', handleAddVideo);
         DOMElements.cancelVideoHelperBtn.addEventListener('click', () => closeModal(DOMElements.videoHelperModal));
-
-        DOMElements.videoWallBtn.addEventListener('click', () => openModal(DOMElements.videoWallModal));
         
-        // Listeners for Session Injector Modal
         DOMElements.importLocalNoteBtn.addEventListener('click', openImportLocalNoteModal);
         DOMElements.cancelImportLocalNoteBtn.addEventListener('click', () => closeModal(DOMElements.importLocalNoteModal));
         DOMElements.confirmImportLocalNoteBtn.addEventListener('click', handleConfirmImportLocalNotes);
         DOMElements.importNoteSearch.addEventListener('input', renderLocalNotePickerList);
         
-        // Listeners for Grouped Toolbar
-        DOMElements.collabActionsBtn.addEventListener('click', () => {
+        DOMElements.collabActionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             DOMElements.collabActionsMenu.classList.toggle('hidden');
         });
         document.addEventListener('click', (e) => {
