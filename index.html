@@ -118,6 +118,9 @@
             <div class="flex-shrink-0 p-2 border-t border-gray-700">
                 <div class="flex items-center gap-2">
                     <input type="text" id="chat-input" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
+                    <button id="import-local-note-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold p-2 rounded-full" title="Import Local Note">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                    </button>
                     <button id="add-game-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2 rounded-full" title="Add a Game">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12M12 6v12"></path><rect x="3" y="3" width="18" height="18" rx="4"></rect></svg>
                     </button>
@@ -172,7 +175,7 @@
         <div class="rounded-lg shadow-xl w-full max-w-md p-8 text-center">
             <h2 class="text-2xl font-bold mb-4">Channel</h2>
             <p class="text-gray-400 mb-6">Enter a channel name to create or join a session.</p>
-            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg bg-gray-700" placeholder="e.g., ProjectPhoenix">
+            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg bg-gray-700" placeholder="e.g., GroupSession">
             <button id="join-session-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Join</button>
              <button id="cancel-collaboration-start-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
         </div>
@@ -518,29 +521,20 @@
             </div>
         </div>
     </div>
-
-    <div id="qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-2xl font-bold mb-4">Share Note</h2>
-            <div id="qr-code-container" class="flex justify-center bg-white p-4 rounded-lg"></div>
-            <div id="share-info" class="mt-4 text-sm text-gray-400"></div>
-            <div id="share-password-display" class="mt-2 text-sm"></div>
-             <div class="mt-4">
-                <label class="flex items-center justify-center cursor-pointer">
-                    <span class="mr-3 font-semibold">Require Password on Open</span>
-                    <div class="relative">
-                        <input type="checkbox" id="secure-send-toggle" class="sr-only peer toggle-bg">
-                        <div class="w-14 h-8 bg-gray-600 rounded-full block"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform"></div>
-                    </div>
-                </label>
-            </div>
-            <div class="mt-6 flex justify-center gap-4">
-                <button id="export-note-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Export as .nii</button>
-                <button id="close-qr-code-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button>
+    
+    <div id="import-local-note-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 flex flex-col">
+            <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Import Local Notes into Session</h2>
+            <input type="text" id="import-note-search" placeholder="Search your local notes..." class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 mb-4 flex-shrink-0">
+            <div id="import-note-list" class="flex-grow overflow-y-auto custom-scrollbar border border-gray-700 rounded p-2" style="max-height: 50vh;">
+                </div>
+            <div class="flex justify-end gap-4 mt-6 flex-shrink-0">
+                <button id="cancel-import-local-note-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                <button id="confirm-import-local-note-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import Selected</button>
             </div>
         </div>
     </div>
+
     <div id="collab-qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
             <h2 class="text-2xl font-bold mb-4">Share Session Invite</h2>
