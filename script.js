@@ -2529,14 +2529,17 @@
             }, 400);
         });
 
-        DOMElements.modalOverlay.addEventListener('click', (e) => {
-            // Close collab actions menu if open
-            if (!DOMElements.collabActionsMenu.classList.contains('hidden')) {
+        // This is the FIX for the modal bug
+        DOMElements.modalOverlay.addEventListener('click', closeAllPopups);
+        
+        document.addEventListener('click', (e) => {
+            if (!DOMElements.collabActionsMenu.classList.contains('hidden') && 
+                !DOMElements.collabActionsMenu.contains(e.target) && 
+                !DOMElements.collabActionsBtn.contains(e.target)) {
                 DOMElements.collabActionsMenu.classList.add('hidden');
-            } else {
-                closeAllPopups();
             }
         });
+
 
         DOMElements.dashboardLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -2598,13 +2601,6 @@
         DOMElements.collabActionsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             DOMElements.collabActionsMenu.classList.toggle('hidden');
-        });
-        document.addEventListener('click', (e) => {
-            if (!DOMElements.collabActionsMenu.classList.contains('hidden') && 
-                !DOMElements.collabActionsMenu.contains(e.target) && 
-                !DOMElements.collabActionsBtn.contains(e.target)) {
-                DOMElements.collabActionsMenu.classList.add('hidden');
-            }
         });
 
 
