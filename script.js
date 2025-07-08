@@ -95,13 +95,6 @@
         batchExportBtn: document.getElementById('batch-export-btn'),
         batchArchiveBtn: document.getElementById('batch-archive-btn'),
         batchDeleteBtn: document.getElementById('batch-delete-btn'),
-        qrCodeModal: document.getElementById('qr-code-modal'),
-        qrCodeContainer: document.getElementById('qr-code-container'),
-        shareInfo: document.getElementById('share-info'),
-        sharePasswordDisplay: document.getElementById('share-password-display'),
-        closeQrCodeModalBtn: document.getElementById('close-qr-code-modal'),
-        secureSendToggle: document.getElementById('secure-send-toggle'),
-        exportNoteBtn: document.getElementById('export-note-btn'),
         collabQrCodeModal: document.getElementById('collab-qr-code-modal'),
         collabQrCodeContainer: document.getElementById('collab-qr-code-container'),
         collabInviteLinkDisplay: document.getElementById('collab-invite-link-display'),
@@ -158,6 +151,13 @@
         wbClearBtn: document.getElementById('wb-clear-btn'),
         wbCloseBtn: document.getElementById('wb-close-btn'),
         loadingOverlay: document.getElementById('loading-overlay'),
+        // New Elements for Session Injector
+        importLocalNoteBtn: document.getElementById('import-local-note-btn'),
+        importLocalNoteModal: document.getElementById('import-local-note-modal'),
+        importNoteSearch: document.getElementById('import-note-search'),
+        importNoteList: document.getElementById('import-note-list'),
+        cancelImportLocalNoteBtn: document.getElementById('cancel-import-local-note-btn'),
+        confirmImportLocalNoteBtn: document.getElementById('confirm-import-local-note-btn'),
     };
 
     // --- App State ---
@@ -174,6 +174,7 @@
         connections: new Map(),
         roomId: null,
         isHost: false,
+        isSecureSession: false, // Flag for password-protected sessions
         collaborationNotes: [],
         peerInfo: new Map(),
         chatLog: [],
@@ -400,7 +401,7 @@
         DOMElements.fabChatLogBtn.style.backgroundColor = settings.fabColor;
 
         const rgbaModalBg = hexToRgba(settings.modalBgColor, settings.modalOpacity);
-        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.qrCodeModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.sessionManagementModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.whiteboardModal, DOMElements.youtubeModal].forEach(el => {
+        [DOMElements.calendarModal, settingsModal, DOMElements.editNotePane, DOMElements.newNotePane, DOMElements.chatLogPane, DOMElements.embedModal, DOMElements.iframeHelperModal, DOMElements.videoHelperModal, DOMElements.welcomeModal, DOMElements.confirmClearModal, DOMElements.collabQrCodeModal, DOMElements.batchDeleteConfirmModal, DOMElements.collaborationStartModal, DOMElements.sessionManagementModal, DOMElements.saveCollabNotesModal, DOMElements.videoWallModal, DOMElements.addGameModal, DOMElements.whiteboardModal, DOMElements.youtubeModal, DOMElements.importLocalNoteModal].forEach(el => {
             if (el) {
                 el.style.backgroundColor = rgbaModalBg;
             }
@@ -968,156 +969,38 @@
         openModal(DOMElements.confirmClearModal);
     }
 
-    async function handleShareNote() {
-        await handleSaveEdit(true);
-        await generateShareLink();
-        openModal(DOMElements.qrCodeModal);
-    }
-
-    async function generateShareLink() {
+    async function handleShareNoteAsCollab() {
         if (!state.currentNoteId) return;
-        const noteToShare = { ...state.notes.find(n => n.id === state.currentNoteId)
-        };
-        if (!noteToShare) return;
 
-        let password = state.settings.sessionPassword;
-        let temporaryPassword = false;
-        if (!password) {
-            password = Math.random().toString(36).substring(2, 10);
-            temporaryPassword = true;
+        // Ensure a password is set, as this is now a secure-only feature
+        if (!state.settings.sessionPassword) {
+            showNotification('Please set a Session Password in Settings before sharing a note as a collaboration.', 'error');
+            openModal(DOMElements.settingsModal);
+            return;
         }
 
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = noteToShare.content;
-        const hasImages = tempDiv.querySelector('img, video, iframe');
-        noteToShare.content = tempDiv.innerHTML.replace(/<img[^>]*>|<video[^>]*>.*?<\/video>|<iframe[^>]*>.*?<\/iframe>/g, '');
-        DOMElements.shareInfo.textContent = hasImages ? 'Images or files removed for URL sharing. Use Export for full note.' : '';
+        // 1. Set up the new session state
+        state.isHost = true;
+        state.isSecureSession = true;
+        state.roomId = `niilow-${Date.now().toString(36)}`; // Unique room ID
 
-        try {
-            const noteString = JSON.stringify(noteToShare);
-            const compressed = LZString.compressToUint8Array(noteString);
-
-            const salt = window.crypto.getRandomValues(new Uint8Array(16));
-            const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), {
-                name: 'PBKDF2'
-            }, false, ['deriveKey']);
-            const key = await window.crypto.subtle.deriveKey({
-                name: 'PBKDF2',
-                salt,
-                iterations: 100000,
-                hash: 'SHA-256'
-            }, keyMaterial, {
-                name: 'AES-GCM',
-                length: 256
-            }, true, ['encrypt']);
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            const encryptedContent = await window.crypto.subtle.encrypt({
-                name: 'AES-GCM',
-                iv
-            }, key, compressed);
-
-            const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
-            combinedData.set(salt, 0);
-            combinedData.set(iv, salt.length);
-            combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
-
-            const base64Data = btoa(String.fromCharCode.apply(null, combinedData));
-            const urlSafeBase64 = base64Data.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-            const baseUrl = window.location.origin + window.location.pathname;
-            let sessionUrl = `${baseUrl}?data=${urlSafeBase64}`;
-
-            if (DOMElements.secureSendToggle.checked) {
-                sessionUrl += '&secret=true';
-                if (temporaryPassword) {
-                    DOMElements.sharePasswordDisplay.innerHTML = `A temporary password has been created for this share: <br><strong class="text-lg text-yellow-400 font-mono">${password}</strong>`;
-                } else {
-                    DOMElements.sharePasswordDisplay.innerHTML = `Sharing with your saved session password. The receiver will be prompted to enter it.`;
-                }
-            } else {
-                sessionUrl += `&sesh-ID=${encodeURIComponent(password)}`;
-                DOMElements.sharePasswordDisplay.innerHTML = '';
-            }
-
-            const textArea = document.createElement("textarea");
-            textArea.value = sessionUrl;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showNotification('Share link copied to clipboard!', 'success');
-            } catch (err) {
-                showNotification('Failed to copy link.', 'error');
-            }
-            document.body.removeChild(textArea);
-
-            DOMElements.qrCodeContainer.innerHTML = '';
-            const qr = qrcode(0, 'M');
-            qr.addData(sessionUrl);
-            qr.make();
-            DOMElements.qrCodeContainer.innerHTML = qr.createImgTag(5, 10);
-
-        } catch (err) {
-            console.error("Note sharing failed:", err);
-            showNotification('Failed to create share link.', 'error');
+        // 2. Pre-populate the collaboration notes with the current note
+        const noteToShare = state.notes.find(n => n.id === state.currentNoteId);
+        if (noteToShare) {
+            state.collaborationNotes = [{ ...noteToShare }];
+        } else {
+            showNotification('Could not find the note to share.', 'error');
+            return;
         }
+
+        // 3. Initiate the PeerJS connection as host
+        showNotification('Creating secure collaboration session...', 'success');
+        DOMElements.loadingOverlay.classList.remove('hidden');
+        initPeer(); // This will handle the rest of the UI changes in its 'open' callback
+
+        closeEditPane();
     }
 
-    async function handleExportSingleNote() {
-        if (!state.currentNoteId) return;
-        const noteToExport = state.notes.find(n => n.id === state.currentNoteId);
-        if (!noteToExport) return;
-
-        let password = state.settings.sessionPassword;
-        if (!password) {
-            password = prompt("Please set a password for this export:");
-            if (!password) {
-                showNotification("Password is required for export.", "error");
-                return;
-            }
-        }
-
-        const dataToEncrypt = JSON.stringify([noteToExport]);
-        try {
-            const salt = window.crypto.getRandomValues(new Uint8Array(16));
-            const keyMaterial = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(password), {
-                name: 'PBKDF2'
-            }, false, ['deriveKey']);
-            const key = await window.crypto.subtle.deriveKey({
-                name: 'PBKDF2',
-                salt,
-                iterations: 100000,
-                hash: 'SHA-256'
-            }, keyMaterial, {
-                name: 'AES-GCM',
-                length: 256
-            }, true, ['encrypt']);
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            const encodedData = new TextEncoder().encode(dataToEncrypt);
-            const encryptedContent = await window.crypto.subtle.encrypt({
-                name: 'AES-GCM',
-                iv
-            }, key, encodedData);
-            const combinedData = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
-            combinedData.set(salt, 0);
-            combinedData.set(iv, salt.length);
-            combinedData.set(new Uint8Array(encryptedContent), salt.length + iv.length);
-            const blob = new Blob([combinedData], {
-                type: 'application/octet-stream'
-            });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${noteToExport.title.replace(/\s/g, '-')}.nii`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showNotification('Note exported successfully!');
-        } catch (err) {
-            console.error("Single note export failed:", err);
-            showNotification('Export failed due to an encryption error.', 'error');
-        }
-    }
 
     function insertImageFile(file, editor) {
         if (file && file.type.startsWith('image/')) {
@@ -1294,6 +1177,7 @@
         DOMElements.archiveNoteBtn.classList.toggle('bg-green-500', note.archived);
         DOMElements.archiveNoteBtn.classList.toggle('hover:bg-green-600', note.archived);
         DOMElements.archiveNoteBtn.style.display = inCollabView ? 'none' : 'inline-flex';
+        // Share button is now for collab, so it's disabled *during* a collab
         DOMElements.shareNoteBtn.style.display = inCollabView ? 'none' : 'inline-flex';
 
 
@@ -1325,6 +1209,7 @@
     }
 
     function openModal(modal) {
+        if (!modal) return;
         DOMElements.modalOverlay.classList.remove('hidden');
         modal.classList.remove('hidden');
         setTimeout(() => {
@@ -1335,6 +1220,7 @@
     }
 
     function closeModal(modal) {
+        if (!modal) return;
         modal.classList.add('opacity-0', 'scale-95');
         setTimeout(() => {
             modal.classList.add('hidden');
@@ -1352,7 +1238,6 @@
             !DOMElements.iframeHelperModal.classList.contains('hidden') ||
             !DOMElements.videoHelperModal.classList.contains('hidden') ||
             !DOMElements.welcomeModal.classList.contains('hidden') ||
-            !DOMElements.qrCodeModal.classList.contains('hidden') ||
             !DOMElements.collabQrCodeModal.classList.contains('hidden') ||
             !DOMElements.confirmClearModal.classList.contains('hidden') ||
             !DOMElements.batchDeleteConfirmModal.classList.contains('hidden') ||
@@ -1414,7 +1299,6 @@
         closeModal(DOMElements.videoHelperModal);
         closeModal(DOMElements.welcomeModal);
         closeModal(DOMElements.confirmClearModal);
-        closeModal(DOMElements.qrCodeModal);
         closeModal(DOMElements.collabQrCodeModal);
         closeModal(DOMElements.batchDeleteConfirmModal);
         closeModal(DOMElements.collaborationStartModal);
@@ -1424,6 +1308,7 @@
         closeModal(DOMElements.addGameModal);
         closeModal(DOMElements.youtubeModal);
         closeModal(DOMElements.sessionManagementModal);
+        closeModal(DOMElements.importLocalNoteModal);
         closeSidebarMobile();
     }
 
@@ -1728,7 +1613,10 @@
     function generateCollabQrCode() {
         if (!state.roomId) return;
         const baseUrl = window.location.origin + window.location.pathname;
-        const inviteLink = `${baseUrl}?channel=${state.roomId}`;
+        let inviteLink = `${baseUrl}?channel=${state.roomId}`;
+        if (state.isSecureSession) {
+            inviteLink += '&secure=true';
+        }
 
         DOMElements.collabInviteLinkDisplay.textContent = inviteLink;
         DOMElements.collabQrCodeContainer.innerHTML = '';
@@ -1762,6 +1650,8 @@
 
         state.peer.on('open', (id) => {
             console.log('PeerJS open. My ID is:', id);
+            DOMElements.loadingOverlay.classList.add('hidden');
+            
             const myPeerId = id;
             state.peerInfo.set(myPeerId, {
                 name: state.settings.userName,
@@ -1771,11 +1661,14 @@
             if (state.isHost) {
                 state.roomId = id;
                 renderSessionInfo();
-                showNotification('Channel Joined', 'success');
+                showNotification('Channel ready!', 'success');
                 showView('collaboration');
-                DOMElements.loadingOverlay.classList.add('hidden');
-                DOMElements.mainContent.style.paddingBottom = '60px';
                 renderCollaborationNotesGrid();
+                DOMElements.mainContent.style.paddingBottom = '60px';
+                // If the session was started via "share", show the QR code now
+                if (state.isSecureSession) {
+                    generateCollabQrCode();
+                }
                 playSound('https://www.niilow.com/join.mp3');
             } else {
                 if (state.roomId) {
@@ -1801,7 +1694,6 @@
             DOMElements.loadingOverlay.classList.add('hidden');
             
             if (err.type === 'unavailable-id' && state.isHost) {
-                // This means we tried to create a room that exists. We now become a joiner.
                 if (state.peer) state.peer.destroy();
                 state.isHost = false; 
                 initPeer(); 
@@ -1829,14 +1721,16 @@
             return;
         };
         closeModal(DOMElements.collaborationStartModal);
-        // Always try to become the host first. The error handler will manage joining if the room already exists.
+        
+        // Joining a session from the modal is never secure by default
+        state.isSecureSession = !!(new URL(window.location.href).searchParams.get('secure'));
         state.isHost = true;
         state.roomId = roomId;
         initPeer();
     }
 
     function leaveSession() {
-        if (state.collaborationNotes.length > 0) {
+        if (state.collaborationNotes.length > 0 && !state.isSecureSession) {
             openModal(DOMElements.saveCollabNotesModal);
         } else {
             _finishLeaveSession();
@@ -1885,6 +1779,7 @@
         state.peerInfo.clear();
         state.roomId = null;
         state.isHost = false;
+        state.isSecureSession = false;
         state.collaborationNotes = [];
         state.chatLog = [];
 
@@ -1897,43 +1792,30 @@
 
     function setupConnection(conn) {
         conn.on('open', () => {
-            const peerId = conn.peer;
-            console.log('Connection established with', peerId);
             conn.reliable = true;
-            state.connections.set(peerId, conn);
-
-            if (state.isHost) {
-                const newPeerId = conn.metadata.peerId;
-                const newPeerInfo = {
-                    name: conn.metadata.userName,
-                    avatar: null
-                };
-                state.peerInfo.set(newPeerId, newPeerInfo);
-
-                const otherPeerIds = Array.from(state.peerInfo.keys()).filter(id => id !== newPeerId && id !== state.peer.id);
-                conn.send({
-                    type: 'full_sync',
-                    notes: state.collaborationNotes,
-                    chatLog: state.chatLog,
-                    peerInfo: Object.fromEntries(state.peerInfo),
-                    otherPeerIds: otherPeerIds,
-                    hostName: state.settings.userName,
-                    videoWall: state.settings.videoWall
-                });
-
-                broadcastToAllPeers({
-                    type: 'new_peer_announcement',
-                    peerId: newPeerId,
-                    info: newPeerInfo
-                }, [newPeerId]);
-
-                renderSessionInfo();
+            
+            if (state.isHost && state.isSecureSession) {
+                // If this is a secure session, start the password handshake
+                conn.send({ type: 'request_password' });
+            } else {
+                // Otherwise, proceed with the normal connection setup
+                establishConnection(conn);
             }
-            showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
         });
 
         conn.on('data', (data) => {
             console.log('Received data:', data, 'from', conn.peer);
+            // Handle password submission from client
+            if (data.type === 'submit_password') {
+                if (data.password === state.settings.sessionPassword) {
+                    conn.send({ type: 'password_accepted' });
+                    establishConnection(conn); // Password is correct, establish connection
+                } else {
+                    conn.send({ type: 'password_rejected' });
+                    setTimeout(() => conn.close(), 500);
+                }
+                return;
+            }
             handleReceivedData(data, conn.peer);
         });
 
@@ -1956,6 +1838,74 @@
 
         conn.on('error', (err) => {
             console.error('Connection error:', err);
+        });
+    }
+
+    function establishConnection(conn) {
+        const peerId = conn.peer;
+        console.log('Connection established with', peerId);
+        state.connections.set(peerId, conn);
+
+        if (state.isHost) {
+            const newPeerId = conn.metadata.peerId;
+            const newPeerInfo = { name: conn.metadata.userName, avatar: null };
+            state.peerInfo.set(newPeerId, newPeerInfo);
+
+            conn.send({
+                type: 'full_sync',
+                notes: state.collaborationNotes,
+                chatLog: state.chatLog,
+                peerInfo: Object.fromEntries(state.peerInfo),
+                hostName: state.settings.userName,
+                videoWall: state.settings.videoWall
+            });
+
+            broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
+
+            renderSessionInfo();
+        }
+        showNotification(`${conn.metadata.userName || 'A user'} has joined the session.`, 'success');
+    }
+    
+    function promptForPassword(conn) {
+        const existingModal = document.getElementById('password-prompt-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'password-prompt-modal';
+        modal.className = 'modal fixed inset-0 z-[10001] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 text-center">
+                <h2 class="text-2xl font-bold mb-4 text-white">Password Required</h2>
+                <p class="text-white mb-6">This session is protected. Please enter the password.</p>
+                <input type="password" id="session-password-input" class="text-input-field w-full p-2 rounded mb-6 text-center bg-gray-700 text-white">
+                <div class="flex justify-end gap-4">
+                    <button id="cancel-password-prompt" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+                    <button id="submit-password-prompt" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Join</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        openModal(modal);
+
+        const passwordInput = modal.querySelector('#session-password-input');
+        const submitBtn = modal.querySelector('#submit-password-prompt');
+        const cancelBtn = modal.querySelector('#cancel-password-prompt');
+
+        const handleSubmit = () => {
+            conn.send({ type: 'submit_password', password: passwordInput.value });
+            closeModal(modal);
+            setTimeout(() => modal.remove(), 500);
+        };
+
+        submitBtn.addEventListener('click', handleSubmit);
+        passwordInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') handleSubmit();
+        });
+        cancelBtn.addEventListener('click', () => {
+            conn.close();
+            closeModal(modal);
+            setTimeout(() => modal.remove(), 500);
         });
     }
 
@@ -1995,7 +1945,6 @@
                 break;   
             }
             case 'request_send_chat': {
-                 // Re-package the chat message for broadcast
                 broadcastPayload = {
                     type: 'chat_message',
                     ...data.payload
@@ -2011,7 +1960,6 @@
                 break;
             }
             case 'request_youtube_state_change': {
-                // The host just relays this state change to everyone
                 broadcastPayload = { type: 'youtube_state_change', ...data.payload };
                 break;
             }
@@ -2024,7 +1972,6 @@
             }
         }
         if (broadcastPayload) {
-            // Also handle it locally for the host immediately
             handleReceivedData(broadcastPayload, fromPeerId);
              if (broadcastPayload.type === 'whiteboard_draw' || broadcastPayload.type === 'whiteboard_clear') {
                  if (broadcastPayload.type === 'whiteboard_clear') state.whiteboard.history = [];
@@ -2041,12 +1988,23 @@
         }
 
         switch (data.type) {
+            case 'request_password':
+                promptForPassword(state.connections.get(state.roomId));
+                break;
+            case 'password_rejected':
+                showNotification('Incorrect password.', 'error');
+                _finishLeaveSession();
+                break;
+            case 'password_accepted':
+                showNotification('Password accepted!', 'success');
+                // The full_sync will follow from the host
+                break;
             case 'full_sync':
                 state.collaborationNotes = data.notes;
                 state.chatLog = data.chatLog;
                 state.peerInfo = new Map(Object.entries(data.peerInfo));
                 if (data.videoWall) {
-                    state.settings.videoWall = data.videoWall;
+                    state.settings.videoWall = data.url;
                     applyVideoWall();
                 }
                 renderCollaborationNotesGrid();
@@ -2066,6 +2024,7 @@
                 if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
+                    showNotification(`Note "${data.note.title}" was added to the session.`, 'info');
                 }
                 break;
             case 'update_note':
@@ -2120,7 +2079,6 @@
                 updateWhiteboardIndicator();
                 break;
             case 'youtube_state_change':
-                // Only process if the event is from someone else
                 if (data.from !== state.peer.id) {
                     const player = state.youtubePlayers.get(data.noteId);
                     if (player) {
@@ -2130,14 +2088,14 @@
                 break;
             case 'whiteboard_history_sync':
                 data.history.forEach(drawData => drawOnCanvas(drawData));
-                state.whiteboard.history = data.history; // Sync local history
+                state.whiteboard.history = data.history;
                 break;
         }
     }
 
     function broadcastToAllPeers(data, exclude = []) {
         console.log('Broadcasting data to all peers:', data);
-        data.from = state.peer.id; // Tag the data with the sender's ID
+        data.from = state.peer.id;
         for (const [peerId, conn] of state.connections.entries()) {
             if (conn && conn.open && !exclude.includes(peerId)) {
                 conn.send(data);
@@ -2151,7 +2109,6 @@
             state.collaborationNotes.forEach(note => {
                 const card = createNoteCard(note, openEditPane);
                 DOMElements.collaborationNotesGrid.appendChild(card);
-                // After card is in DOM, check if it's a YouTube note and initialize player
                 if (note.type === 'youtube-sync' && note.videoId) {
                     createYouTubePlayer(note.id, note.videoId);
                 }
@@ -2226,7 +2183,6 @@
             if (hostConn && hostConn.open) {
                 hostConn.send(request);
             }
-             // Also add to local UI immediately for responsiveness
             if (!state.chatLog.some(msg => msg.id === chatPayload.id)) {
                 state.chatLog.push(chatPayload);
                 renderChatLog();
@@ -2361,7 +2317,6 @@
     function handleYoutubeStateSync(player, newState, time) {
         state.isYTPlayerSyncing = true;
         const currentTime = player.getCurrentTime();
-        // Only seek if the time difference is significant, to avoid choppy playback
         if (Math.abs(currentTime - time) > 1.5) {
             player.seekTo(time, true);
         }
@@ -2403,7 +2358,6 @@
             const parent = canvas.parentElement;
             canvas.width = parent.clientWidth;
             canvas.height = parent.clientHeight;
-             // Redraw history after resize
             state.whiteboard.history.forEach(data => drawOnCanvas(data));
         };
 
@@ -2439,7 +2393,7 @@
                 color: DOMElements.wbColorPicker.value,
                 size: DOMElements.wbBrushSize.value,
             };
-            drawOnCanvas(drawData); // Draw locally
+            drawOnCanvas(drawData);
             const request = { type: 'request_whiteboard_draw', data: drawData };
             if (state.isHost) {
                 handleHostAction(request, state.peer.id);
@@ -2487,6 +2441,65 @@
         }
     }
     
+    // --- Session Injector Functions ---
+    function openImportLocalNoteModal() {
+        renderLocalNotePickerList();
+        DOMElements.importNoteSearch.value = '';
+        openModal(DOMElements.importLocalNoteModal);
+    }
+    
+    function renderLocalNotePickerList() {
+        const listEl = DOMElements.importNoteList;
+        const filterText = DOMElements.importNoteSearch.value.toLowerCase();
+        
+        const notesToRender = state.notes.filter(note => {
+            return !note.archived && (note.title.toLowerCase().includes(filterText) || note.content.toLowerCase().includes(filterText));
+        });
+
+        if (notesToRender.length === 0) {
+            listEl.innerHTML = `<p class="text-gray-400 text-center p-4">No matching local notes found.</p>`;
+            return;
+        }
+
+        listEl.innerHTML = notesToRender.map(note => `
+            <div class="flex items-center p-2 rounded hover:bg-gray-700">
+                <input type="checkbox" data-note-id="${note.id}" class="mr-4 h-5 w-5 rounded">
+                <div class="flex-grow">
+                    <p class="font-semibold">${note.title}</p>
+                    <p class="text-sm text-gray-400 truncate">${note.content.replace(/<[^>]+>/g, '')}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function handleConfirmImportLocalNotes() {
+        const selectedCheckboxes = DOMElements.importNoteList.querySelectorAll('input[type="checkbox"]:checked');
+        if (selectedCheckboxes.length === 0) {
+            showNotification('No notes selected to import.', 'error');
+            return;
+        }
+
+        selectedCheckboxes.forEach(checkbox => {
+            const noteId = checkbox.dataset.noteId;
+            const noteToImport = state.notes.find(n => n.id === noteId);
+
+            if (noteToImport && !state.collaborationNotes.some(cn => cn.id === noteToImport.id)) {
+                const action = { type: 'request_add_note', note: { ...noteToImport } };
+                if (state.isHost) {
+                    handleHostAction(action, state.peer.id);
+                } else {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send(action);
+                    }
+                }
+            }
+        });
+
+        showNotification(`${selectedCheckboxes.length} note(s) sent to session.`, 'success');
+        closeModal(DOMElements.importLocalNoteModal);
+    }
+    
     // --- Main Event Listener Setup ---
     function addEventListeners() {
         DOMElements.mobileMenuBtn.addEventListener('click', () => {
@@ -2496,7 +2509,6 @@
         });
 
         DOMElements.closeWelcomeModalBtn.addEventListener('click', () => closeModal(DOMElements.welcomeModal));
-        DOMElements.closeQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.qrCodeModal));
         DOMElements.closeCollabQrCodeModalBtn.addEventListener('click', () => closeModal(DOMElements.collabQrCodeModal));
         DOMElements.copyLinkFromModalBtn.addEventListener('click', () => {
             const linkText = DOMElements.collabInviteLinkDisplay.textContent;
@@ -2504,9 +2516,9 @@
                 showNotification('Invite link copied to clipboard!', 'success');
             });
         });
-        DOMElements.shareNoteBtn.addEventListener('click', handleShareNote);
-        DOMElements.secureSendToggle.addEventListener('change', generateShareLink);
-        DOMElements.exportNoteBtn.addEventListener('click', handleExportSingleNote);
+        
+        DOMElements.shareNoteBtn.addEventListener('click', handleShareNoteAsCollab);
+
         DOMElements.selectModeBtn.addEventListener('click', toggleSelectMode);
         DOMElements.batchExportBtn.addEventListener('click', handleBatchExport);
         DOMElements.batchArchiveBtn.addEventListener('click', handleBatchArchive);
@@ -2570,35 +2582,20 @@
             closeSidebarMobile();
         });
 
-        // We're going to be optimistic and try to support all devices!
-        // if (isUnsupportedDevice()) {
-        //     DOMElements.collaborationLink.style.opacity = '0.5';
-        //     DOMElements.collaborationLink.style.cursor = 'not-allowed';
-        //     DOMElements.collaborationLink.addEventListener('click', (e) => {
-        //         e.preventDefault();
-        //         showNotification('Collaboration is not supported on this device.', 'error');
-        //     });
-        // } else {
-            DOMElements.collaborationLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (state.peer) {
-                    // If we are already in a session...
-                    const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
-                    if (inCollabView) {
-                        // and on the collab screen, open the management modal.
-                        openSessionManagementModal();
-                    } else {
-                        // otherwise, just switch to the collab view.
-                        showView('collaboration');
-                    }
+        DOMElements.collaborationLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (state.peer) {
+                const inCollabView = !DOMElements.collaborationView.classList.contains('hidden');
+                if (inCollabView) {
+                    openSessionManagementModal();
                 } else {
-                    // If not in a session, open the modal to start one.
-                    openModal(DOMElements.collaborationStartModal);
+                    showView('collaboration');
                 }
-                closeSidebarMobile();
-            });
-        // }
-
+            } else {
+                openModal(DOMElements.collaborationStartModal);
+            }
+            closeSidebarMobile();
+        });
 
         DOMElements.archiveToggle.addEventListener('change', e => {
             state.showArchived = e.target.checked;
@@ -2627,6 +2624,12 @@
         DOMElements.cancelVideoWallBtn.addEventListener('click', () => closeModal(DOMElements.videoWallModal));
         DOMElements.saveVideoWallBtn.addEventListener('click', handleSetVideoWall);
         DOMElements.removeVideoWallBtn.addEventListener('click', handleRemoveVideoWall);
+        
+        // Listeners for Session Injector Modal
+        DOMElements.importLocalNoteBtn.addEventListener('click', openImportLocalNoteModal);
+        DOMElements.cancelImportLocalNoteBtn.addEventListener('click', () => closeModal(DOMElements.importLocalNoteModal));
+        DOMElements.confirmImportLocalNoteBtn.addEventListener('click', handleConfirmImportLocalNotes);
+        DOMElements.importNoteSearch.addEventListener('input', renderLocalNotePickerList);
 
         DOMElements.addGameBtn.addEventListener('click', () => openModal(DOMElements.addGameModal));
         DOMElements.cancelAddGameBtn.addEventListener('click', () => closeModal(DOMElements.addGameModal));
@@ -2833,8 +2836,7 @@
 
         DOMElements.whiteboardBtn.addEventListener('click', () => {
             openModal(DOMElements.whiteboardModal);
-             // Request history only if we don't have it yet
-            if (state.whiteboard.history.length === 0 && !state.isHost) {
+             if (state.whiteboard.history.length === 0 && !state.isHost) {
                 const hostConn = state.connections.get(state.roomId);
                 if (hostConn && hostConn.open) {
                     hostConn.send({ type: 'request_whiteboard_history' });
@@ -2902,23 +2904,18 @@
         const currentUrl = new URL(window.location.href);
         const dataFromUrl = currentUrl.searchParams.get('data');
         const channelRoomId = currentUrl.searchParams.get('channel');
-        const requiresSecret = currentUrl.searchParams.get('secret') === 'true';
+        
+        history.replaceState({}, document.title, window.location.pathname);
 
         if (channelRoomId) {
             showNotification(`Attempting to join channel: ${channelRoomId}`, 'info');
             joinSession(channelRoomId);
-            history.replaceState({}, document.title, window.location.pathname);
         } else if (dataFromUrl) {
-            let password = currentUrl.searchParams.get('sesh-ID');
-            if (requiresSecret) {
-                password = prompt("This note is protected. Please enter the password to view it:");
-            }
-
+            // This is part of the old, deprecated single-note import system.
+            // Keeping it for backward compatibility with old links.
+            let password = prompt("This note link is from an older version. Please enter the password to import it:");
             if (password) {
-                await handleUrlDataImport(dataFromUrl, password);
-            } else if (requiresSecret) {
-                showNotification("Password required to open this secret note.", "error");
-                history.replaceState({}, document.title, window.location.pathname);
+                 await handleUrlDataImport(dataFromUrl, password);
             }
         }
 
