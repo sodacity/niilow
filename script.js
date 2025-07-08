@@ -2570,14 +2570,15 @@
             closeSidebarMobile();
         });
 
-        if (isUnsupportedDevice()) {
-            DOMElements.collaborationLink.style.opacity = '0.5';
-            DOMElements.collaborationLink.style.cursor = 'not-allowed';
-            DOMElements.collaborationLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                showNotification('Collaboration is not supported on this device.', 'error');
-            });
-        } else {
+        // We're going to be optimistic and try to support all devices!
+        // if (isUnsupportedDevice()) {
+        //     DOMElements.collaborationLink.style.opacity = '0.5';
+        //     DOMElements.collaborationLink.style.cursor = 'not-allowed';
+        //     DOMElements.collaborationLink.addEventListener('click', (e) => {
+        //         e.preventDefault();
+        //         showNotification('Collaboration is not supported on this device.', 'error');
+        //     });
+        // } else {
             DOMElements.collaborationLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 if (state.peer) {
@@ -2596,7 +2597,7 @@
                 }
                 closeSidebarMobile();
             });
-        }
+        // }
 
 
         DOMElements.archiveToggle.addEventListener('change', e => {
