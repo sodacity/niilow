@@ -1213,7 +1213,6 @@
             DOMElements.modalOverlay.classList.remove('opacity-0');
             modal.classList.remove('opacity-0', 'scale-95');
         }, 10);
-        closeSidebarMobile();
     }
 
     function closeModal(modal) {
@@ -1257,6 +1256,35 @@
         }
     }
 
+    function closeSidebarMobile() {
+        if (window.innerWidth < 768) {
+            DOMElements.sidebar.classList.add('-translate-x-full');
+            updateOverlayState();
+        }
+    }
+
+    function openSessionManagementModal() {
+        if (!state.peer) return;
+
+        DOMElements.sessionModalRoomId.textContent = state.roomId;
+        const peerListContainer = DOMElements.sessionModalPeerList;
+        peerListContainer.innerHTML = '';
+
+        for (const [peerId, info] of state.peerInfo.entries()) {
+            const isSelf = peerId === state.peer.id;
+            const peerName = isSelf ? `${info.name} (You)` : info.name;
+            const peerEl = document.createElement('div');
+            peerEl.className = 'flex items-center gap-2 text-sm';
+            peerEl.innerHTML = `
+                <img src="${info.avatar || 'https://www.niilow.com/logo.png'}" class="w-6 h-6 rounded-full">
+                <span>${peerName}</span>
+            `;
+            peerListContainer.appendChild(peerEl);
+        }
+
+        openModal(DOMElements.sessionManagementModal);
+    }
+
     function closeAllPopups() {
         closeNewNotePane();
         closeEditPane();
@@ -1278,7 +1306,6 @@
         closeModal(DOMElements.youtubeModal);
         closeModal(DOMElements.sessionManagementModal);
         closeModal(DOMElements.importLocalNoteModal);
-        closeSidebarMobile();
     }
 
     function setupToolbar(toolbarEl, editorEl) {
@@ -2529,8 +2556,12 @@
             }, 400);
         });
 
-        // This is the FIX for the modal bug
-        DOMElements.modalOverlay.addEventListener('click', closeAllPopups);
+        // Event bubbling fix for all modals and sidebar interactions
+        DOMElements.modalOverlay.addEventListener('click', (e) => {
+            if (e.target === DOMElements.modalOverlay) {
+                closeAllPopups();
+            }
+        });
         
         document.addEventListener('click', (e) => {
             if (!DOMElements.collabActionsMenu.classList.contains('hidden') && 
