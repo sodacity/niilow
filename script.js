@@ -2555,11 +2555,11 @@
                 }
             }, 400);
         });
-
-        // Event bubbling fix for all modals and sidebar interactions
+        
         DOMElements.modalOverlay.addEventListener('click', (e) => {
             if (e.target === DOMElements.modalOverlay) {
                 closeAllPopups();
+                closeSidebarMobile();
             }
         });
         
@@ -2624,7 +2624,10 @@
         DOMElements.addVideoBtn.addEventListener('click', handleAddVideo);
         DOMElements.cancelVideoHelperBtn.addEventListener('click', () => closeModal(DOMElements.videoHelperModal));
         
-        DOMElements.importLocalNoteBtn.addEventListener('click', openImportLocalNoteModal);
+        DOMElements.importLocalNoteBtn.addEventListener('click', () => {
+            openImportLocalNoteModal();
+            DOMElements.collabActionsMenu.classList.add('hidden');
+        });
         DOMElements.cancelImportLocalNoteBtn.addEventListener('click', () => closeModal(DOMElements.importLocalNoteModal));
         DOMElements.confirmImportLocalNoteBtn.addEventListener('click', handleConfirmImportLocalNotes);
         DOMElements.importNoteSearch.addEventListener('input', renderLocalNotePickerList);
@@ -2633,14 +2636,33 @@
             e.stopPropagation();
             DOMElements.collabActionsMenu.classList.toggle('hidden');
         });
+        
+        // This is the restored listener block for the Video Wall modal buttons
+        DOMElements.videoWallBtn.addEventListener('click', () => {
+            openModal(DOMElements.videoWallModal);
+            DOMElements.collabActionsMenu.classList.add('hidden');
+        });
+        DOMElements.cancelVideoWallBtn.addEventListener('click', () => closeModal(DOMElements.videoWallModal));
+        DOMElements.saveVideoWallBtn.addEventListener('click', handleSetVideoWall);
+        DOMElements.removeVideoWallBtn.addEventListener('click', handleRemoveVideoWall);
 
+        DOMElements.addGameBtn.addEventListener('click', () => {
+            openModal(DOMElements.addGameModal);
+            DOMElements.collabActionsMenu.classList.add('hidden');
+        });
+        DOMElements.whiteboardBtn.addEventListener('click', () => {
+            openModal(DOMElements.whiteboardModal);
+            DOMElements.collabActionsMenu.classList.add('hidden');
+        });
+        DOMElements.addYoutubeBtn.addEventListener('click', () => {
+            openModal(DOMElements.youtubeModal);
+            DOMElements.collabActionsMenu.classList.add('hidden');
+        });
 
-        DOMElements.addGameBtn.addEventListener('click', () => openModal(DOMElements.addGameModal));
         DOMElements.cancelAddGameBtn.addEventListener('click', () => closeModal(DOMElements.addGameModal));
         document.getElementById('add-game-connectfour').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/connectfour.html', 'Connect 4'));
         document.getElementById('add-game-tcycle').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/tcycle.html', 'Tron'));
         
-        DOMElements.addYoutubeBtn.addEventListener('click', () => openModal(DOMElements.youtubeModal));
         DOMElements.cancelYoutubeAddBtn.addEventListener('click', () => closeModal(DOMElements.youtubeModal));
         DOMElements.confirmYoutubeAddBtn.addEventListener('click', handleAddYouTubeNote);
 
@@ -2838,20 +2860,6 @@
             if (e.key === 'Enter') sendChatMessage(DOMElements.chatLogInput.value, DOMElements.chatLogInput);
         });
 
-        DOMElements.whiteboardBtn.addEventListener('click', () => {
-            openModal(DOMElements.whiteboardModal);
-             if (state.whiteboard.history.length === 0 && !state.isHost) {
-                const hostConn = state.connections.get(state.roomId);
-                if (hostConn && hostConn.open) {
-                    hostConn.send({ type: 'request_whiteboard_history' });
-                }
-            }
-            initWhiteboard();
-            const size = DOMElements.wbBrushSize.value;
-            DOMElements.wbBrushPreview.style.width = `${size}px`;
-            DOMElements.wbBrushPreview.style.height = `${size}px`;
-            DOMElements.wbBrushPreview.style.backgroundColor = DOMElements.wbColorPicker.value;
-        });
         DOMElements.wbCloseBtn.addEventListener('click', () => {
             broadcastToAllPeers({ type: 'whiteboard_status', status: 'closed' });
             state.whiteboard.activeUsers.delete(state.peer.id);
