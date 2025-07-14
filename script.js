@@ -212,6 +212,9 @@
         videoWall: '',
     };
     
+    // NEW: Variable for the long-press timer
+    let touchTimer;
+
     let autoSaveTimeout = null;
 
     // --- IndexedDB Helper ---
@@ -1185,6 +1188,8 @@
     }
 
     function closeEditPane() {
+        // NEW: Clean up any remote cursors when closing a note
+        document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
         clearTimeout(autoSaveTimeout);
         DOMElements.editNotePane.classList.remove('is-open');
         state.currentNoteId = null;
@@ -1651,7 +1656,9 @@
             const myPeerId = id;
             state.peerInfo.set(myPeerId, {
                 name: state.settings.userName,
-                avatar: state.settings.userAvatar
+                avatar: state.settings.userAvatar,
+                // NEW: Add a color for the user's cursor
+                color: `#${Math.floor(Math.random()*16777215).toString(16)}`
             });
 
             if (state.isHost) {
@@ -1670,7 +1677,8 @@
                     const conn = state.peer.connect(state.roomId, {
                         metadata: {
                             userName: state.settings.userName,
-                            peerId: myPeerId
+                            peerId: myPeerId,
+                            avatar: state.settings.userAvatar
                         },
                         reliable: true
                     });
@@ -1819,6 +1827,12 @@
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
 
+            // NEW: Remove the cursor of the user who left
+            const cursorEl = document.getElementById(`cursor-${peerId}`);
+            if (cursorEl) {
+                cursorEl.remove();
+            }
+
             broadcastToAllPeers({
                 type: 'peer_left',
                 peerId
@@ -1839,16 +1853,28 @@
 
         if (state.isHost) {
             const newPeerId = conn.metadata.peerId;
-            const newPeerInfo = { name: conn.metadata.userName, avatar: null };
+            const newPeerInfo = { 
+                name: conn.metadata.userName, 
+                avatar: conn.metadata.avatar,
+                color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+            };
             state.peerInfo.set(newPeerId, newPeerInfo);
-
-            conn.send({
-                type: 'full_sync',
+            
+            // NEW: Using compressed sync
+            const syncData = {
                 notes: state.collaborationNotes,
                 chatLog: state.chatLog,
                 peerInfo: Object.fromEntries(state.peerInfo),
                 hostName: state.settings.userName,
                 videoWall: state.settings.videoWall
+            };
+
+            const jsonString = JSON.stringify(syncData);
+            const compressedData = LZString.compressToUTF16(jsonString);
+
+            conn.send({
+                type: 'full_sync_compressed',
+                payload: compressedData
             });
 
             broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
@@ -1961,6 +1987,16 @@
                 }
                 break;
             }
+            // NEW: Handle cursor updates
+            case 'request_cursor_update': {
+                broadcastPayload = { 
+                    type: 'cursor_update', 
+                    from: fromPeerId,
+                    noteId: data.noteId,
+                    selection: data.selection
+                };
+                break;
+            }
         }
         if (broadcastPayload) {
             handleReceivedData(broadcastPayload, fromPeerId);
@@ -1989,12 +2025,20 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-            case 'full_sync':
-                state.collaborationNotes = data.notes;
-                state.chatLog = data.chatLog;
-                state.peerInfo = new Map(Object.entries(data.peerInfo));
-                if (data.videoWall) {
-                    state.settings.videoWall = data.url;
+            // NEW: Decompress the sync data
+            case 'full_sync_compressed': {
+                const decompressedString = LZString.decompressFromUTF16(data.payload);
+                if (!decompressedString) {
+                    showNotification('Failed to sync with session. Data was corrupted.', 'error');
+                    return;
+                }
+                const syncData = JSON.parse(decompressedString);
+                
+                state.collaborationNotes = syncData.notes;
+                state.chatLog = syncData.chatLog;
+                state.peerInfo = new Map(Object.entries(syncData.peerInfo));
+                if (syncData.videoWall) {
+                    state.settings.videoWall = syncData.videoWall;
                     applyVideoWall();
                 }
                 renderCollaborationNotesGrid();
@@ -2003,9 +2047,10 @@
                 showView('collaboration');
                 DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
-                showNotification(`Joined session hosted by ${data.hostName || 'Host'}!`, 'success');
+                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}!`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
                 break;
+            }
             case 'new_peer_announcement':
                 state.peerInfo.set(data.peerId, data.info);
                 renderSessionInfo();
@@ -2029,6 +2074,10 @@
                 renderCollaborationNotesGrid();
                 break;
             case 'peer_left':
+                // NEW: Remove cursor of the peer who left
+                const cursorEl = document.getElementById(`cursor-${data.peerId}`);
+                if (cursorEl) cursorEl.remove();
+                
                 state.connections.delete(data.peerId);
                 state.peerInfo.delete(data.peerId);
                 renderSessionInfo();
@@ -2079,6 +2128,12 @@
             case 'whiteboard_history_sync':
                 data.history.forEach(drawData => drawOnCanvas(drawData));
                 state.whiteboard.history = data.history;
+                break;
+            // NEW: Handle incoming cursor updates
+            case 'cursor_update':
+                if (data.from !== state.peer.id) { // Don't render our own cursor
+                    renderRemoteCursor(data.from, data.noteId, data.selection);
+                }
                 break;
         }
     }
@@ -2242,6 +2297,88 @@
         });
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
+    
+    // --- NEW: Function to render remote cursors ---
+    function renderRemoteCursor(peerId, noteId, selection) {
+        if (noteId !== state.currentNoteId || !DOMElements.editNotePane.classList.contains('is-open')) {
+             const cursorEl = document.getElementById(`cursor-${peerId}`);
+             if(cursorEl) cursorEl.style.display = 'none';
+             return;
+        }
+
+        const editor = DOMElements.editNoteEditor;
+        let cursorEl = document.getElementById(`cursor-${peerId}`);
+        const peerInfo = state.peerInfo.get(peerId) || { name: 'User', color: '#f56565' };
+        
+        if (!cursorEl) {
+            cursorEl = document.createElement('div');
+            cursorEl.id = `cursor-${peerId}`;
+            cursorEl.className = 'remote-cursor';
+            cursorEl.dataset.name = peerInfo.name;
+            cursorEl.style.backgroundColor = peerInfo.color;
+            cursorEl.style.setProperty('--cursor-color', peerInfo.color); // For pseudo-element
+            editor.parentElement.appendChild(cursorEl);
+        }
+        
+        cursorEl.style.display = 'block';
+
+        function getPos(charOffset) {
+            const range = document.createRange();
+            let el = editor;
+            let a = charOffset;
+            let n, p = 0;
+            while (el.childNodes.length > 0) {
+                 n = el.firstChild;
+                 p = n.textContent.length;
+                 if (a < p) {
+                      range.setStart(n, a);
+                      return range.getBoundingClientRect();
+                 }
+                 a -= p;
+                 el.removeChild(n);
+            }
+        }
+        
+        try {
+            const textNodes = [];
+            function getTextNodes(node) {
+                if (node.nodeType === 3) {
+                    textNodes.push(node);
+                } else {
+                    for (const child of node.childNodes) {
+                        getTextNodes(child);
+                    }
+                }
+            }
+            getTextNodes(editor);
+            
+            let charCount = 0;
+            let startNode, startOffset;
+
+            for (const node of textNodes) {
+                const nextCharCount = charCount + node.length;
+                if (nextCharCount >= selection.start) {
+                    startNode = node;
+                    startOffset = selection.start - charCount;
+                    break;
+                }
+                charCount = nextCharCount;
+            }
+
+            if (startNode) {
+                const range = document.createRange();
+                range.setStart(startNode, startOffset);
+                const rect = range.getBoundingClientRect();
+                const editorRect = editor.getBoundingClientRect();
+                
+                cursorEl.style.left = `${rect.left - editorRect.left}px`;
+                cursorEl.style.top = `${rect.top - editorRect.top + editor.scrollTop}px`;
+            }
+        } catch(e) {
+            console.warn("Could not render remote cursor:", e);
+        }
+    }
+
 
     // --- YouTube Sync Functions ---
     function getYouTubeVideoId(url) {
@@ -2490,6 +2627,37 @@
         closeModal(DOMElements.importLocalNoteModal);
     }
     
+    // NEW: Function to show the image download menu
+    function showImageContextMenu(imageElement, x, y) {
+        // Remove any old menu first
+        const existingMenu = document.getElementById('image-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        // Create the menu
+        const menu = document.createElement('div');
+        menu.id = 'image-context-menu';
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = 'Download Image';
+        
+        downloadBtn.addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.href = imageElement.src;
+            a.download = `Niilow-Image-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            menu.remove();
+        });
+
+        menu.appendChild(downloadBtn);
+        document.body.appendChild(menu);
+    }
+
     // --- Main Event Listener Setup ---
     function addEventListeners() {
         DOMElements.mobileMenuBtn.addEventListener('click', () => {
@@ -2525,7 +2693,39 @@
         DOMElements.saveEditNoteBtn.addEventListener('click', () => handleSaveEdit(false));
         DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
         DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
+        
+        // NEW: Event listeners for live cursors
+        const editEditor = DOMElements.editNoteEditor;
+        const broadcastSelection = () => {
+            if (!state.peer || !state.currentNoteId || document.activeElement !== editEditor) return;
 
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            
+            // To get character offset, we create a temporary range from the start of the editor
+            const preSelectionRange = document.createRange();
+            preSelectionRange.selectNodeContents(editEditor);
+            preSelectionRange.setEnd(range.startContainer, range.startOffset);
+            const start = preSelectionRange.toString().length;
+            
+            const payload = {
+                type: 'request_cursor_update',
+                noteId: state.currentNoteId,
+                selection: { start: start, end: start + range.toString().length }
+            };
+
+            if (state.isHost) {
+                handleHostAction(payload, state.peer.id);
+            } else {
+                const hostConn = state.connections.get(state.roomId);
+                if (hostConn && hostConn.open) hostConn.send(payload);
+            }
+        };
+        editEditor.addEventListener('keyup', broadcastSelection);
+        document.addEventListener('selectionchange', broadcastSelection);
+        
         const autoSaveHandler = () => {
             clearTimeout(autoSaveTimeout);
             if (DOMElements.editNotePane.classList.contains('is-open')) {
@@ -2568,6 +2768,11 @@
                 !DOMElements.collabActionsMenu.contains(e.target) && 
                 !DOMElements.collabActionsBtn.contains(e.target)) {
                 DOMElements.collabActionsMenu.classList.add('hidden');
+            }
+             // NEW: Close image context menu on any click
+            const existingMenu = document.getElementById('image-context-menu');
+            if (existingMenu) {
+                existingMenu.remove();
             }
         });
 
@@ -2637,7 +2842,6 @@
             DOMElements.collabActionsMenu.classList.toggle('hidden');
         });
         
-        // This is the restored listener block for the Video Wall modal buttons
         DOMElements.videoWallBtn.addEventListener('click', () => {
             openModal(DOMElements.videoWallModal);
             DOMElements.collabActionsMenu.classList.add('hidden');
@@ -2837,6 +3041,27 @@
                         handleSaveEdit(true);
                     }
                 }
+            });
+
+            // NEW: Listeners for image downloads (right-click and long-press)
+            editor.addEventListener('contextmenu', (e) => {
+                if (e.target.tagName === 'IMG') {
+                    e.preventDefault();
+                    showImageContextMenu(e.target, e.clientX, e.clientY);
+                }
+            });
+            editor.addEventListener('touchstart', (e) => {
+                if (e.target.tagName === 'IMG') {
+                    touchTimer = setTimeout(() => {
+                        showImageContextMenu(e.target, e.touches[0].clientX, e.touches[0].clientY);
+                    }, 500);
+                }
+            });
+            editor.addEventListener('touchend', () => {
+                clearTimeout(touchTimer);
+            });
+            editor.addEventListener('touchmove', () => {
+                clearTimeout(touchTimer);
             });
         });
 
