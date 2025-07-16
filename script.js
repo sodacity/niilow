@@ -312,66 +312,18 @@
 
     // --- HTML Sanitizer ---
     function sanitizeHTML(dirtyHTML) {
-        // IMPORTANT: Replace this with a robust, well-tested library like DOMPurify
-        // for production use. This is a placeholder for security.
-        // Example with DOMPurify:
-        // return DOMPurify.sanitize(dirtyHTML, { USE_PROFILES: { html: true } });
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = dirtyHTML;
-        const allowedTags = [
-            'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'P', 'A', 'UL', 'OL', 'LI', 'B', 'I', 'STRONG', 'EM', 'U', 'BR', 'DIV', 'SPAN',
-            'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG', 'VIDEO', 'SOURCE', 'IFRAME', 'FONT'
-        ];
-        const allowedAttrs = {
-            '*': ['style', 'class', 'title'],
-            'A': ['href', 'target'],
-            'IMG': ['src', 'alt', 'width', 'height'],
-            'VIDEO': ['src', 'controls', 'width', 'height', 'autoplay', 'muted', 'loop', 'poster'],
-            'SOURCE': ['src', 'type'],
-            'IFRAME': ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading', 'sandbox'],
-            'FONT': ['color']
-        };
-
-        const cleanNode = (node) => {
-            if (node.nodeType === 3) return node.cloneNode();
-            if (node.nodeType !== 1) return null;
-
-            const tagName = node.tagName.toUpperCase();
-            if (!allowedTags.includes(tagName)) return null;
-
-            const newNode = document.createElement(node.tagName);
-            const universalAttrs = allowedAttrs['*'] || [];
-            const tagSpecificAttrs = allowedAttrs[tagName] || [];
-            const allAllowedAttrs = [...new Set([...universalAttrs, ...tagSpecificAttrs])];
-
-            for (const attr of node.attributes) {
-                if (allAllowedAttrs.includes(attr.name.toLowerCase()) && !attr.name.startsWith('on')) {
-                    if (attr.name === 'src' || attr.name === 'href') {
-                        if (!attr.value.startsWith('http:') && !attr.value.startsWith('https:') && !attr.value.startsWith('data:')) {
-                            continue;
-                        }
-                    }
-                    newNode.setAttribute(attr.name, attr.value);
-                }
-            }
-
-            for (const child of node.childNodes) {
-                const cleanChild = cleanNode(child);
-                if (cleanChild) newNode.appendChild(cleanChild);
-            }
-
-            return newNode;
+        // This is now configured to allow rich content pasting by default
+        // while still removing dangerous elements like <script> tags.
+        // Make sure you've added the DOMPurify script to index.html:
+        // <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+        if (typeof DOMPurify === 'undefined') {
+            console.error("DOMPurify is not loaded. Please include the script in your HTML.");
+            // Fallback to a very basic text-only sanitizer
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = dirtyHTML;
+            return tempDiv.innerHTML;
         }
-
-        const fragment = document.createDocumentFragment();
-        for (const child of tempDiv.childNodes) {
-            const cleanChild = cleanNode(child);
-            if (cleanChild) fragment.appendChild(cleanChild);
-        }
-
-        const cleanDiv = document.createElement('div');
-        cleanDiv.appendChild(fragment);
-        return cleanDiv.innerHTML;
+        return DOMPurify.sanitize(dirtyHTML, {USE_PROFILES: {html: true}});
     }
 
 
@@ -597,14 +549,13 @@
         const opacity = state.settings.noteCardOpacity || 1;
         card.style.backgroundColor = hexToRgba(baseColor, opacity);
 
-        // SECURE CHANGE: Use textContent for the title to prevent XSS
         const titleEl = document.createElement('div');
         titleEl.className = 'note-card-title';
         titleEl.textContent = note.title;
 
         const contentEl = document.createElement('div');
         contentEl.className = 'note-card-content';
-        contentEl.innerHTML = note.content; // Content is sanitized on save
+        contentEl.innerHTML = note.content;
 
         card.appendChild(titleEl);
         card.appendChild(contentEl);
@@ -1700,11 +1651,11 @@
             console.error('PeerJS error:', err);
             DOMElements.loadingOverlay.classList.add('hidden');
             
-            // IMPROVED ERROR HANDLING
-            if (err.type === 'unavailable-id') {
-                showNotification(`Channel name "${state.roomId}" is already taken. Please try another.`, 'error');
-                _finishLeaveSession();
-                openModal(DOMElements.collaborationStartModal);
+            // This is the intended "create or join" functionality
+            if (err.type === 'unavailable-id' && state.isHost) {
+                if (state.peer) state.peer.destroy();
+                state.isHost = false;
+                initPeer(); 
                 return;
             }
 
@@ -1873,8 +1824,6 @@
             };
 
             const jsonString = JSON.stringify(syncData);
-            
-            // TRANSPORT-SAFE CHANGE
             const compressedData = LZString.compressToBase64(jsonString);
 
             conn.send({
@@ -2030,7 +1979,6 @@
                 showNotification('Password accepted!', 'success');
                 break;
             case 'full_sync_compressed': {
-                // TRANSPORT-SAFE CHANGE
                 const decompressedString = LZString.decompressFromBase64(data.payload);
                 if (!decompressedString) {
                     showNotification('Failed to sync with session. Data was corrupted.', 'error');
