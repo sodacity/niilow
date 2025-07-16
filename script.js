@@ -1996,9 +1996,7 @@
         }
         
         if (broadcastPayload) {
-            handleReceivedData(broadcastPayload, fromPeerId); // Update host's own UI
-            
-            // NEW: Broadcasting logic with queueing for syncing peers
+            // Broadcasting logic with queueing for syncing peers
             broadcastPayload.from = state.peer.id;
             for (const [peerId, conn] of state.connections.entries()) {
                 if (conn && conn.open) {
@@ -2552,17 +2550,23 @@
         DOMElements.whiteboardBtn.classList.toggle('is-live', live);
     }
     
+    function redrawWhiteboard() {
+        if (!state.whiteboard.ctx) return;
+        const canvas = DOMElements.whiteboardCanvas;
+        
+        // Resize canvas to fit its container
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+
+        // Draw every action from history
+        state.whiteboard.history.forEach(data => drawOnCanvas(data));
+    }
+
     function initWhiteboard() {
         const canvas = DOMElements.whiteboardCanvas;
         const ctx = canvas.getContext('2d');
         state.whiteboard.ctx = ctx;
-
-        const resizeCanvas = () => {
-            const parent = canvas.parentElement;
-            canvas.width = parent.clientWidth;
-            canvas.height = parent.clientHeight;
-            state.whiteboard.history.forEach(data => drawOnCanvas(data));
-        };
 
         const getCoords = (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -2607,8 +2611,6 @@
             [state.whiteboard.lastX, state.whiteboard.lastY] = [coords.x, coords.y];
         };
 
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
@@ -2930,10 +2932,13 @@
             openModal(DOMElements.addGameModal);
             DOMElements.collabActionsMenu.classList.add('hidden');
         });
+        
         DOMElements.whiteboardBtn.addEventListener('click', () => {
+            redrawWhiteboard(); // Redraw the canvas from history
             openModal(DOMElements.whiteboardModal);
             DOMElements.collabActionsMenu.classList.add('hidden');
         });
+
         DOMElements.addYoutubeBtn.addEventListener('click', () => {
             openModal(DOMElements.youtubeModal);
             DOMElements.collabActionsMenu.classList.add('hidden');
@@ -3240,6 +3245,7 @@
         applyVideoWall();
         renderAll();
         addEventListeners();
+        initWhiteboard();
         setupToolbar(DOMElements.newNoteToolbar, DOMElements.newNoteEditor);
         setupToolbar(DOMElements.editToolbar, DOMElements.editNoteEditor);
         setInterval(updateTime, 1000);
