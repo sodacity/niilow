@@ -191,7 +191,11 @@
             lastX: 0,
             lastY: 0,
         },
+        syncingPeers: new Set(),
+        syncUpdateQueue: new Map(),
     };
+
+    const NOTE_CHUNK_SIZE = 5;
 
     const defaultSettings = {
         title: 'Collections',
@@ -212,7 +216,9 @@
         videoWall: '',
     };
     
+    // NEW: Variable for the long-press timer
     let touchTimer;
+
     let autoSaveTimeout = null;
 
     // --- IndexedDB Helper ---
@@ -312,18 +318,62 @@
 
     // --- HTML Sanitizer ---
     function sanitizeHTML(dirtyHTML) {
-        // This is now configured to allow rich content pasting by default
-        // while still removing dangerous elements like <script> tags.
-        // Make sure you've added the DOMPurify script to index.html:
-        // <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
-        if (typeof DOMPurify === 'undefined') {
-            console.error("DOMPurify is not loaded. Please include the script in your HTML.");
-            // Fallback to a very basic text-only sanitizer
-            const tempDiv = document.createElement('div');
-            tempDiv.textContent = dirtyHTML;
-            return tempDiv.innerHTML;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = dirtyHTML;
+        const allowedTags = [
+            'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'P', 'A', 'UL', 'OL', 'LI', 'B', 'I', 'STRONG', 'EM', 'U', 'BR', 'DIV', 'SPAN',
+            'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG', 'VIDEO', 'SOURCE', 'IFRAME', 'FONT'
+        ];
+        const allowedAttrs = {
+            '*': ['style', 'class', 'title'],
+            'A': ['href', 'target'],
+            'IMG': ['src', 'alt', 'width', 'height'],
+            'VIDEO': ['src', 'controls', 'width', 'height', 'autoplay', 'muted', 'loop', 'poster'],
+            'SOURCE': ['src', 'type'],
+            'IFRAME': ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading', 'sandbox'],
+            'FONT': ['color']
+        };
+
+        const cleanNode = (node) => {
+            if (node.nodeType === 3) return node.cloneNode();
+            if (node.nodeType !== 1) return null;
+
+            const tagName = node.tagName.toUpperCase();
+            if (!allowedTags.includes(tagName)) return null;
+
+            const newNode = document.createElement(node.tagName);
+            const universalAttrs = allowedAttrs['*'] || [];
+            const tagSpecificAttrs = allowedAttrs[tagName] || [];
+            const allAllowedAttrs = [...new Set([...universalAttrs, ...tagSpecificAttrs])];
+
+            for (const attr of node.attributes) {
+                if (allAllowedAttrs.includes(attr.name.toLowerCase()) && !attr.name.startsWith('on')) {
+                    if (attr.name === 'src' || attr.name === 'href') {
+                        if (!attr.value.startsWith('http:') && !attr.value.startsWith('https:') && !attr.value.startsWith('data:')) {
+                            continue;
+                        }
+                    }
+                    newNode.setAttribute(attr.name, attr.value);
+                }
+            }
+
+            for (const child of node.childNodes) {
+                const cleanChild = cleanNode(child);
+                if (cleanChild) newNode.appendChild(cleanChild);
+            }
+
+            return newNode;
         }
-        return DOMPurify.sanitize(dirtyHTML, {USE_PROFILES: {html: true}});
+
+        const fragment = document.createDocumentFragment();
+        for (const child of tempDiv.childNodes) {
+            const cleanChild = cleanNode(child);
+            if (cleanChild) fragment.appendChild(cleanChild);
+        }
+
+        const cleanDiv = document.createElement('div');
+        cleanDiv.appendChild(fragment);
+        return cleanDiv.innerHTML;
     }
 
 
@@ -412,7 +462,14 @@
         const recentNotes = state.notes.filter(n => !n.archived).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 5);
         DOMElements.recentNotesContainer.innerHTML = '';
         recentNotes.forEach(note => {
-            const card = createNoteCard(note, () => openEditPane(note.id));
+            const card = document.createElement('div');
+            card.className = 'note-card recent-note-card';
+            card.dataset.id = note.id;
+            const baseColor = note.color || state.settings.noteCardColor;
+            const opacity = state.settings.noteCardOpacity || 1;
+            card.style.backgroundColor = hexToRgba(baseColor, opacity);
+            card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
+            card.addEventListener('click', () => openEditPane(note.id));
             DOMElements.recentNotesContainer.appendChild(card);
         });
     }
@@ -521,7 +578,7 @@
         }
 
         notesToShow.forEach(note => {
-            const card = createNoteCard(note, () => openEditPane(note.id));
+            const card = createNoteCard(note, openEditPane);
             DOMElements.notesGrid.appendChild(card);
         });
         new Sortable(DOMElements.notesGrid, {
@@ -548,17 +605,7 @@
         const baseColor = note.color || state.settings.noteCardColor;
         const opacity = state.settings.noteCardOpacity || 1;
         card.style.backgroundColor = hexToRgba(baseColor, opacity);
-
-        const titleEl = document.createElement('div');
-        titleEl.className = 'note-card-title';
-        titleEl.textContent = note.title;
-
-        const contentEl = document.createElement('div');
-        contentEl.className = 'note-card-content';
-        contentEl.innerHTML = note.content;
-
-        card.appendChild(titleEl);
-        card.appendChild(contentEl);
+        card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
 
         card.addEventListener('click', () => {
             if (state.selectModeActive) {
@@ -1145,6 +1192,7 @@
     }
 
     function closeEditPane() {
+        // NEW: Clean up any remote cursors when closing a note
         document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
         clearTimeout(autoSaveTimeout);
         DOMElements.editNotePane.classList.remove('is-open');
@@ -1540,7 +1588,7 @@
         if (!url) return;
 
         let videoElement;
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        if (url.includes('youtu.be') || url.includes('youtube.com')) {
             const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
             if (videoId) {
@@ -1613,6 +1661,7 @@
             state.peerInfo.set(myPeerId, {
                 name: state.settings.userName,
                 avatar: state.settings.userAvatar,
+                // NEW: Add a color for the user's cursor
                 color: `#${Math.floor(Math.random()*16777215).toString(16)}`
             });
 
@@ -1651,10 +1700,9 @@
             console.error('PeerJS error:', err);
             DOMElements.loadingOverlay.classList.add('hidden');
             
-            // This is the intended "create or join" functionality
             if (err.type === 'unavailable-id' && state.isHost) {
                 if (state.peer) state.peer.destroy();
-                state.isHost = false;
+                state.isHost = false; 
                 initPeer(); 
                 return;
             }
@@ -1782,7 +1830,10 @@
             showNotification(`${peerInfo.name} has left the session.`, 'error');
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
+            state.syncingPeers.delete(peerId);
+            state.syncUpdateQueue.delete(peerId);
 
+            // NEW: Remove the cursor of the user who left
             const cursorEl = document.getElementById(`cursor-${peerId}`);
             if (cursorEl) {
                 cursorEl.remove();
@@ -1808,6 +1859,7 @@
 
         if (state.isHost) {
             const newPeerId = conn.metadata.peerId;
+            state.syncingPeers.add(newPeerId);
             const newPeerInfo = { 
                 name: conn.metadata.userName, 
                 avatar: conn.metadata.avatar,
@@ -1815,20 +1867,18 @@
             };
             state.peerInfo.set(newPeerId, newPeerInfo);
             
-            const syncData = {
-                notes: state.collaborationNotes,
+            // NEW: Send initial chat/peer data first, then notes will be chunked.
+            const initialSyncData = {
                 chatLog: state.chatLog,
                 peerInfo: Object.fromEntries(state.peerInfo),
                 hostName: state.settings.userName,
-                videoWall: state.settings.videoWall
+                videoWall: state.settings.videoWall,
+                totalNotes: state.collaborationNotes.length
             };
 
-            const jsonString = JSON.stringify(syncData);
-            const compressedData = LZString.compressToBase64(jsonString);
-
             conn.send({
-                type: 'full_sync_compressed',
-                payload: compressedData
+                type: 'initial_sync',
+                payload: initialSyncData
             });
 
             broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
@@ -1882,16 +1932,16 @@
 
     function handleHostAction(data, fromPeerId) {
         let broadcastPayload = null;
+        let isNoteAction = false; // Flag to see if this is a note-related action
+
         switch (data.type) {
             case 'request_add_note': {
                 if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = {
-                    type: 'add_note',
-                    note: data.note
-                };
+                broadcastPayload = { type: 'add_note', note: data.note };
+                isNoteAction = true;
                 break;
             }
             case 'request_update_note': {
@@ -1900,26 +1950,19 @@
                     state.collaborationNotes[noteIndex] = data.note;
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = {
-                    type: 'update_note',
-                    note: data.note
-                };
+                broadcastPayload = { type: 'update_note', note: data.note };
+                isNoteAction = true;
                 break;
             }
             case 'request_delete_note': {
                 state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
                 renderCollaborationNotesGrid();
-                broadcastPayload = {
-                    type: 'delete_note',
-                    noteId: data.noteId
-                };
-                break;   
+                broadcastPayload = { type: 'delete_note', noteId: data.noteId };
+                isNoteAction = true;
+                break;
             }
             case 'request_send_chat': {
-                broadcastPayload = {
-                    type: 'chat_message',
-                    ...data.payload
-                };
+                broadcastPayload = { type: 'chat_message', ...data.payload };
                 break;
             }
             case 'request_whiteboard_draw': {
@@ -1934,7 +1977,7 @@
                 broadcastPayload = { type: 'youtube_state_change', ...data.payload };
                 break;
             }
-             case 'request_whiteboard_history': {
+            case 'request_whiteboard_history': {
                 const conn = state.connections.get(fromPeerId);
                 if (conn && conn.open) {
                     conn.send({ type: 'whiteboard_history_sync', history: state.whiteboard.history });
@@ -1951,13 +1994,32 @@
                 break;
             }
         }
+        
         if (broadcastPayload) {
-            handleReceivedData(broadcastPayload, fromPeerId);
-             if (broadcastPayload.type === 'whiteboard_draw' || broadcastPayload.type === 'whiteboard_clear') {
-                 if (broadcastPayload.type === 'whiteboard_clear') state.whiteboard.history = [];
-                 else state.whiteboard.history.push(broadcastPayload.data);
+            handleReceivedData(broadcastPayload, fromPeerId); // Update host's own UI
+            
+            // NEW: Broadcasting logic with queueing for syncing peers
+            broadcastPayload.from = state.peer.id;
+            for (const [peerId, conn] of state.connections.entries()) {
+                if (conn && conn.open) {
+                    // If it's a note action AND the peer is still syncing, queue the update
+                    if (isNoteAction && state.syncingPeers.has(peerId)) {
+                        if (!state.syncUpdateQueue.has(peerId)) {
+                            state.syncUpdateQueue.set(peerId, []);
+                        }
+                        state.syncUpdateQueue.get(peerId).push(broadcastPayload);
+                    } else {
+                        // Otherwise, send it immediately
+                        conn.send(broadcastPayload);
+                    }
+                }
             }
-            broadcastToAllPeers(broadcastPayload);
+            
+            if (broadcastPayload.type === 'whiteboard_draw') {
+                 state.whiteboard.history.push(broadcastPayload.data);
+            } else if (broadcastPayload.type === 'whiteboard_clear') {
+                state.whiteboard.history = [];
+            }
         }
     }
 
@@ -1978,31 +2040,81 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-            case 'full_sync_compressed': {
-                const decompressedString = LZString.decompressFromBase64(data.payload);
-                if (!decompressedString) {
-                    showNotification('Failed to sync with session. Data was corrupted.', 'error');
-                    return;
-                }
-                const syncData = JSON.parse(decompressedString);
-                
-                state.collaborationNotes = syncData.notes;
-                state.chatLog = syncData.chatLog;
-                state.peerInfo = new Map(Object.entries(syncData.peerInfo));
+
+            case 'initial_sync': {
+                const syncData = data.payload;
+                state.chatLog = syncData.chatLog || [];
+                state.peerInfo = new Map(Object.entries(syncData.peerInfo || {}));
                 if (syncData.videoWall) {
                     state.settings.videoWall = syncData.videoWall;
                     applyVideoWall();
                 }
-                renderCollaborationNotesGrid();
                 renderChatLog();
                 renderSessionInfo();
                 showView('collaboration');
                 DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
-                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}!`, 'success');
+                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}! Syncing notes...`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
+
+                if (syncData.totalNotes > 0) {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send({ type: 'request_note_chunk', index: 0 });
+                    }
+                }
                 break;
             }
+
+            case 'request_note_chunk': {
+                if (!state.isHost) return;
+
+                const startIndex = data.index;
+                const notesChunk = state.collaborationNotes.slice(startIndex, startIndex + NOTE_CHUNK_SIZE);
+                const isLast = (startIndex + NOTE_CHUNK_SIZE) >= state.collaborationNotes.length;
+
+                const conn = state.connections.get(fromPeerId);
+                if (conn && conn.open) {
+                    conn.send({
+                        type: 'note_chunk_response',
+                        notes: notesChunk,
+                        index: startIndex,
+                        isLastChunk: isLast
+                    });
+
+                    if (isLast) {
+                        const queuedUpdates = state.syncUpdateQueue.get(fromPeerId);
+                        if (queuedUpdates && queuedUpdates.length > 0) {
+                            queuedUpdates.forEach(update => conn.send(update));
+                        }
+                        state.syncingPeers.delete(fromPeerId);
+                        state.syncUpdateQueue.delete(fromPeerId);
+                        console.log(`Peer ${fromPeerId} is now fully synced.`);
+                    }
+                }
+                break;
+            }
+
+            case 'note_chunk_response': {
+                data.notes.forEach(note => {
+                    if (!state.collaborationNotes.some(n => n.id === note.id)) {
+                        state.collaborationNotes.push(note);
+                    }
+                });
+                renderCollaborationNotesGrid();
+
+                if (!data.isLastChunk) {
+                    const nextIndex = data.index + NOTE_CHUNK_SIZE;
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send({ type: 'request_note_chunk', index: nextIndex });
+                    }
+                } else {
+                    showNotification('All notes have been synced!', 'success');
+                }
+                break;
+            }
+
             case 'new_peer_announcement':
                 state.peerInfo.set(data.peerId, data.info);
                 renderSessionInfo();
@@ -2081,7 +2193,7 @@
                 state.whiteboard.history = data.history;
                 break;
             case 'cursor_update':
-                if (data.from !== state.peer.id) { 
+                if (data.from !== state.peer.id) {
                     renderRemoteCursor(data.from, data.noteId, data.selection);
                 }
                 break;
@@ -2102,7 +2214,7 @@
         if (DOMElements.collaborationNotesGrid) {
             DOMElements.collaborationNotesGrid.innerHTML = '';
             state.collaborationNotes.forEach(note => {
-                const card = createNoteCard(note, () => openEditPane(note.id));
+                const card = createNoteCard(note, openEditPane);
                 DOMElements.collaborationNotesGrid.appendChild(card);
                 if (note.type === 'youtube-sync' && note.videoId) {
                     createYouTubePlayer(note.id, note.videoId);
@@ -2248,6 +2360,7 @@
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
     
+    // --- NEW: Function to render remote cursors ---
     function renderRemoteCursor(peerId, noteId, selection) {
         if (noteId !== state.currentNoteId || !DOMElements.editNotePane.classList.contains('is-open')) {
              const cursorEl = document.getElementById(`cursor-${peerId}`);
@@ -2265,11 +2378,28 @@
             cursorEl.className = 'remote-cursor';
             cursorEl.dataset.name = peerInfo.name;
             cursorEl.style.backgroundColor = peerInfo.color;
-            cursorEl.style.setProperty('--cursor-color', peerInfo.color); 
+            cursorEl.style.setProperty('--cursor-color', peerInfo.color); // For pseudo-element
             editor.parentElement.appendChild(cursorEl);
         }
         
         cursorEl.style.display = 'block';
+
+        function getPos(charOffset) {
+            const range = document.createRange();
+            let el = editor;
+            let a = charOffset;
+            let n, p = 0;
+            while (el.childNodes.length > 0) {
+                 n = el.firstChild;
+                 p = n.textContent.length;
+                 if (a < p) {
+                      range.setStart(n, a);
+                      return range.getBoundingClientRect();
+                 }
+                 a -= p;
+                 el.removeChild(n);
+            }
+        }
         
         try {
             const textNodes = [];
@@ -2314,7 +2444,7 @@
 
     // --- YouTube Sync Functions ---
     function getYouTubeVideoId(url) {
-        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
@@ -2559,12 +2689,15 @@
         closeModal(DOMElements.importLocalNoteModal);
     }
     
+    // NEW: Function to show the image download menu
     function showImageContextMenu(imageElement, x, y) {
+        // Remove any old menu first
         const existingMenu = document.getElementById('image-context-menu');
         if (existingMenu) {
             existingMenu.remove();
         }
 
+        // Create the menu
         const menu = document.createElement('div');
         menu.id = 'image-context-menu';
         menu.style.left = `${x}px`;
@@ -2623,6 +2756,7 @@
         DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
         DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
         
+        // NEW: Event listeners for live cursors
         const editEditor = DOMElements.editNoteEditor;
         const broadcastSelection = () => {
             if (!state.peer || !state.currentNoteId || document.activeElement !== editEditor) return;
@@ -2632,6 +2766,7 @@
 
             const range = selection.getRangeAt(0);
             
+            // To get character offset, we create a temporary range from the start of the editor
             const preSelectionRange = document.createRange();
             preSelectionRange.selectNodeContents(editEditor);
             preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -2696,6 +2831,7 @@
                 !DOMElements.collabActionsBtn.contains(e.target)) {
                 DOMElements.collabActionsMenu.classList.add('hidden');
             }
+             // NEW: Close image context menu on any click
             const existingMenu = document.getElementById('image-context-menu');
             if (existingMenu) {
                 existingMenu.remove();
@@ -2793,7 +2929,6 @@
         document.getElementById('add-game-connectfour').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/connectfour.html', 'Connect 4'));
         document.getElementById('add-game-tcycle').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/tcycle.html', 'Tron'));
         document.getElementById('add-game-pong').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/pong.html', 'Pong'));
-
         
         DOMElements.cancelYoutubeAddBtn.addEventListener('click', () => closeModal(DOMElements.youtubeModal));
         DOMElements.confirmYoutubeAddBtn.addEventListener('click', handleAddYouTubeNote);
@@ -2971,6 +3106,7 @@
                 }
             });
 
+            // NEW: Listeners for image downloads (right-click and long-press)
             editor.addEventListener('contextmenu', (e) => {
                 if (e.target.tagName === 'IMG') {
                     e.preventDefault();
@@ -3092,7 +3228,6 @@
         addEventListeners();
         setupToolbar(DOMElements.newNoteToolbar, DOMElements.newNoteEditor);
         setupToolbar(DOMElements.editToolbar, DOMElements.editNoteEditor);
-        initWhiteboard();
         setInterval(updateTime, 1000);
         updateTime();
 
