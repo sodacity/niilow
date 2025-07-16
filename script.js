@@ -212,9 +212,7 @@
         videoWall: '',
     };
     
-    // NEW: Variable for the long-press timer
     let touchTimer;
-
     let autoSaveTimeout = null;
 
     // --- IndexedDB Helper ---
@@ -314,6 +312,10 @@
 
     // --- HTML Sanitizer ---
     function sanitizeHTML(dirtyHTML) {
+        // IMPORTANT: Replace this with a robust, well-tested library like DOMPurify
+        // for production use. This is a placeholder for security.
+        // Example with DOMPurify:
+        // return DOMPurify.sanitize(dirtyHTML, { USE_PROFILES: { html: true } });
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = dirtyHTML;
         const allowedTags = [
@@ -458,14 +460,7 @@
         const recentNotes = state.notes.filter(n => !n.archived).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 5);
         DOMElements.recentNotesContainer.innerHTML = '';
         recentNotes.forEach(note => {
-            const card = document.createElement('div');
-            card.className = 'note-card recent-note-card';
-            card.dataset.id = note.id;
-            const baseColor = note.color || state.settings.noteCardColor;
-            const opacity = state.settings.noteCardOpacity || 1;
-            card.style.backgroundColor = hexToRgba(baseColor, opacity);
-            card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
-            card.addEventListener('click', () => openEditPane(note.id));
+            const card = createNoteCard(note, () => openEditPane(note.id));
             DOMElements.recentNotesContainer.appendChild(card);
         });
     }
@@ -574,7 +569,7 @@
         }
 
         notesToShow.forEach(note => {
-            const card = createNoteCard(note, openEditPane);
+            const card = createNoteCard(note, () => openEditPane(note.id));
             DOMElements.notesGrid.appendChild(card);
         });
         new Sortable(DOMElements.notesGrid, {
@@ -601,7 +596,18 @@
         const baseColor = note.color || state.settings.noteCardColor;
         const opacity = state.settings.noteCardOpacity || 1;
         card.style.backgroundColor = hexToRgba(baseColor, opacity);
-        card.innerHTML = `<div class="note-card-title">${note.title}</div><div class="note-card-content">${note.content}</div>`;
+
+        // SECURE CHANGE: Use textContent for the title to prevent XSS
+        const titleEl = document.createElement('div');
+        titleEl.className = 'note-card-title';
+        titleEl.textContent = note.title;
+
+        const contentEl = document.createElement('div');
+        contentEl.className = 'note-card-content';
+        contentEl.innerHTML = note.content; // Content is sanitized on save
+
+        card.appendChild(titleEl);
+        card.appendChild(contentEl);
 
         card.addEventListener('click', () => {
             if (state.selectModeActive) {
@@ -1188,7 +1194,6 @@
     }
 
     function closeEditPane() {
-        // NEW: Clean up any remote cursors when closing a note
         document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
         clearTimeout(autoSaveTimeout);
         DOMElements.editNotePane.classList.remove('is-open');
@@ -1584,7 +1589,7 @@
         if (!url) return;
 
         let videoElement;
-        if (url.includes('youtu.be') || url.includes('youtube.com')) {
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
             const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
             if (videoId) {
@@ -1657,7 +1662,6 @@
             state.peerInfo.set(myPeerId, {
                 name: state.settings.userName,
                 avatar: state.settings.userAvatar,
-                // NEW: Add a color for the user's cursor
                 color: `#${Math.floor(Math.random()*16777215).toString(16)}`
             });
 
@@ -1696,10 +1700,11 @@
             console.error('PeerJS error:', err);
             DOMElements.loadingOverlay.classList.add('hidden');
             
-            if (err.type === 'unavailable-id' && state.isHost) {
-                if (state.peer) state.peer.destroy();
-                state.isHost = false; 
-                initPeer(); 
+            // IMPROVED ERROR HANDLING
+            if (err.type === 'unavailable-id') {
+                showNotification(`Channel name "${state.roomId}" is already taken. Please try another.`, 'error');
+                _finishLeaveSession();
+                openModal(DOMElements.collaborationStartModal);
                 return;
             }
 
@@ -1827,7 +1832,6 @@
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
 
-            // NEW: Remove the cursor of the user who left
             const cursorEl = document.getElementById(`cursor-${peerId}`);
             if (cursorEl) {
                 cursorEl.remove();
@@ -1860,7 +1864,6 @@
             };
             state.peerInfo.set(newPeerId, newPeerInfo);
             
-            // NEW: Using compressed sync
             const syncData = {
                 notes: state.collaborationNotes,
                 chatLog: state.chatLog,
@@ -1870,7 +1873,9 @@
             };
 
             const jsonString = JSON.stringify(syncData);
-            const compressedData = LZString.compressToUTF16(jsonString);
+            
+            // TRANSPORT-SAFE CHANGE
+            const compressedData = LZString.compressToBase64(jsonString);
 
             conn.send({
                 type: 'full_sync_compressed',
@@ -1987,7 +1992,6 @@
                 }
                 break;
             }
-            // NEW: Handle cursor updates
             case 'request_cursor_update': {
                 broadcastPayload = { 
                     type: 'cursor_update', 
@@ -2025,9 +2029,9 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-            // NEW: Decompress the sync data
             case 'full_sync_compressed': {
-                const decompressedString = LZString.decompressFromUTF16(data.payload);
+                // TRANSPORT-SAFE CHANGE
+                const decompressedString = LZString.decompressFromBase64(data.payload);
                 if (!decompressedString) {
                     showNotification('Failed to sync with session. Data was corrupted.', 'error');
                     return;
@@ -2074,7 +2078,6 @@
                 renderCollaborationNotesGrid();
                 break;
             case 'peer_left':
-                // NEW: Remove cursor of the peer who left
                 const cursorEl = document.getElementById(`cursor-${data.peerId}`);
                 if (cursorEl) cursorEl.remove();
                 
@@ -2129,9 +2132,8 @@
                 data.history.forEach(drawData => drawOnCanvas(drawData));
                 state.whiteboard.history = data.history;
                 break;
-            // NEW: Handle incoming cursor updates
             case 'cursor_update':
-                if (data.from !== state.peer.id) { // Don't render our own cursor
+                if (data.from !== state.peer.id) { 
                     renderRemoteCursor(data.from, data.noteId, data.selection);
                 }
                 break;
@@ -2152,7 +2154,7 @@
         if (DOMElements.collaborationNotesGrid) {
             DOMElements.collaborationNotesGrid.innerHTML = '';
             state.collaborationNotes.forEach(note => {
-                const card = createNoteCard(note, openEditPane);
+                const card = createNoteCard(note, () => openEditPane(note.id));
                 DOMElements.collaborationNotesGrid.appendChild(card);
                 if (note.type === 'youtube-sync' && note.videoId) {
                     createYouTubePlayer(note.id, note.videoId);
@@ -2298,7 +2300,6 @@
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
     
-    // --- NEW: Function to render remote cursors ---
     function renderRemoteCursor(peerId, noteId, selection) {
         if (noteId !== state.currentNoteId || !DOMElements.editNotePane.classList.contains('is-open')) {
              const cursorEl = document.getElementById(`cursor-${peerId}`);
@@ -2316,28 +2317,11 @@
             cursorEl.className = 'remote-cursor';
             cursorEl.dataset.name = peerInfo.name;
             cursorEl.style.backgroundColor = peerInfo.color;
-            cursorEl.style.setProperty('--cursor-color', peerInfo.color); // For pseudo-element
+            cursorEl.style.setProperty('--cursor-color', peerInfo.color); 
             editor.parentElement.appendChild(cursorEl);
         }
         
         cursorEl.style.display = 'block';
-
-        function getPos(charOffset) {
-            const range = document.createRange();
-            let el = editor;
-            let a = charOffset;
-            let n, p = 0;
-            while (el.childNodes.length > 0) {
-                 n = el.firstChild;
-                 p = n.textContent.length;
-                 if (a < p) {
-                      range.setStart(n, a);
-                      return range.getBoundingClientRect();
-                 }
-                 a -= p;
-                 el.removeChild(n);
-            }
-        }
         
         try {
             const textNodes = [];
@@ -2382,7 +2366,7 @@
 
     // --- YouTube Sync Functions ---
     function getYouTubeVideoId(url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
@@ -2627,15 +2611,12 @@
         closeModal(DOMElements.importLocalNoteModal);
     }
     
-    // NEW: Function to show the image download menu
     function showImageContextMenu(imageElement, x, y) {
-        // Remove any old menu first
         const existingMenu = document.getElementById('image-context-menu');
         if (existingMenu) {
             existingMenu.remove();
         }
 
-        // Create the menu
         const menu = document.createElement('div');
         menu.id = 'image-context-menu';
         menu.style.left = `${x}px`;
@@ -2694,7 +2675,6 @@
         DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
         DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
         
-        // NEW: Event listeners for live cursors
         const editEditor = DOMElements.editNoteEditor;
         const broadcastSelection = () => {
             if (!state.peer || !state.currentNoteId || document.activeElement !== editEditor) return;
@@ -2704,7 +2684,6 @@
 
             const range = selection.getRangeAt(0);
             
-            // To get character offset, we create a temporary range from the start of the editor
             const preSelectionRange = document.createRange();
             preSelectionRange.selectNodeContents(editEditor);
             preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -2769,7 +2748,6 @@
                 !DOMElements.collabActionsBtn.contains(e.target)) {
                 DOMElements.collabActionsMenu.classList.add('hidden');
             }
-             // NEW: Close image context menu on any click
             const existingMenu = document.getElementById('image-context-menu');
             if (existingMenu) {
                 existingMenu.remove();
@@ -2866,6 +2844,8 @@
         DOMElements.cancelAddGameBtn.addEventListener('click', () => closeModal(DOMElements.addGameModal));
         document.getElementById('add-game-connectfour').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/connectfour.html', 'Connect 4'));
         document.getElementById('add-game-tcycle').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/tcycle.html', 'Tron'));
+        document.getElementById('add-game-pong').addEventListener('click', () => handleAddGameNote('https://www.niilow.com/pong.html', 'Pong'));
+
         
         DOMElements.cancelYoutubeAddBtn.addEventListener('click', () => closeModal(DOMElements.youtubeModal));
         DOMElements.confirmYoutubeAddBtn.addEventListener('click', handleAddYouTubeNote);
@@ -3043,7 +3023,6 @@
                 }
             });
 
-            // NEW: Listeners for image downloads (right-click and long-press)
             editor.addEventListener('contextmenu', (e) => {
                 if (e.target.tagName === 'IMG') {
                     e.preventDefault();
@@ -3165,6 +3144,7 @@
         addEventListeners();
         setupToolbar(DOMElements.newNoteToolbar, DOMElements.newNoteEditor);
         setupToolbar(DOMElements.editToolbar, DOMElements.editNoteEditor);
+        initWhiteboard();
         setInterval(updateTime, 1000);
         updateTime();
 
