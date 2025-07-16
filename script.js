@@ -2024,7 +2024,21 @@
     }
 
     function handleReceivedData(data, fromPeerId) {
-        if (state.isHost && data.type.startsWith('request_')) {
+        // Define which actions are handled by the host.
+        const hostActions = [
+            'request_add_note', 
+            'request_update_note', 
+            'request_delete_note',
+            'request_send_chat',
+            'request_whiteboard_draw',
+            'request_whiteboard_clear',
+            'request_youtube_state_change',
+            'request_whiteboard_history',
+            'request_cursor_update'
+        ];
+
+        // FIXED: Only route specific host actions, letting others (like request_note_chunk) pass through.
+        if (state.isHost && hostActions.includes(data.type)) {
             handleHostAction(data, fromPeerId);
             return;
         }
