@@ -191,11 +191,7 @@
             lastX: 0,
             lastY: 0,
         },
-        syncingPeers: new Set(),
-        syncUpdateQueue: new Map(),
     };
-
-    const NOTE_CHUNK_SIZE = 5;
 
     const defaultSettings = {
         title: 'Collections',
@@ -1650,7 +1646,15 @@
             port: 443,
             path: '/',
             secure: true,
-            debug: 2
+            debug: 2,
+            config: {
+              iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                // We can add a free TURN server here later if we find one
+              ]
+            }
         });
 
         state.peer.on('open', (id) => {
@@ -1830,8 +1834,6 @@
             showNotification(`${peerInfo.name} has left the session.`, 'error');
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
-            state.syncingPeers.delete(peerId);
-            state.syncUpdateQueue.delete(peerId);
 
             // NEW: Remove the cursor of the user who left
             const cursorEl = document.getElementById(`cursor-${peerId}`);
@@ -1859,7 +1861,6 @@
 
         if (state.isHost) {
             const newPeerId = conn.metadata.peerId;
-            state.syncingPeers.add(newPeerId);
             const newPeerInfo = { 
                 name: conn.metadata.userName, 
                 avatar: conn.metadata.avatar,
@@ -1867,18 +1868,21 @@
             };
             state.peerInfo.set(newPeerId, newPeerInfo);
             
-            // NEW: Send initial chat/peer data first, then notes will be chunked.
-            const initialSyncData = {
+            // NEW: Using compressed sync
+            const syncData = {
+                notes: state.collaborationNotes,
                 chatLog: state.chatLog,
                 peerInfo: Object.fromEntries(state.peerInfo),
                 hostName: state.settings.userName,
-                videoWall: state.settings.videoWall,
-                totalNotes: state.collaborationNotes.length
+                videoWall: state.settings.videoWall
             };
 
+            const jsonString = JSON.stringify(syncData);
+            const compressedData = LZString.compressToUTF16(jsonString);
+
             conn.send({
-                type: 'initial_sync',
-                payload: initialSyncData
+                type: 'full_sync_compressed',
+                payload: compressedData
             });
 
             broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
@@ -1932,16 +1936,16 @@
 
     function handleHostAction(data, fromPeerId) {
         let broadcastPayload = null;
-        let isNoteAction = false; // Flag to see if this is a note-related action
-
         switch (data.type) {
             case 'request_add_note': {
                 if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = { type: 'add_note', note: data.note };
-                isNoteAction = true;
+                broadcastPayload = {
+                    type: 'add_note',
+                    note: data.note
+                };
                 break;
             }
             case 'request_update_note': {
@@ -1950,19 +1954,26 @@
                     state.collaborationNotes[noteIndex] = data.note;
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = { type: 'update_note', note: data.note };
-                isNoteAction = true;
+                broadcastPayload = {
+                    type: 'update_note',
+                    note: data.note
+                };
                 break;
             }
             case 'request_delete_note': {
                 state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
                 renderCollaborationNotesGrid();
-                broadcastPayload = { type: 'delete_note', noteId: data.noteId };
-                isNoteAction = true;
-                break;
+                broadcastPayload = {
+                    type: 'delete_note',
+                    noteId: data.noteId
+                };
+                break;   
             }
             case 'request_send_chat': {
-                broadcastPayload = { type: 'chat_message', ...data.payload };
+                broadcastPayload = {
+                    type: 'chat_message',
+                    ...data.payload
+                };
                 break;
             }
             case 'request_whiteboard_draw': {
@@ -1977,13 +1988,14 @@
                 broadcastPayload = { type: 'youtube_state_change', ...data.payload };
                 break;
             }
-            case 'request_whiteboard_history': {
+             case 'request_whiteboard_history': {
                 const conn = state.connections.get(fromPeerId);
                 if (conn && conn.open) {
                     conn.send({ type: 'whiteboard_history_sync', history: state.whiteboard.history });
                 }
                 break;
             }
+            // NEW: Handle cursor updates
             case 'request_cursor_update': {
                 broadcastPayload = { 
                     type: 'cursor_update', 
@@ -1994,49 +2006,18 @@
                 break;
             }
         }
-        
         if (broadcastPayload) {
-            // Broadcasting logic with queueing for syncing peers
-            broadcastPayload.from = state.peer.id;
-            for (const [peerId, conn] of state.connections.entries()) {
-                if (conn && conn.open) {
-                    // If it's a note action AND the peer is still syncing, queue the update
-                    if (isNoteAction && state.syncingPeers.has(peerId)) {
-                        if (!state.syncUpdateQueue.has(peerId)) {
-                            state.syncUpdateQueue.set(peerId, []);
-                        }
-                        state.syncUpdateQueue.get(peerId).push(broadcastPayload);
-                    } else {
-                        // Otherwise, send it immediately
-                        conn.send(broadcastPayload);
-                    }
-                }
+            handleReceivedData(broadcastPayload, fromPeerId);
+             if (broadcastPayload.type === 'whiteboard_draw' || broadcastPayload.type === 'whiteboard_clear') {
+                 if (broadcastPayload.type === 'whiteboard_clear') state.whiteboard.history = [];
+                 else state.whiteboard.history.push(broadcastPayload.data);
             }
-            
-            if (broadcastPayload.type === 'whiteboard_draw') {
-                 state.whiteboard.history.push(broadcastPayload.data);
-            } else if (broadcastPayload.type === 'whiteboard_clear') {
-                state.whiteboard.history = [];
-            }
+            broadcastToAllPeers(broadcastPayload);
         }
     }
 
     function handleReceivedData(data, fromPeerId) {
-        // Define which actions are handled by the host.
-        const hostActions = [
-            'request_add_note', 
-            'request_update_note', 
-            'request_delete_note',
-            'request_send_chat',
-            'request_whiteboard_draw',
-            'request_whiteboard_clear',
-            'request_youtube_state_change',
-            'request_whiteboard_history',
-            'request_cursor_update'
-        ];
-
-        // FIXED: Only route specific host actions, letting others (like request_note_chunk) pass through.
-        if (state.isHost && hostActions.includes(data.type)) {
+        if (state.isHost && data.type.startsWith('request_')) {
             handleHostAction(data, fromPeerId);
             return;
         }
@@ -2052,81 +2033,32 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-
-            case 'initial_sync': {
-                const syncData = data.payload;
-                state.chatLog = syncData.chatLog || [];
-                state.peerInfo = new Map(Object.entries(syncData.peerInfo || {}));
+            // NEW: Decompress the sync data
+            case 'full_sync_compressed': {
+                const decompressedString = LZString.decompressFromUTF16(data.payload);
+                if (!decompressedString) {
+                    showNotification('Failed to sync with session. Data was corrupted.', 'error');
+                    return;
+                }
+                const syncData = JSON.parse(decompressedString);
+                
+                state.collaborationNotes = syncData.notes;
+                state.chatLog = syncData.chatLog;
+                state.peerInfo = new Map(Object.entries(syncData.peerInfo));
                 if (syncData.videoWall) {
                     state.settings.videoWall = syncData.videoWall;
                     applyVideoWall();
                 }
+                renderCollaborationNotesGrid();
                 renderChatLog();
                 renderSessionInfo();
                 showView('collaboration');
                 DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
-                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}! Syncing notes...`, 'success');
+                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}!`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
-
-                if (syncData.totalNotes > 0) {
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send({ type: 'request_note_chunk', index: 0 });
-                    }
-                }
                 break;
             }
-
-            case 'request_note_chunk': {
-                if (!state.isHost) return;
-
-                const startIndex = data.index;
-                const notesChunk = state.collaborationNotes.slice(startIndex, startIndex + NOTE_CHUNK_SIZE);
-                const isLast = (startIndex + NOTE_CHUNK_SIZE) >= state.collaborationNotes.length;
-
-                const conn = state.connections.get(fromPeerId);
-                if (conn && conn.open) {
-                    conn.send({
-                        type: 'note_chunk_response',
-                        notes: notesChunk,
-                        index: startIndex,
-                        isLastChunk: isLast
-                    });
-
-                    if (isLast) {
-                        const queuedUpdates = state.syncUpdateQueue.get(fromPeerId);
-                        if (queuedUpdates && queuedUpdates.length > 0) {
-                            queuedUpdates.forEach(update => conn.send(update));
-                        }
-                        state.syncingPeers.delete(fromPeerId);
-                        state.syncUpdateQueue.delete(fromPeerId);
-                        console.log(`Peer ${fromPeerId} is now fully synced.`);
-                    }
-                }
-                break;
-            }
-
-            case 'note_chunk_response': {
-                data.notes.forEach(note => {
-                    if (!state.collaborationNotes.some(n => n.id === note.id)) {
-                        state.collaborationNotes.push(note);
-                    }
-                });
-                renderCollaborationNotesGrid();
-
-                if (!data.isLastChunk) {
-                    const nextIndex = data.index + NOTE_CHUNK_SIZE;
-                    const hostConn = state.connections.get(state.roomId);
-                    if (hostConn && hostConn.open) {
-                        hostConn.send({ type: 'request_note_chunk', index: nextIndex });
-                    }
-                } else {
-                    showNotification('All notes have been synced!', 'success');
-                }
-                break;
-            }
-
             case 'new_peer_announcement':
                 state.peerInfo.set(data.peerId, data.info);
                 renderSessionInfo();
@@ -2150,6 +2082,7 @@
                 renderCollaborationNotesGrid();
                 break;
             case 'peer_left':
+                // NEW: Remove cursor of the peer who left
                 const cursorEl = document.getElementById(`cursor-${data.peerId}`);
                 if (cursorEl) cursorEl.remove();
                 
@@ -2204,8 +2137,9 @@
                 data.history.forEach(drawData => drawOnCanvas(drawData));
                 state.whiteboard.history = data.history;
                 break;
+            // NEW: Handle incoming cursor updates
             case 'cursor_update':
-                if (data.from !== state.peer.id) {
+                if (data.from !== state.peer.id) { // Don't render our own cursor
                     renderRemoteCursor(data.from, data.noteId, data.selection);
                 }
                 break;
@@ -2554,12 +2488,10 @@
         if (!state.whiteboard.ctx) return;
         const canvas = DOMElements.whiteboardCanvas;
         
-        // Resize canvas to fit its container
         const parent = canvas.parentElement;
         canvas.width = parent.clientWidth;
         canvas.height = parent.clientHeight;
 
-        // Draw every action from history
         state.whiteboard.history.forEach(data => drawOnCanvas(data));
     }
 
@@ -2934,7 +2866,7 @@
         });
         
         DOMElements.whiteboardBtn.addEventListener('click', () => {
-            redrawWhiteboard(); // Redraw the canvas from history
+            redrawWhiteboard();
             openModal(DOMElements.whiteboardModal);
             DOMElements.collabActionsMenu.classList.add('hidden');
         });
