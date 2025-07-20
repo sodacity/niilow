@@ -191,6 +191,8 @@
             lastX: 0,
             lastY: 0,
         },
+        syncingPeers: new Set(),
+        syncUpdateQueue: new Map(),
     };
 
     const defaultSettings = {
@@ -212,7 +214,6 @@
         videoWall: '',
     };
     
-    // NEW: Variable for the long-press timer
     let touchTimer;
 
     let autoSaveTimeout = null;
@@ -1188,7 +1189,6 @@
     }
 
     function closeEditPane() {
-        // NEW: Clean up any remote cursors when closing a note
         document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
         clearTimeout(autoSaveTimeout);
         DOMElements.editNotePane.classList.remove('is-open');
@@ -1832,6 +1832,8 @@
             showNotification(`${peerInfo.name} has left the session.`, 'error');
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
+            state.syncingPeers.delete(peerId);
+            state.syncUpdateQueue.delete(peerId);
 
             const cursorEl = document.getElementById(`cursor-${peerId}`);
             if (cursorEl) {
@@ -1858,6 +1860,7 @@
 
         if (state.isHost) {
             const newPeerId = conn.metadata.peerId;
+            state.syncingPeers.add(newPeerId);
             const newPeerInfo = { 
                 name: conn.metadata.userName, 
                 avatar: conn.metadata.avatar,
@@ -1865,20 +1868,17 @@
             };
             state.peerInfo.set(newPeerId, newPeerInfo);
             
-            const syncData = {
-                notes: state.collaborationNotes,
+            const initialSyncData = {
                 chatLog: state.chatLog,
                 peerInfo: Object.fromEntries(state.peerInfo),
                 hostName: state.settings.userName,
-                videoWall: state.settings.videoWall
+                videoWall: state.settings.videoWall,
+                totalNotes: state.collaborationNotes.length
             };
 
-            const jsonString = JSON.stringify(syncData);
-            const compressedData = LZString.compressToUint8Array(jsonString);
-
             conn.send({
-                type: 'full_sync_binary',
-                payload: compressedData
+                type: 'initial_sync',
+                payload: initialSyncData
             });
 
             broadcastToAllPeers({ type: 'new_peer_announcement', peerId: newPeerId, info: newPeerInfo }, [newPeerId]);
@@ -1932,16 +1932,16 @@
 
     function handleHostAction(data, fromPeerId) {
         let broadcastPayload = null;
+        let isNoteAction = false;
+
         switch (data.type) {
             case 'request_add_note': {
                 if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
                     state.collaborationNotes.push(data.note);
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = {
-                    type: 'add_note',
-                    note: data.note
-                };
+                broadcastPayload = { type: 'add_note', note: data.note };
+                isNoteAction = true;
                 break;
             }
             case 'request_update_note': {
@@ -1950,26 +1950,19 @@
                     state.collaborationNotes[noteIndex] = data.note;
                     renderCollaborationNotesGrid();
                 }
-                broadcastPayload = {
-                    type: 'update_note',
-                    note: data.note
-                };
+                broadcastPayload = { type: 'update_note', note: data.note };
+                isNoteAction = true;
                 break;
             }
             case 'request_delete_note': {
                 state.collaborationNotes = state.collaborationNotes.filter(n => n.id !== data.noteId);
                 renderCollaborationNotesGrid();
-                broadcastPayload = {
-                    type: 'delete_note',
-                    noteId: data.noteId
-                };
-                break;   
+                broadcastPayload = { type: 'delete_note', noteId: data.noteId };
+                isNoteAction = true;
+                break;
             }
             case 'request_send_chat': {
-                broadcastPayload = {
-                    type: 'chat_message',
-                    ...data.payload
-                };
+                broadcastPayload = { type: 'chat_message', ...data.payload };
                 break;
             }
             case 'request_whiteboard_draw': {
@@ -1984,7 +1977,7 @@
                 broadcastPayload = { type: 'youtube_state_change', ...data.payload };
                 break;
             }
-             case 'request_whiteboard_history': {
+            case 'request_whiteboard_history': {
                 const conn = state.connections.get(fromPeerId);
                 if (conn && conn.open) {
                     conn.send({ type: 'whiteboard_history_sync', history: state.whiteboard.history });
@@ -2001,18 +1994,45 @@
                 break;
             }
         }
+        
         if (broadcastPayload) {
-            handleReceivedData(broadcastPayload, fromPeerId);
-             if (broadcastPayload.type === 'whiteboard_draw' || broadcastPayload.type === 'whiteboard_clear') {
-                 if (broadcastPayload.type === 'whiteboard_clear') state.whiteboard.history = [];
-                 else state.whiteboard.history.push(broadcastPayload.data);
+            broadcastPayload.from = state.peer.id;
+            for (const [peerId, conn] of state.connections.entries()) {
+                if (conn && conn.open) {
+                    if (isNoteAction && state.syncingPeers.has(peerId)) {
+                        if (!state.syncUpdateQueue.has(peerId)) {
+                            state.syncUpdateQueue.set(peerId, []);
+                        }
+                        state.syncUpdateQueue.get(peerId).push(broadcastPayload);
+                    } else {
+                        conn.send(broadcastPayload);
+                    }
+                }
             }
-            broadcastToAllPeers(broadcastPayload);
+            
+            if (broadcastPayload.type === 'whiteboard_draw') {
+                 state.whiteboard.history.push(broadcastPayload.data);
+            } else if (broadcastPayload.type === 'whiteboard_clear') {
+                state.whiteboard.history = [];
+            }
         }
     }
 
     function handleReceivedData(data, fromPeerId) {
-        if (state.isHost && data.type.startsWith('request_')) {
+        const hostActions = [
+            'request_add_note', 
+            'request_update_note', 
+            'request_delete_note',
+            'request_send_chat',
+            'request_whiteboard_draw',
+            'request_whiteboard_clear',
+            'request_youtube_state_change',
+            'request_whiteboard_history',
+            'request_cursor_update',
+            'request_notes'
+        ];
+
+        if (state.isHost && hostActions.includes(data.type)) {
             handleHostAction(data, fromPeerId);
             return;
         }
@@ -2028,29 +2048,39 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-            case 'full_sync_binary': {
-                const decompressedString = LZString.decompressFromUint8Array(data.payload);
-                if (!decompressedString) {
-                    showNotification('Failed to sync with session. Data was corrupted.', 'error');
-                    return;
-                }
-                const syncData = JSON.parse(decompressedString);
-                
-                state.collaborationNotes = syncData.notes;
-                state.chatLog = syncData.chatLog;
-                state.peerInfo = new Map(Object.entries(syncData.peerInfo));
+            case 'initial_sync': {
+                const syncData = data.payload;
+                state.chatLog = syncData.chatLog || [];
+                state.peerInfo = new Map(Object.entries(syncData.peerInfo || {}));
                 if (syncData.videoWall) {
                     state.settings.videoWall = syncData.videoWall;
                     applyVideoWall();
                 }
-                renderCollaborationNotesGrid();
                 renderChatLog();
                 renderSessionInfo();
                 showView('collaboration');
                 DOMElements.loadingOverlay.classList.add('hidden');
                 DOMElements.mainContent.style.paddingBottom = '60px';
-                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}!`, 'success');
+                showNotification(`Joined session hosted by ${syncData.hostName || 'Host'}! Syncing notes...`, 'success');
                 playSound('https://www.niilow.com/join.mp3');
+
+                if (syncData.totalNotes > 0) {
+                    const hostConn = state.connections.get(state.roomId);
+                    if (hostConn && hostConn.open) {
+                        hostConn.send({ type: 'request_notes' });
+                    }
+                }
+                break;
+            }
+            case 'sync_note': {
+                if (!state.collaborationNotes.some(n => n.id === data.note.id)) {
+                    state.collaborationNotes.push(data.note);
+                }
+                renderCollaborationNotesGrid();
+                break;
+            }
+            case 'sync_complete': {
+                showNotification('All notes have been synced!', 'success');
                 break;
             }
             case 'new_peer_announcement':
@@ -2298,7 +2328,6 @@
         DOMElements.chatLogMessages.scrollTop = DOMElements.chatLogMessages.scrollHeight;
     }
     
-    // --- NEW: Function to render remote cursors ---
     function renderRemoteCursor(peerId, noteId, selection) {
         if (noteId !== state.currentNoteId || !DOMElements.editNotePane.classList.contains('is-open')) {
              const cursorEl = document.getElementById(`cursor-${peerId}`);
@@ -2316,7 +2345,7 @@
             cursorEl.className = 'remote-cursor';
             cursorEl.dataset.name = peerInfo.name;
             cursorEl.style.backgroundColor = peerInfo.color;
-            cursorEl.style.setProperty('--cursor-color', peerInfo.color); // For pseudo-element
+            cursorEl.style.setProperty('--cursor-color', peerInfo.color);
             editor.parentElement.appendChild(cursorEl);
         }
         
@@ -2629,15 +2658,12 @@
         closeModal(DOMElements.importLocalNoteModal);
     }
     
-    // NEW: Function to show the image download menu
     function showImageContextMenu(imageElement, x, y) {
-        // Remove any old menu first
         const existingMenu = document.getElementById('image-context-menu');
         if (existingMenu) {
             existingMenu.remove();
         }
 
-        // Create the menu
         const menu = document.createElement('div');
         menu.id = 'image-context-menu';
         menu.style.left = `${x}px`;
