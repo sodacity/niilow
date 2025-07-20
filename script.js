@@ -1652,7 +1652,6 @@
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 { urls: 'stun:stun2.l.google.com:19302' },
-                // We can add a free TURN server here later if we find one
               ]
             }
         });
@@ -1665,7 +1664,6 @@
             state.peerInfo.set(myPeerId, {
                 name: state.settings.userName,
                 avatar: state.settings.userAvatar,
-                // NEW: Add a color for the user's cursor
                 color: `#${Math.floor(Math.random()*16777215).toString(16)}`
             });
 
@@ -1835,7 +1833,6 @@
             state.connections.delete(peerId);
             state.peerInfo.delete(peerId);
 
-            // NEW: Remove the cursor of the user who left
             const cursorEl = document.getElementById(`cursor-${peerId}`);
             if (cursorEl) {
                 cursorEl.remove();
@@ -1868,7 +1865,6 @@
             };
             state.peerInfo.set(newPeerId, newPeerInfo);
             
-            // NEW: Using compressed sync
             const syncData = {
                 notes: state.collaborationNotes,
                 chatLog: state.chatLog,
@@ -1878,10 +1874,10 @@
             };
 
             const jsonString = JSON.stringify(syncData);
-            const compressedData = LZString.compressToUTF16(jsonString);
+            const compressedData = LZString.compressToUint8Array(jsonString);
 
             conn.send({
-                type: 'full_sync_compressed',
+                type: 'full_sync_binary',
                 payload: compressedData
             });
 
@@ -1995,7 +1991,6 @@
                 }
                 break;
             }
-            // NEW: Handle cursor updates
             case 'request_cursor_update': {
                 broadcastPayload = { 
                     type: 'cursor_update', 
@@ -2033,9 +2028,8 @@
             case 'password_accepted':
                 showNotification('Password accepted!', 'success');
                 break;
-            // NEW: Decompress the sync data
-            case 'full_sync_compressed': {
-                const decompressedString = LZString.decompressFromUTF16(data.payload);
+            case 'full_sync_binary': {
+                const decompressedString = LZString.decompressFromUint8Array(data.payload);
                 if (!decompressedString) {
                     showNotification('Failed to sync with session. Data was corrupted.', 'error');
                     return;
@@ -2082,7 +2076,6 @@
                 renderCollaborationNotesGrid();
                 break;
             case 'peer_left':
-                // NEW: Remove cursor of the peer who left
                 const cursorEl = document.getElementById(`cursor-${data.peerId}`);
                 if (cursorEl) cursorEl.remove();
                 
@@ -2137,9 +2130,8 @@
                 data.history.forEach(drawData => drawOnCanvas(drawData));
                 state.whiteboard.history = data.history;
                 break;
-            // NEW: Handle incoming cursor updates
             case 'cursor_update':
-                if (data.from !== state.peer.id) { // Don't render our own cursor
+                if (data.from !== state.peer.id) {
                     renderRemoteCursor(data.from, data.noteId, data.selection);
                 }
                 break;
@@ -2483,7 +2475,7 @@
         const live = state.whiteboard.activeUsers.size > 0;
         DOMElements.whiteboardBtn.classList.toggle('is-live', live);
     }
-    
+
     function redrawWhiteboard() {
         if (!state.whiteboard.ctx) return;
         const canvas = DOMElements.whiteboardCanvas;
@@ -2494,7 +2486,7 @@
 
         state.whiteboard.history.forEach(data => drawOnCanvas(data));
     }
-
+    
     function initWhiteboard() {
         const canvas = DOMElements.whiteboardCanvas;
         const ctx = canvas.getContext('2d');
@@ -2704,7 +2696,6 @@
         DOMElements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
         DOMElements.archiveNoteBtn.addEventListener('click', handleArchiveNote);
         
-        // NEW: Event listeners for live cursors
         const editEditor = DOMElements.editNoteEditor;
         const broadcastSelection = () => {
             if (!state.peer || !state.currentNoteId || document.activeElement !== editEditor) return;
@@ -2714,7 +2705,6 @@
 
             const range = selection.getRangeAt(0);
             
-            // To get character offset, we create a temporary range from the start of the editor
             const preSelectionRange = document.createRange();
             preSelectionRange.selectNodeContents(editEditor);
             preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -2779,7 +2769,6 @@
                 !DOMElements.collabActionsBtn.contains(e.target)) {
                 DOMElements.collabActionsMenu.classList.add('hidden');
             }
-             // NEW: Close image context menu on any click
             const existingMenu = document.getElementById('image-context-menu');
             if (existingMenu) {
                 existingMenu.remove();
@@ -3057,7 +3046,6 @@
                 }
             });
 
-            // NEW: Listeners for image downloads (right-click and long-press)
             editor.addEventListener('contextmenu', (e) => {
                 if (e.target.tagName === 'IMG') {
                     e.preventDefault();
