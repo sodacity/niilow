@@ -1758,7 +1758,8 @@
                 state.peer = tempPeer; // Promote the temp peer to the main peer
                 state.roomId = roomId;
                 state.isHost = false;
-                setupConnection(conn);
+                // Bypassing the host-centric setup and going straight to establishing the connection
+                establishConnection(conn); 
             });
     
             // Set a timeout. If we can't connect in 4 seconds, assume the room is empty.
@@ -1998,7 +1999,15 @@
                 break;
             }
             case 'request_send_chat': {
-                broadcastPayload = { type: 'chat_message', ...data.payload };
+                const chatData = { type: 'chat_message', ...data.payload };
+                // Process the message locally for the host
+                if (!state.chatLog.some(msg => msg.id === chatData.id)) {
+                    state.chatLog.push(chatData);
+                    renderChatLog();
+                    displayChatBubble(chatData);
+                }
+                // Set it as the payload to be broadcast to clients
+                broadcastPayload = chatData;
                 break;
             }
             case 'request_whiteboard_draw': {
