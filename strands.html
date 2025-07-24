@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Player Strands</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden; /* Prevent scrollbars from the main layout */
+        }
+        .grid-cell {
+            transition: all 0.2s ease-in-out;
+        }
+        .selected {
+            background-color: #60a5fa; /* A nice blue for selection */
+            color: white;
+            transform: scale(1.1);
+        }
+        .found {
+            background-color: #4ade80; /* A vibrant green for found words */
+            color: white;
+        }
+        .spangram {
+            background-color: #facc15; /* A bright yellow for the spangram */
+            color: #422006;
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+        #message-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+        #message-box.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="w-full max-w-7xl mx-auto">
+        <h1 class="text-4xl font-bold text-center mb-2 text-blue-400">Strands Showdown</h1>
+        <p class="text-center text-gray-400 mb-6">Create a room or join a friend's to start the challenge!</p>
+        
+        <div id="game-setup" class="flex flex-col items-center justify-center space-y-4">
+             <input id="room-name-input" type="text" placeholder="Enter a Room Name" class="w-full max-w-sm p-3 bg-gray-800 border border-gray-700 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+             <div class="flex space-x-4">
+                <button id="create-room-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105">Create Room</button>
+                <button id="join-room-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105">Join Room</button>
+             </div>
+        </div>
+
+        <div id="game-area" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Player 1 Board -->
+            <div id="player1-container" class="w-full p-6 bg-gray-800 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-bold text-center mb-1">You (<span id="player1-id" class="font-mono text-sm"></span>)</h2>
+                <p class="text-center text-blue-300 font-semibold text-xl mb-4">Theme: <span id="player1-theme"></span></p>
+                 <div id="player1-grid" class="grid grid-cols-6 gap-2 aspect-square select-none"></div>
+                 <div class="mt-4">
+                    <h3 class="font-semibold text-lg">Words Found: <span id="player1-found-count">0</span> / <span id="player1-total-words">0</span></h3>
+                    <div id="player1-found-words" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+            </div>
+
+            <!-- Player 2 Board -->
+            <div id="player2-container" class="w-full p-6 bg-gray-800 rounded-2xl shadow-lg">
+                <!-- Content will be dynamically set to waiting message or opponent board -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Win/Loss Modal -->
+    <div id="result-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-gray-900">
+            <h2 id="result-title" class="text-3xl font-bold mb-4"></h2>
+            <p id="result-message" class="text-lg mb-6"></p>
+            <button id="play-again-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Custom Message Box -->
+    <div id="message-box"></div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- THEMES ---
+        const themes = [
+            { theme: "ON THE KEYBOARD", words: ["SHIFT", "SPACE", "ENTER", "DELETE", "CAPS", "TAB", "CONTROL"], spangram: "FUNCTIONKEYS" },
+            { theme: "FEELING BLUE", words: ["SAD", "SKY", "OCEAN", "JEANS", "BERRY", "SAPPHIRE"], spangram: "DEPRESSION" },
+            { theme: "IN THE KITCHEN", words: ["SINK", "STOVE", "OVEN", "KNIFE", "PAN", "POT", "FORK"], spangram: "APPLIANCES" },
+            { theme: "HOT STUFF", words: ["SUN", "FIRE", "LAVA", "CHILI", "SAUNA", "PEPPER"], spangram: "TEMPERATURE" },
+            { theme: "COLD THINGS", words: ["ICE", "SNOW", "WINTER", "POPSICLE", "FRIDGE", "FREEZER"], spangram: "ANTARCTICA" },
+            { theme: "FRUITS", words: ["APPLE", "BANANA", "CHERRY", "GRAPE", "LEMON", "ORANGE"], spangram: "STRAWBERRY" },
+            { theme: "PLANETS", words: ["MARS", "EARTH", "VENUS", "JUPITER", "SATURN", "NEPTUNE"], spangram: "SOLARSYSTEM" },
+        ];
+
+        // --- FIREBASE SETUP ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "your-fallback-api-key", authDomain: "your-fallback-auth-domain", projectId: "your-fallback-project-id" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-strands-app';
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId;
+        let gameId;
+        let gameUnsubscribe;
+        
+        // --- DOM ELEMENTS ---
+        const roomNameInput = document.getElementById('room-name-input');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const gameSetupEl = document.getElementById('game-setup');
+        const gameAreaEl = document.getElementById('game-area');
+        const resultModal = document.getElementById('result-modal');
+        const resultTitle = document.getElementById('result-title');
+        const resultMessage = document.getElementById('result-message');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const messageBox = document.getElementById('message-box');
+
+        // --- GAME STATE ---
+        let isSelecting = false;
+        let selectedCells = [];
+
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+            } else {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                    showMessage("Could not connect to the server.");
+                }
+            }
+        });
+
+        // --- CUSTOM MESSAGE FUNCTION ---
+        function showMessage(msg, isError = true) {
+            messageBox.textContent = msg;
+            messageBox.style.backgroundColor = isError ? '#ef4444' : '#22c55e';
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- GAME LOGIC ---
+        createRoomBtn.addEventListener('click', async () => {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showMessage('Please enter a room name.');
+                return;
+            }
+            gameId = roomName;
+            
+            const gameRef = doc(db, `artifacts/${appId}/public/data/strands`, gameId);
+            const gameSnap = await getDoc(gameRef);
+
+            if (gameSnap.exists()) {
+                showMessage('This room name is already taken. Try another.');
+                return;
+            }
+            
+            const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+            const board = generateBoard(randomTheme);
+            
+            await setDoc(gameRef, {
+                players: { [userId]: { foundWords: [] } },
+                theme: randomTheme.theme,
+                words: randomTheme.words,
+                spangram: randomTheme.spangram,
+                board: board,
+                winner: null,
+                createdAt: new Date()
+            });
+            
+            joinGame(gameId);
+        });
+
+        joinRoomBtn.addEventListener('click', async () => {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showMessage('Please enter a room name to join.');
+                return;
+            }
+            gameId = roomName;
+
+            const gameRef = doc(db, `artifacts/${appId}/public/data/strands`, gameId);
+            const gameSnap = await getDoc(gameRef);
+
+            if (!gameSnap.exists()) {
+                showMessage('Room not found. Check the name and try again.');
+                return;
+            }
+
+            const gameData = gameSnap.data();
+            const players = gameData.players || {};
+            const playerCount = Object.keys(players).length;
+
+            if (playerCount >= 2 && !players[userId]) {
+                showMessage('This room is already full.');
+                return;
+            }
+
+            if (!players[userId]) {
+                 await updateDoc(gameRef, {
+                    [`players.${userId}`]: { foundWords: [] }
+                });
+            }
+
+            joinGame(gameId);
+        });
+
+        function joinGame(gId) {
+            gameId = gId;
+            gameSetupEl.classList.add('hidden');
+            gameAreaEl.classList.remove('hidden');
+            
+            if(gameUnsubscribe) gameUnsubscribe();
+            
+            gameUnsubscribe = onSnapshot(doc(db, `artifacts/${appId}/public/data/strands`, gId), (doc) => {
+                const gameData = doc.data();
+                if (!gameData) return;
+                updateUI(gameData);
+            });
+        }
+
+        function updateUI(gameData) {
+            const playerIds = Object.keys(gameData.players);
+            const opponentId = playerIds.find(id => id !== userId);
+            const myData = gameData.players[userId];
+
+            // My Board
+            document.getElementById('player1-id').textContent = userId.substring(0, 8);
+            document.getElementById('player1-theme').textContent = gameData.theme;
+            renderGrid('player1-grid', gameData.board, myData.foundWords, gameData.spangram, true);
+            document.getElementById('player1-found-count').textContent = myData.foundWords.length;
+            document.getElementById('player1-total-words').textContent = gameData.words.length + 1;
+            renderFoundWords('player1-found-words', myData.foundWords, gameData.spangram);
+            
+            // Opponent's Board
+            const player2Container = document.getElementById('player2-container');
+            if (opponentId && gameData.players[opponentId]) {
+                const opponentData = gameData.players[opponentId];
+                player2Container.innerHTML = `
+                    <h2 class="text-2xl font-bold text-center mb-1">Opponent (<span class="font-mono text-sm">${opponentId.substring(0,8)}</span>)</h2>
+                    <p class="text-center text-purple-300 font-semibold text-xl mb-4">Theme: <span>${gameData.theme}</span></p>
+                    <div id="player2-grid" class="grid grid-cols-6 gap-2 aspect-square"></div>
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-lg">Words Found: <span id="player2-found-count">${opponentData.foundWords.length}</span> / <span>${gameData.words.length + 1}</span></h3>
+                        <div id="player2-found-words" class="flex flex-wrap gap-2 mt-2"></div>
+                    </div>
+                `;
+                renderGrid('player2-grid', gameData.board, opponentData.foundWords, gameData.spangram, false);
+                renderFoundWords('player2-found-words', opponentData.foundWords, gameData.spangram);
+            } else {
+                 player2Container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 border-2 border-dashed border-gray-700 rounded-2xl">
+                        <h2 class="text-2xl font-bold">Waiting for Opponent...</h2>
+                        <p class="mt-2">Share the room name:</p>
+                        <p class="font-mono text-yellow-300 text-lg bg-gray-700 px-3 py-1 rounded mt-1">${gameId}</p>
+                    </div>`;
+            }
+            
+            // Check for winner
+            if(gameData.winner && !resultModal.classList.contains('show')) {
+                showResultModal(gameData.winner === userId);
+            }
+        }
+
+        function renderGrid(containerId, board, foundWords, spangram, isInteractive) {
+            const gridContainer = document.getElementById(containerId);
+            if (!gridContainer) return;
+            gridContainer.innerHTML = '';
+
+            // Create a map of cell coordinates to the word they belong to
+            const cellWordMap = {};
+            // This part is complex and requires storing word paths. For now, we'll color based on the foundWords list.
+            // A full implementation would pre-calculate and store paths for each word in the board data.
+
+            board.flat().forEach((cellData) => {
+                const cell = document.createElement('div');
+                cell.textContent = cellData.letter;
+                cell.dataset.row = cellData.row;
+                cell.dataset.col = cellData.col;
+                cell.className = 'grid-cell w-full h-full flex items-center justify-center text-xl lg:text-2xl font-bold bg-gray-700 rounded-lg';
+
+                // Simple coloring for now. This won't color individual cells of found words yet.
+                // That requires storing word paths, which is a big logic change.
+                // We will color the found words in the list below the grid.
+                
+                if (isInteractive) {
+                    cell.addEventListener('mousedown', handleMouseDown);
+                    cell.addEventListener('mouseover', handleMouseOver);
+                    cell.addEventListener('touchstart', (e) => { e.preventDefault(); handleMouseDown(e.touches[0]); });
+                    cell.addEventListener('touchmove', (e) => { 
+                        e.preventDefault(); 
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        if (element && element.classList.contains('grid-cell')) {
+                            handleMouseOver({target: element});
+                        }
+                    });
+                }
+                gridContainer.appendChild(cell);
+            });
+
+            if (isInteractive) {
+                 document.body.addEventListener('mouseup', handleMouseUp);
+                 document.body.addEventListener('touchend', handleMouseUp);
+            }
+        }
+
+        function renderFoundWords(containerId, words, spangram) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.innerHTML = '';
+            words.forEach(word => {
+                const wordEl = document.createElement('span');
+                wordEl.textContent = word;
+                const isSpangram = word === spangram;
+                wordEl.className = `text-white px-3 py-1 rounded-full text-sm font-semibold ${isSpangram ? 'bg-yellow-500' : 'bg-blue-500'}`;
+                container.appendChild(wordEl);
+            });
+        }
+
+        function handleMouseDown(e) {
+            const target = e.target || document.elementFromPoint(e.clientX, e.clientY);
+            if (!target || !target.classList.contains('grid-cell')) return;
+            isSelecting = true;
+            selectedCells = [target];
+            target.classList.add('selected');
+        }
+
+        function handleMouseOver(e) {
+            const target = e.target;
+            if (isSelecting && !selectedCells.includes(target)) {
+                // Add adjacency check for real Strands feel
+                const lastCell = selectedCells[selectedCells.length - 1];
+                const lastRow = parseInt(lastCell.dataset.row);
+                const lastCol = parseInt(lastCell.dataset.col);
+                const currentRow = parseInt(target.dataset.row);
+                const currentCol = parseInt(target.dataset.col);
+
+                if (Math.abs(lastRow - currentRow) <= 1 && Math.abs(lastCol - currentCol) <= 1) {
+                    selectedCells.push(target);
+                    target.classList.add('selected');
+                }
+            }
+        }
+
+        async function handleMouseUp() {
+            if (!isSelecting) return;
+            isSelecting = false;
+            const selectedWord = selectedCells.map(cell => cell.textContent).join('');
+            
+            const gameRef = doc(db, `artifacts/${appId}/public/data/strands`, gameId);
+            const gameSnap = await getDoc(gameRef);
+            const gameData = gameSnap.data();
+
+            const allThemeWords = [...gameData.words, gameData.spangram];
+            const myData = gameData.players[userId];
+
+            if (allThemeWords.includes(selectedWord) && !myData.foundWords.includes(selectedWord)) {
+                const newFoundWords = [...myData.foundWords, selectedWord];
+                const updatePayload = { [`players.${userId}.foundWords`]: newFoundWords };
+                
+                if (newFoundWords.length === allThemeWords.length && !gameData.winner) {
+                    updatePayload.winner = userId;
+                }
+                await updateDoc(gameRef, updatePayload);
+
+            } else if (selectedWord.length > 0) {
+                const grid = document.getElementById('player1-grid');
+                grid.classList.add('shake');
+                setTimeout(() => grid.classList.remove('shake'), 500);
+            }
+
+            selec
