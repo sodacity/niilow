@@ -58,6 +58,12 @@
         .cell.selected { background-color: var(--selected-bg) !important; color: white; }
         .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
         
+        .score-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
         .bonus-word-area { margin-top: 1rem; width: 100%; max-width: 400px; text-align: center; }
         .bonus-word-list { list-style: none; padding: 0; margin: 0; column-count: 2; }
         .bonus-word-list li { padding: 4px; font-weight: 600; color: var(--bonus-word-color); }
@@ -81,14 +87,13 @@
 
     <div id="game-area">
         <div id="game-info">
-            <div id="my-score-display">Score: 0</div>
             <div id="timer-display">Time: 2:00</div>
-            <div id="opponent-score-display">Opponent: 0</div>
         </div>
         <div id="game-container">
             <div class="player-area" id="player1-area">
                 <h2>You</h2>
                 <div class="board" id="board-p1"></div>
+                <div class="score-display" id="score-p1">Score: 0</div>
                 <div class="bonus-word-area">
                     <h3>Bonus Words Found:</h3>
                     <ul class="bonus-word-list" id="bonus-words-p1"></ul>
@@ -97,6 +102,7 @@
             <div class="player-area" id="player2-area">
                 <h2>Opponent</h2>
                 <div class="board" id="board-p2"></div>
+                <div class="score-display" id="score-p2">Score: 0</div>
                  <div class="bonus-word-area">
                     <h3>Bonus Words Found:</h3>
                     <ul class="bonus-word-list" id="bonus-words-p2"></ul>
@@ -125,21 +131,27 @@
         const gameAreaEl = document.getElementById('game-area');
         const newGameBtn = document.getElementById('new-game-btn');
         const timerDisplay = document.getElementById('timer-display');
-        const myScoreDisplay = document.getElementById('my-score-display');
-        const opponentScoreDisplay = document.getElementById('opponent-score-display');
-
+        
         class Player {
             constructor(id, isLocal) {
                 this.id = id;
                 this.isLocal = isLocal;
                 this.boardEl = document.getElementById(`board-p${id}`);
+                this.scoreEl = document.getElementById(`score-p${id}`);
                 this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
                 this.areaEl = document.getElementById(`player${id}-area`);
                 
                 this.score = 0;
                 this.foundWords = new Set();
-                this.isSelecting = false;
+                this.isDragging = false;
                 this.selectedCells = [];
+
+                if (isLocal) {
+                    this.boardEl.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                    this.boardEl.addEventListener('mouseover', (e) => this.handleMouseOver(e));
+                    // Add global mouseup to handle ending a drag anywhere
+                    document.addEventListener('mouseup', () => this.handleMouseUp());
+                }
             }
 
             reset() {
@@ -174,8 +186,7 @@
             
             updateScore(newScore) {
                 this.score = newScore;
-                if(this.isLocal) myScoreDisplay.textContent = `Score: ${this.score}`;
-                else opponentScoreDisplay.textContent = `Opponent: ${this.score}`;
+                this.scoreEl.textContent = `Score: ${this.score}`;
             }
 
             addBonusWord(word) {
@@ -185,35 +196,51 @@
             }
 
             // --- LOCAL PLAYER ONLY METHODS ---
-            startSelection(e) {
+            handleMouseDown(e) {
                 if (gameTimer <= 0 || !e.target.classList.contains('cell')) return;
-                this.isSelecting = true;
-                this.selectedCells = [];
-                this.addCellToSelection(e.target);
+                this.isDragging = true;
+                // A new mousedown always starts a new word.
+                this.clearSelection(); 
+                this.toggleCellSelection(e.target);
             }
 
-            continueSelection(e) {
-                if (!this.isSelecting || !e.target.classList.contains('cell')) return;
-                this.addCellToSelection(e.target);
+            handleMouseOver(e) {
+                if (!this.isDragging || !e.target.classList.contains('cell')) return;
+                this.toggleCellSelection(e.target);
+            }
+
+            handleMouseUp() {
+                if (!this.isDragging) return;
+                this.isDragging = false;
+                this.submitWord();
             }
             
-            addCellToSelection(cellEl) {
-                if (this.selectedCells.includes(cellEl)) return;
+            toggleCellSelection(cellEl) {
+                if (this.selectedCells.includes(cellEl)) return; // Don't re-select
                 this.selectedCells.push(cellEl);
                 cellEl.classList.add('selected');
-                conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
+                this.sendSelectionUpdate();
             }
 
-            endSelection() {
-                if (!this.isSelecting) return;
-                this.isSelecting = false;
-                conn.send({ type: 'selection_end' });
+            clearSelection() {
+                this.selectedCells.forEach(cell => cell.classList.remove('selected'));
+                this.selectedCells = [];
+                this.sendSelectionUpdate();
+            }
+            
+            sendSelectionUpdate() {
+                 conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
+            }
+
+            submitWord() {
+                if (this.selectedCells.length === 0) return;
 
                 const selectedWord = this.selectedCells.map(c => c.textContent).join('');
-                this.selectedCells.forEach(cell => cell.classList.remove('selected'));
-                
                 this.validateAndScoreWord(selectedWord);
                 this.validateAndScoreWord(selectedWord.split('').reverse().join(''));
+                
+                // Clear selection after submitting
+                this.clearSelection();
             }
 
             validateAndScoreWord(word) {
@@ -242,13 +269,9 @@
                     if (cell) cell.classList.add('opponent-selecting');
                 });
             }
-
-            clearOpponentSelection() {
-                this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
-            }
         }
         
-        // --- WEBRTC LOGIC (omitted for brevity, same as before) ---
+        // --- WEBRTC LOGIC ---
         function initializePeer(host, roomName) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
@@ -296,9 +319,6 @@
                     case 'selection_update':
                         opponentPlayer.updateOpponentSelection(data.path);
                         break;
-                    case 'selection_end':
-                        opponentPlayer.clearOpponentSelection();
-                        break;
                     case 'word_found':
                         opponentPlayer.updateScore(data.newScore);
                         if (data.isBonus) {
@@ -324,7 +344,7 @@
             for (const word of targetWords) {
                 let placed = false;
                 for (let i = 0; i < 200 && !placed; i++) {
-                    const dir = Math.floor(Math.random() * 4); // 0:h, 1:v, 2:d-down-right, 3:d-down-left
+                    const dir = Math.floor(Math.random() * 4);
                     const wordToPlace = word;
                     
                     let r, c, canPlace = true;
@@ -350,7 +370,7 @@
                            break;
                         case 3: // diagonal down-left
                            r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
-                           c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)) + (word.length -1);
+                           c = Math.floor(Math.random() * (word.length -1));
                            for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j];
                            break;
@@ -406,7 +426,6 @@
             myOverlay.textContent = myText;
             myPlayer.areaEl.appendChild(myOverlay);
             
-            // Show opponent result based on my result
             const opponentOverlay = document.createElement('div');
             opponentOverlay.className = `result-overlay ${myResult === 'winner' ? 'loser' : myResult === 'loser' ? 'winner' : 'draw'}`;
             opponentOverlay.textContent = `${myResult === 'winner' ? 'SO CLOSE!' : myResult === 'loser' ? 'WINNER!' : 'DRAW!'}`;
