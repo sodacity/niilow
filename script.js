@@ -1698,26 +1698,23 @@
             setupConnection(conn);
         });
 
+        // The new, simpler error handler
         state.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
             DOMElements.loadingOverlay.classList.add('hidden');
             
-            if (err.type === 'unavailable-id' && state.isHost) {
-                if (state.peer) state.peer.destroy();
-                state.isHost = false; 
-                initPeer(); 
-                return;
-            }
-
-            let message = `Connection error: ${err.type}`;
-            if (err.type === 'peer-unavailable') {
-                message = `Channel "${state.roomId}" could not be found. Check the name and try again.`
+            let message = `A connection error occurred: ${err.type}`;
+            if (err.type === 'peer-unavailable' || err.type === 'unavailable-id') {
+                message = `Could not connect to channel "${state.roomId}". It may be unavailable.`;
             } else if (err.type === 'network') {
                 message = 'Network error. Please check your connection.';
             } else if (err.type === 'disconnected') {
-                leaveSession();
+                // This can sometimes fire on session leave, so we can ignore it or handle cleanly
+                console.log('Peer disconnected.');
+                return; 
             }
             showNotification(message, 'error');
+            leaveSession(); // Cleanly leave the session on critical errors
         });
     }
 
@@ -1725,16 +1722,55 @@
         DOMElements.loadingOverlay.classList.remove('hidden');
         const roomId = roomIdFromUrl || DOMElements.customRoomIdInput.value.trim();
         if (!roomId) {
-            showNotification("Please enter a room name to join.", "error");
+            showNotification("Please enter a room name.", "error");
             DOMElements.loadingOverlay.classList.add('hidden');
             return;
         };
         closeModal(DOMElements.collaborationStartModal);
         
-        state.isSecureSession = !!(new URL(window.location.href).searchParams.get('secure'));
-        state.isHost = true;
-        state.roomId = roomId;
-        initPeer();
+        // This is a temporary peer to test the connection
+        const tempPeer = new Peer(); 
+        let connectionTimeout;
+    
+        const assumeHostRole = () => {
+            clearTimeout(connectionTimeout);
+            tempPeer.destroy();
+            state.isHost = true;
+            state.roomId = roomId;
+            initPeer(); // Re-initialize as the actual host
+        };
+    
+        tempPeer.on('open', () => {
+            // Temporary peer is ready, now try to connect to the desired room
+            const conn = tempPeer.connect(roomId, {
+                metadata: {
+                    userName: state.settings.userName,
+                    peerId: tempPeer.id,
+                    avatar: state.settings.userAvatar
+                },
+                reliable: true
+            });
+    
+            conn.on('open', () => {
+                // SUCCESS! The room exists and we connected.
+                clearTimeout(connectionTimeout);
+                console.log('Successfully connected to existing session.');
+                state.peer = tempPeer; // Promote the temp peer to the main peer
+                state.roomId = roomId;
+                state.isHost = false;
+                setupConnection(conn);
+            });
+    
+            // Set a timeout. If we can't connect in 4 seconds, assume the room is empty.
+            connectionTimeout = setTimeout(assumeHostRole, 4000);
+        });
+    
+        tempPeer.on('error', (err) => {
+            // If the peer is unavailable, we know for sure the room is empty.
+            if (err.type === 'peer-unavailable') {
+                assumeHostRole();
+            }
+        });
     }
 
     function leaveSession() {
