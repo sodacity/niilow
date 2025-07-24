@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Too Many Words</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fredoka+One&display=swap" rel="stylesheet">
+    <script src="dictionary.js"></script> <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
         :root {
             --background-color: #f0f2f5;
@@ -114,6 +114,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
 
         .player-name {
@@ -124,6 +125,7 @@
             margin-bottom: 1rem;
             color: white;
             transition: background-color 0.3s;
+            box-shadow: var(--box-shadow);
         }
 
         .player-content-wrapper { display: flex; gap: 1.5rem; width: 100%; justify-content: center; }
@@ -133,12 +135,12 @@
         .board-container { display: flex; flex-direction: column; align-items: center; }
         .lists-container { display: flex; flex-direction: column; width: 200px; }
         
-        .result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
+        .result-overlay { position: absolute; top: 2.5rem; /* Adjust to not cover name */ left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Fredoka One', cursive; font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
         .result-overlay.winner { background: var(--winner-overlay); }
         .result-overlay.loser { background: var(--loser-overlay); }
         .result-overlay.draw { background: var(--draw-overlay); }
 
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border: 2px solid var(--cell-border); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
         .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; background-color: #fafafa; border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; }
         .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
         .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
@@ -146,8 +148,8 @@
         .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; font-family: 'Fredoka One', cursive; }
         
         .words-display-area { margin-top: 1rem; width: 100%; text-align: center; }
-        .words-display-area h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--subtle-text); }
-        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; }
+        .words-display-area h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--subtle-text); font-weight: 500; }
+        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; }
         .found-words-list li { color: #333; font-size: 0.9rem; }
         .bonus-word-list li { font-weight: 600; color: #4CAF50; font-size: 0.9rem; }
 
@@ -191,11 +193,11 @@
                     </div>
                     <div class="lists-container">
                         <div class="words-display-area">
-                            <h3>Your Found Words:</h3>
+                            <h3>Found Words</h3>
                             <ul class="found-words-list" id="found-words-p1"></ul>
                         </div>
                         <div class="words-display-area">
-                            <h3>Bonus Words:</h3>
+                            <h3>Bonus Words</h3>
                             <ul class="bonus-word-list" id="bonus-words-p1"></ul>
                         </div>
                     </div>
@@ -210,11 +212,11 @@
                     </div>
                     <div class="lists-container">
                         <div class="words-display-area">
-                            <h3>Your Found Words:</h3>
+                            <h3>Found Words</h3>
                             <ul class="found-words-list" id="found-words-p2"></ul>
                         </div>
                         <div class="words-display-area">
-                            <h3>Bonus Words:</h3>
+                            <h3>Bonus Words</h3>
                             <ul class="bonus-word-list" id="bonus-words-p2"></ul>
                         </div>
                     </div>
@@ -226,7 +228,6 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        // The DICTIONARY_WORDS array will be loaded from dictionary.js
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
         
         const correctSound = new Audio('https://www.niilow.com/corect.mp3');
@@ -249,14 +250,13 @@
         const newGameBtn = document.getElementById('new-game-btn');
         const timerDisplay = document.getElementById('timer-display');
 
-        // Function to determine text color (black or white) based on background color
         function getContrastingTextColor(hexcolor){
-            hexcolor = hexcolor.replace("#", "");
+            if (hexcolor.startsWith('#')) { hexcolor = hexcolor.slice(1); }
             const r = parseInt(hexcolor.substr(0,2),16);
             const g = parseInt(hexcolor.substr(2,2),16);
             const b = parseInt(hexcolor.substr(4,2),16);
             const yiq = ((r*299)+(g*587)+(b*114))/1000;
-            return (yiq >= 128) ? 'black' : 'white';
+            return (yiq >= 128) ? '#111' : '#fff';
         }
         
         class Player {
@@ -277,7 +277,6 @@
                 this.nameEl.style.backgroundColor = this.color;
                 this.nameEl.style.color = getContrastingTextColor(this.color);
 
-                // If local player, also theme their board selection color
                 if (this.isLocal) {
                     document.documentElement.style.setProperty('--selected-bg', this.color);
                 }
@@ -331,6 +330,7 @@
             }
 
             addBonusWord(word) {
+                if (!this.isLocal) return;
                 const li = document.createElement('li');
                 li.textContent = word;
                 this.bonusWordListEl.appendChild(li);
@@ -338,6 +338,7 @@
             }
 
             addFoundWord(word) {
+                if (!this.isLocal) return;
                 const li = document.createElement('li');
                 li.textContent = word;
                 this.foundWordsListEl.appendChild(li);
@@ -376,11 +377,11 @@
             }
             
             sendSelectionUpdate() {
-                 conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
+                 if(conn && conn.open) conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
             }
 
             submitWord() {
-                if (this.selectedCells.length < 4) { // Updated to 4-letter minimum
+                if (this.selectedCells.length < 4) {
                     if (this.selectedCells.length > 0) wrongSound.play();
                     this.clearSelection();
                     return;
@@ -461,6 +462,8 @@
                 gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
 
+                // The local player is ALWAYS Player 1 (left) for the host
+                // and ALWAYS Player 2 (right) for the guest
                 const myPlayerId = isHost ? 1 : 2;
                 myPlayer = new Player(myPlayerId, myName, myColor, true);
             });
@@ -471,12 +474,6 @@
                         const opponentId = isHost ? 2 : 1;
                         opponentPlayer = new Player(opponentId, data.name, data.color, false);
                         
-                        if (!isHost) {
-                            const p1Area = document.getElementById('player1-area');
-                            const p2Area = document.getElementById('player2-area');
-                            gameAreaEl.querySelector('#game-container').insertBefore(p2Area, p1Area);
-                        }
-
                          if (isHost) {
                             newGameBtn.disabled = false;
                             mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`;
@@ -494,7 +491,7 @@
                     case 'word_found':
                         if(opponentPlayer) {
                             opponentPlayer.updateScore(data.newScore);
-                            if(data.isBonus) opponentPlayer.addBonusWord(data.word);
+                            // Opponent's private lists are not updated here. That's correct.
                         }
                         break;
                 }
