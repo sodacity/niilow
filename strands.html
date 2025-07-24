@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stands Showdown</title>
+    <title>Too Many Words</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
+    <script src="dictionary.js"></script> <style>
         :root {
             --board-bg: #FFFFFF;
             --cell-border: #E0E0E0;
@@ -74,7 +74,7 @@
 <body>
 
     <div id="game-header">
-        <h1>Strands Showdown</h1>
+        <h1>Too Many Words</h1>
         <div id="main-status">Enter your name to begin!</div>
     </div>
 
@@ -116,43 +116,10 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        // NOTE: This dictionary is now massive to accept more words.
-        const DICTIONARY_WORDS = [
-            'a', 'aback', 'abacus', 'abandon', 'abandoned', 'abandonment', 'abashed', 'abate', 'abattoir', 'abbess', 'abbey', 'abbot', 'abbreviate', 'abbreviation', 'abdicate',
-            'abdication', 'abdomen', 'abdominal', 'abduct', 'abduction', 'aberration', 'abet', 'abhor', 'abhorrence', 'abhorrent', 'abide', 'abiding', 'ability', 'abject',
-            'abjure', 'ablaze', 'able', 'ably', 'abnormal', 'abnormality', 'abnormally', 'aboard', 'abode', 'abolish', 'abolition', 'abominable', 'abominate', 'abomination',
-            'aboriginal', 'aborigine', 'abort', 'abortion', 'abortive', 'abound', 'about', 'above', 'abrasion', 'abrasive', 'abreast', 'abridge', 'abridgement', 'abroad',
-            'abrupt', 'abruptly', 'abscess', 'abscond', 'absence', 'absent', 'absentee', 'absently', 'absolute', 'absolutely', 'absolution', 'absolve', 'absorb', 'absorbed',
-            'absorbent', 'absorbing', 'absorption', 'abstain', 'abstemious', 'abstention', 'abstinence', 'abstract', 'absurd', 'absurdity', 'abundance', 'abundant', 'abuse',
-            'abusive', 'abysmal', 'abyss', 'acacia', 'academic', 'academically', 'academy', 'accede', 'accelerate', 'acceleration', 'accelerator', 'accent', 'accentuate',
-            'accept', 'acceptable', 'acceptably', 'acceptance', 'accepted', 'access', 'accessible', 'accession', 'accessory', 'accident', 'accidental', 'acclaim',
-            'acclimatize', 'accolade', 'accommodate', 'accommodating', 'accommodation', 'accompaniment', 'accompany', 'accomplice', 'accomplish', 'accomplished',
-            'accomplishment', 'accord', 'accordance', 'accordingly', 'accordion', 'accost', 'account', 'accountable', 'accountant', 'accrue', 'accumulate', 'accumulation',
-            'accuracy', 'accurate', 'accurately', 'accursed', 'accusation', 'accuse', 'accused', 'accustom', 'accustomed', 'ace', 'acerbic', 'ache', 'achieve', 'achievement',
-            'acid', 'acidity', 'acidly', 'acknowledge', 'acknowledgement', 'acme', 'acne', 'acorn', 'acoustic', 'acoustics', 'acquaint', 'acquaintance', 'acquainted',
-            'acquiesce', 'acquiescence', 'acquire', 'acquisition', 'acquit', 'acquittal', 'acre', 'acrid', 'acrimonious', 'acrimony', 'acrobat', 'acrobatic', 'acrobatics',
-            'acronym', 'across', 'act', 'acting', 'action', 'activate', 'active', 'actively', 'activist', 'activity', 'actor', 'actress', 'actual', 'actuality', 'actually',
-            'acumen', 'acupuncture', 'acute', 'acutely', 'ad', 'adamant', 'adapt', 'adaptable', 'adaptation', 'adapter', 'add', 'addendum', 'adder', 'addict', 'addicted',
-            'addiction', 'addictive', 'addition', 'additional', 'additionally', 'additive', 'address', 'addressee', 'adept', 'adequate', 'adequately', 'adhere', 'adherence',
-            'adherent', 'adhesion', 'adhesive', 'adjacent', 'adjective', 'adjoin', 'adjourn', 'adjournment', 'adjudge', 'adjudicate', 'adjunct', 'adjust', 'adjustable',
-            'adjustment', 'administer', 'administration', 'administrative', 'administrator', 'admirable', 'admirably', 'admiral', 'admiration', 'admire', 'admirer',
-            'admiring', 'admissible', 'admission', 'admit', 'admittance', 'admittedly', 'admonish', 'admonition', 'ado', 'adobe', 'adolescence', 'adolescent', 'adopt',
-            'adoption', 'adoptive', 'adorable', 'adoration', 'adore', 'adorn', 'adornment', 'adrift', 'adroit', 'adulation', 'adult', 'adulterate', 'adulterer', 'adulterous',
-            'adultery', 'adulthood', 'advance', 'advanced', 'advancement', 'advantage', 'advantageous', 'advent', 'adventure', 'adventurous', 'adverb', 'adverbial',
-            'adversary', 'adverse', 'adversity', 'advert', 'advertise', 'advertisement', 'advice', 'advisable', 'advise', 'adviser', 'advisor', 'advisory', 'advocacy',
-            'advocate', 'aerial', 'aero', 'aerobatics', 'aerobics', 'aerodrome', 'aerodynamic', 'aerodynamics', 'aerogram', 'aeronautics', 'aeroplane', 'aerosol',
-            'aerospace', 'aesthetics', 'afar', 'affable', 'affably', 'affair', 'affect', 'affectation', 'affected', 'affecting', 'affection', 'affectionate',
-            'affectionately', 'affidavit', 'affiliate', 'affiliation', 'affinity', 'affirm', 'affirmation', 'affirmative', 'affix', 'afflict', 'affliction', 'affluence',
-            'affluent', 'afford', 'affront', 'afield', 'afloat', 'afoot', 'aforementioned', 'afraid', 'afresh', 'after', 'aftermath', 'afternoon', 'aftershave',
-            'afterthought', 'afterwards', 'again', 'against', 'age', 'aged', 'agency', 'agenda', 'agent', 'aggravate', 'aggravating', 'aggravation', 'aggregate', 'aggression',
-            'aggressive', 'aggressively', 'aggressor', 'aggrieved', 'aghast', 'agile', 'agility', 'aging', 'agitate', 'agitated', 'agitation', 'agitator', 'agnostic', 'ago',
-            'agonize', 'agonizing', 'agony', 'agree', 'agreeable', 'agreeably', 'agreed', 'agreement', 'agricultural', 'agriculture', 'aground', 'ahead', 'aid', 'aide', 'ail',
-            'ailing', 'ailment', 'aim', 'aimless', 'air', 'airborne', 'air-conditioned', 'air-conditioner', 'air-conditioning', 'aircraft', 'airfield', 'air-force',
-            'air-hostess', 'airless', 'airline', 'airliner', 'airlock', 'airmail', 'airplane', 'airport', 'airsick', 'airstrip', 'airtight', 'airway', 'airy', 'aisle',
-        ];
+        // The DICTIONARY_WORDS array is now loaded from dictionary.js
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
         
-        // --- NEW: Sound Effects ---
+        // --- Sound Effects ---
         const correctSound = new Audio('https://www.niilow.com/corect.mp3');
         const wrongSound = new Audio('https://www.niilow.com/wrong.mp3');
         
@@ -174,15 +141,19 @@
         const timerDisplay = document.getElementById('timer-display');
         
         class Player {
-            constructor(id, name, isLocal) {
-                this.id = id;
+            constructor(name, isLocal) {
                 this.name = name;
                 this.isLocal = isLocal;
+                
+                const localId = 1;
+                const remoteId = 2;
+                const id = isLocal ? localId : remoteId;
+
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
                 this.nameEl = document.getElementById(`name-p${id}`);
-                this.bonusWordListEl = this.isLocal ? document.getElementById(`bonus-words-p${id}`) : null;
-                this.foundWordsListEl = this.isLocal ? document.getElementById(`found-words-p${id}`) : null;
+                this.bonusWordListEl = isLocal ? document.getElementById(`bonus-words-p${id}`) : null;
+                this.foundWordsListEl = isLocal ? document.getElementById(`found-words-p${id}`) : null;
                 this.areaEl = document.getElementById(`player${id}-area`);
                 
                 this.nameEl.textContent = this.name;
@@ -191,7 +162,7 @@
                 this.isDragging = false;
                 this.selectedCells = [];
 
-                if (isLocal) {
+                if (this.isLocal) {
                     this.boardEl.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                     this.boardEl.addEventListener('mouseover', (e) => this.handleMouseOver(e));
                     document.addEventListener('mouseup', () => this.handleMouseUp());
@@ -286,7 +257,12 @@
             }
 
             submitWord() {
-                if (this.selectedCells.length === 0) return;
+                if (this.selectedCells.length < 3) {
+                    if (this.selectedCells.length > 0) wrongSound.play();
+                    this.clearSelection();
+                    return;
+                };
+
                 const selectedWord = this.selectedCells.map(c => c.textContent).join('');
                 
                 let foundAnyValidWord = false;
@@ -304,8 +280,8 @@
 
             validateAndScoreWord(word) {
                 const upperWord = word.toUpperCase();
-                if (word.length < 3 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
-                    return false; // Word is not valid
+                if (this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
+                    return false;
                 }
 
                 this.foundWords.add(upperWord);
@@ -321,7 +297,7 @@
 
                 this.updateScore(this.score + points);
                 conn.send({ type: 'word_found', word: upperWord, newScore: this.score, isBonus });
-                return true; // Word was valid and scored
+                return true;
             }
             
             updateOpponentSelection(path) {
@@ -362,13 +338,13 @@
                 gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
 
-                myPlayer = new Player(isHost ? 1 : 2, myName, true);
+                myPlayer = new Player(myName, true);
             });
 
             conn.on('data', (data) => {
                 switch (data.type) {
                     case 'name_sync':
-                        opponentPlayer = new Player(isHost ? 2 : 1, data.name, false);
+                        opponentPlayer = new Player(data.name, false);
                          if (isHost) {
                             newGameBtn.disabled = false;
                             mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`;
@@ -408,31 +384,30 @@
                 for (let i = 0; i < 200 && !placed; i++) {
                     const dir = Math.floor(Math.random() * 4);
                     const wordToPlace = word.toUpperCase();
-                    
                     let r, c, canPlace = true;
 
                     switch(dir) {
-                        case 0: // horizontal
+                        case 0:
                            r = Math.floor(Math.random() * GRID_SIZE.rows);
                            c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1));
                            for (let j = 0; j < word.length; j++) if(grid[r][c+j] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r][c+j] = wordToPlace[j];
                            break;
-                        case 1: // vertical
+                        case 1:
                            r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
                            c = Math.floor(Math.random() * GRID_SIZE.cols);
                            for (let j = 0; j < word.length; j++) if(grid[r+j][c] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c] = wordToPlace[j];
                            break;
-                        case 2: // diagonal down-right
+                        case 2:
                            r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
                            c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1));
                            for (let j = 0; j < word.length; j++) if(grid[r+j][c+j] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c+j] = wordToPlace[j];
                            break;
-                        case 3: // diagonal down-left
+                        case 3:
                            r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
-                           c = Math.floor(Math.random() * (GRID_SIZE.cols - (word.length -1))) + (word.length-1);
+                           c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)) + (word.length -1);
                            for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j];
                            break;
