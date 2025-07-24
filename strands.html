@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Head-to-Head Strands</title>
+    <title>Word Discovery Battle</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -11,12 +11,11 @@
             --cell-border: #E0E0E0;
             --text-color: #333;
             --selected-bg: #4A90E2;
-            --found-bg: #DDF9E3;
-            --found-text: #2B733A;
-            --spangram-bg: #FDF4D8;
-            --spangram-text: #B58A00;
-            --winner-overlay: rgba(0, 0, 0, 0.7);
-            --loser-overlay: rgba(50, 50, 50, 0.7);
+            --opponent-selected-bg: #FFB6C1;
+            --bonus-word-color: #28a745;
+            --winner-overlay: rgba(40, 167, 69, 0.8);
+            --loser-overlay: rgba(220, 53, 69, 0.8);
+            --draw-overlay: rgba(108, 117, 125, 0.8);
         }
 
         body {
@@ -32,143 +31,47 @@
             min-height: 100vh;
         }
 
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
+        #game-header { text-align: center; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        #main-status { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; height: 25px; }
         
-        #main-status {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            height: 25px;
-            text-align: center;
-        }
-        
-        #connection-setup {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            align-items: center;
-        }
-
-        #connection-setup input {
-            padding: 0.5rem;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-
-        #connection-setup button {
-            padding: 0.6rem 1rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
+        #connection-setup { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        #connection-setup input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
+        #connection-setup button { padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
         #create-room-btn { background-color: #28a745; }
-        #create-room-btn:hover { background-color: #218838; }
         #join-room-btn { background-color: #007bff; }
-        #join-room-btn:hover { background-color: #0069d9; }
 
+        #game-area { display: none; flex-direction: column; align-items: center; width: 100%; }
+        #game-info { display: flex; justify-content: space-around; width: 100%; max-width: 800px; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
+        #timer-display { color: #DC3545; }
 
-        #game-container {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            width: 100%;
-            max-width: 1200px;
-        }
-
-        .player-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-        }
+        #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1200px; }
+        .player-area { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
         
-        .result-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            border-radius: 12px;
-            z-index: 100;
-        }
+        .result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
         .result-overlay.winner { background: var(--winner-overlay); }
         .result-overlay.loser { background: var(--loser-overlay); }
+        .result-overlay.draw { background: var(--draw-overlay); }
 
-
-        .board {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 4px;
-            background-color: var(--board-bg);
-            border: 2px solid var(--cell-border);
-            border-radius: 12px;
-            padding: 10px;
-            aspect-ratio: 6 / 8;
-            width: 100%;
-            max-width: 400px;
-            user-select: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        .cell {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            background-color: var(--board-bg);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            aspect-ratio: 1 / 1;
-        }
-
-        .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
-        .cell.found { background-color: var(--found-bg); color: var(--found-text); }
-        .cell.spangram { background-color: var(--spangram-bg); color: var(--spangram-text); }
-
-        .found-words-list { list-style: none; padding: 0; margin: 1rem 0 0 0; width: 100%; max-width: 400px; text-align: center; }
-        .found-words-list li { display: inline-block; background-color: #C3E0F4; color: var(--text-color); padding: 0.5rem 1rem; border-radius: 20px; margin: 4px; font-weight: 500; }
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; background-color: var(--board-bg); border: 2px solid var(--cell-border); border-radius: 12px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; user-select: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; background-color: var(--board-bg); border-radius: 8px; cursor: pointer; transition: background-color 0.1s; aspect-ratio: 1 / 1; }
+        .cell.selected { background-color: var(--selected-bg) !important; color: white; }
+        .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
         
-        #new-game-btn {
-            margin-top: 1.5rem;
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            color: white;
-            background-color: #6A5ACD;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: none; /* Initially hidden */
-        }
-        #new-game-btn:hover { background-color: #483D8B; }
+        .bonus-word-area { margin-top: 1rem; width: 100%; max-width: 400px; text-align: center; }
+        .bonus-word-list { list-style: none; padding: 0; margin: 0; column-count: 2; }
+        .bonus-word-list li { padding: 4px; font-weight: 600; color: var(--bonus-word-color); }
+        
+        #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 600; color: white; background-color: #6A5ACD; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; display: none; }
         #new-game-btn:disabled { background-color: #a9a1e4; cursor: not-allowed; }
-        
-        .disabled { pointer-events: none; opacity: 0.6; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <h1>Head-to-Head Strands</h1>
-    <div id="main-status">Create or join a room to start!</div>
+    <div id="game-header">
+        <h1>Word Discovery Battle</h1>
+        <div id="main-status">Create or join a room to start!</div>
+    </div>
 
     <div id="connection-setup">
         <input type="text" id="room-name-input" placeholder="Enter Room Name">
@@ -176,37 +79,41 @@
         <button id="join-room-btn">Join Room</button>
     </div>
 
-    <div id="game-container" class="hidden">
-        <div class="player-area" id="player1-area">
-            <h2>You</h2>
-            <h3 id="theme-p1">Theme: ???</h3>
-            <div class="board" id="board-p1"></div>
-            <ul class="found-words-list" id="found-words-p1"></ul>
+    <div id="game-area">
+        <div id="game-info">
+            <div id="my-score-display">Score: 0</div>
+            <div id="timer-display">Time: 2:00</div>
+            <div id="opponent-score-display">Opponent: 0</div>
         </div>
-
-        <div class="player-area" id="player2-area">
-            <h2>Opponent</h2>
-            <h3 id="theme-p2">Theme: ???</h3>
-            <div class="board" id="board-p2"></div>
-            <ul class="found-words-list" id="found-words-p2"></ul>
+        <div id="game-container">
+            <div class="player-area" id="player1-area">
+                <h2>You</h2>
+                <div class="board" id="board-p1"></div>
+                <div class="bonus-word-area">
+                    <h3>Bonus Words Found:</h3>
+                    <ul class="bonus-word-list" id="bonus-words-p1"></ul>
+                </div>
+            </div>
+            <div class="player-area" id="player2-area">
+                <h2>Opponent</h2>
+                <div class="board" id="board-p2"></div>
+                 <div class="bonus-word-area">
+                    <h3>Bonus Words Found:</h3>
+                    <ul class="bonus-word-list" id="bonus-words-p2"></ul>
+                </div>
+            </div>
         </div>
     </div>
     
     <button id="new-game-btn">New Game</button>
 
     <script>
-        const THEMES = [
-            { theme: "IN THE KITCHEN", spangram: "KITCHENUTENSILS", words: ["SPATULA", "WHISK", "LADLE", "COLANDER", "TONGS"] },
-            { theme: "HOTEL CALIFORNIA", spangram: "CHECKINGIN", words: ["LOBBY", "KEYCARD", "BELLHOP", "LUGGAGE", "MINIBAR", "VALET"] },
-            { theme: "WEATHER WORDS", spangram: "FORECAST", words: ["SUNNY", "CLOUDY", "RAINY", "WINDY", "FOGGY", "STORM"] },
-            { theme: "FEELING BLUE", spangram: "SHADESOFBLUE", words: ["NAVY", "INDIGO", "AZURE", "CYAN", "COBALT", "TEAL"] },
-            { theme: "CLASSIC ROCK BANDS", spangram: "ROCKANDROLL", words: ["ZEPPELIN", "FLOYD", "QUEEN", "STONES", "EAGLES"] },
-            { theme: "COMPUTER PARTS", spangram: "HARDWARE", words: ["MONITOR", "KEYBOARD", "PROCESSOR", "MEMORY", "DRIVE"] }
-        ];
+        const TARGET_WORDS_POOL = ["WAVE", "SWIM", "BEACH", "OCEAN", "SAND", "TIDE", "SHELL", "SURF", "COAST", "WATER", "APPLE", "BANANA", "GRAPE", "ORANGE", "PEAR", "LEMON", "LIME", "PEACH", "PLUM", "CHERRY", "PYTHON", "SWIFT", "JAVA", "SCRIPT", "HTML", "CODE", "CLOUD", "SERVER", "CLIENT", "DATA", "PLANET", "STAR", "MOON", "SPACE", "GALAXY", "ROCKET", "COMET", "EARTH", "MARS", "VENUS"];
+        const FULL_DICTIONARY = new Set(["ACT", "ADD", "AGE", "AGO", "AID", "AIM", "AIR", "ALL", "AND", "ANY", "APE", "APP", "APT", "ARC", "ARE", "ARM", "ART", "ASH", "ASK", "ATE", "AWL", "AXE", "BAD", "BAG", "BAN", "BAT", "BED", "BEE", "BEG", "BET", "BID", "BIG", "BIN", "BIT", "BOB", "BOG", "BOX", "BOY", "BUD", "BUG", "BUM", "BUN", "BUS", "BUT", "BUY", "BYE", "CAB", "CAD", "CAM", "CAN", "CAP", "CAR", "CAT", "CAW", "CHI", "COD", "COG", "CON", "COO", "COP", "COT", "COW", "CRY", "CUB", "CUD", "CUE", "CUP", "CUR", "CUT", "DAB", "DAD", "DAM", "DAY", "DEW", "DID", "DIE", "DIG", "DIM", "DIN", "DIP", "DOE", "DOG", "DON", "DOT", "DRY", "DUB", "DUD", "DUE", "DUG", "DUH", "DYE", "EAR", "EAT", "EBB", "EEL", "EGG", "EGO", "ELK", "ERA", "ETA", "EVE", "EYE", "FAD", "FAN", "FAR", "FAT", "FED", "FEE", "FEW", "FIG", "FIN", "FIR", "FIT", "FIX", "FLY", "FOB", "FOE", "FOG", "FOR", "FRY", "FUD", "FUG", "FUN", "FUR", "GAG", "GAL", "GAP", "GAS", "GEL", "GEM", "GET", "GIG", "GIN", "GOD", "GOO", "GOT", "GUM", "GUN", "GUT", "GUY", "GYM", "HAD", "HAG", "HAM", "HAS", "HAT", "HAY", "HEM", "HEN", "HER", "HEW", "HEX", "HEY", "HID", "HIM", "HIP", "HIS", "HIT", "HOG", "HOP", "HOT", "HOW", "HUB", "HUE", "HUG", "HUH", "HUM", "HUT", "ICE", "ICY", "IGG", "ILL", "IMP", "INK", "INN", "ION", "IRE", "IRK", "IVY", "JAB", "JAG", "JAM", "JAR", "JAW", "JAY", "JET", "JIG", "JOB", "JOG", "JOT", "JOY", "JUG", "JUT", "KEG", "KEY", "KID", "KIN", "KIT", "LAB", "LAD", "LAG", "LAP", "LAW", "LAY", "LEA", "LED", "LEE", "LEG", "LET", "LID", "LIE", "LIP", "LIT", "LOG", "LOP", "LOT", "LOW", "LUG", "LYE", "MAD", "MAN", "MAP", "MAR", "MAT", "MAW", "MAY", "MEN", "MET", "Mew", "MID", "MIG", "MIL", "MOB", "MOD", "MOL", "MOM", "MOP", "MOW", "MUD", "MUG", "MUM", "NAB", "NAG", "NAP", "NAY", "NET", "NEW", "NIB", "NIL", "NIP", "NIT", "NOB", "NOD", "NOR", "NOT", "NOW", "NUN", "NUT", "OAF", "OAK", "OAR", "OAT", "ODD", "ODE", "OFF", "OFT", "OHM", "OHO", "OIL", "OLD", "ONE", "ORB", "ORE", "OWL", "OWN", "PAD", "PAL", "PAN", "PAP", "PAR", "PAT", "PAW", "PAY", "PEA", "PEG", "PEN", "PEP", "PER", "PET", "PEW", "PHI", "PIE", "PIG", "PIN", "PIT", "PLY", "POD", "POI", "POP", "POT", "PRO", "PRY", "PUB", "PUD", "PUG", "PUN", "PUP", "PUT", "QUO", "RAD", "RAG", "RAM", "RAN", "RAP", "RAT", "RAW", "RAY", "RED", "REP", "RIB", "RID", "RIG", "RIM", "RIP", "ROB", "ROD", "ROE", "ROT", "ROW", "RUB", "RUE", "RUG", "RUM", "RUN", "RUT", "RYE", "SAD", "SAG", "SAP", "SAT", "SAW", "SAY", "SEA", "SEC", "SEE", "SET", "SEW", "SEX", "SHY", "SIN", "SIP", "SIR", "SIS", "SIT", "SKI", "SLY", "SOB", "SOD", "SON", "SOP", "SOW", "SOY", "SPY", "STY", "SUB", "SUE", "SUM", "SUN", "SUP", "TAB", "TAD", "TAG", "TAN", "TAP", "TAR", "TEA", "TED", "TEE", "TEN", "THE", "THY", "TIC", "TIE", "TIL", "TIN", "TIP", "TOE", "TOG", "TOM", "TON", "TOO", "TOP", "TOW", "TOY", "TRY", "TUB", "TUG", "TUI", "TUM", "TUN", "TWO", "USE", "VAN", "VAT", "VET", "VIE", "VOW", "WAB", "WAD", "WAG", "WAR", "WAS", "WAX", "WAY", "WEB", "WED", "WEE", "WET", "WHO", "WHY", "WIG", "WIN", "WIT", "WOE", "WOK", "WON", "WOO", "WOW", "WRY", "YAK", "YAM", "YAP", "YAW", "YEA", "YEN", "YEP", "YES", "YET", "YIN", "YIP", "YOU", "YUK", "YUM", "ZAP", "ZED", "ZEE", "ZEN", "ZIG", "ZIP", "ZOO", ...TARGET_WORDS_POOL]);
+        const GRID_SIZE = { rows: 12, cols: 10 };
+        const GAME_DURATION = 120; // 2 minutes in seconds
 
-        const GRID_SIZE = { rows: 8, cols: 6 };
-        let currentTheme, gameActive = false;
-        let peer, conn, isHost;
+        let peer, conn, isHost, gameTimer;
         let myPlayer, opponentPlayer;
 
         // --- DOM ELEMENTS ---
@@ -215,42 +122,39 @@
         const roomNameInput = document.getElementById('room-name-input');
         const createRoomBtn = document.getElementById('create-room-btn');
         const joinRoomBtn = document.getElementById('join-room-btn');
-        const gameContainerEl = document.getElementById('game-container');
+        const gameAreaEl = document.getElementById('game-area');
         const newGameBtn = document.getElementById('new-game-btn');
+        const timerDisplay = document.getElementById('timer-display');
+        const myScoreDisplay = document.getElementById('my-score-display');
+        const opponentScoreDisplay = document.getElementById('opponent-score-display');
 
         class Player {
             constructor(id, isLocal) {
                 this.id = id;
-                this.isLocal = isLocal; // Is this the player on this machine?
+                this.isLocal = isLocal;
                 this.boardEl = document.getElementById(`board-p${id}`);
-                this.themeEl = document.getElementById(`theme-p${id}`);
-                this.foundWordsEl = document.getElementById(`found-words-p${id}`);
+                this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
                 this.areaEl = document.getElementById(`player${id}-area`);
                 
+                this.score = 0;
+                this.foundWords = new Set();
                 this.isSelecting = false;
                 this.selectedCells = [];
-                this.foundWords = [];
-
-                if (isLocal) {
-                    this.boardEl.addEventListener('mousedown', (e) => this.startSelection(e));
-                    this.boardEl.addEventListener('mouseover', (e) => this.continueSelection(e));
-                    document.addEventListener('mouseup', () => this.endSelection());
-                }
             }
 
             reset() {
-                this.foundWords = [];
-                this.spangramFound = false;
-                this.foundWordsEl.innerHTML = '';
-                this.themeEl.textContent = 'Theme: ???';
+                this.score = 0;
+                this.foundWords.clear();
+                this.bonusWordListEl.innerHTML = '';
                 this.boardEl.classList.remove('disabled');
                 const overlay = this.areaEl.querySelector('.result-overlay');
                 if (overlay) overlay.remove();
+                this.updateScore(0);
             }
 
-            setupBoard(theme, grid) {
+            setupBoard(targetWords, grid) {
+                this.targetWords = new Set(targetWords);
                 this.grid = grid;
-                this.currentTheme = theme;
                 this.drawBoard();
             }
             
@@ -267,99 +171,98 @@
                     }
                 }
             }
+            
+            updateScore(newScore) {
+                this.score = newScore;
+                if(this.isLocal) myScoreDisplay.textContent = `Score: ${this.score}`;
+                else opponentScoreDisplay.textContent = `Opponent: ${this.score}`;
+            }
+
+            addBonusWord(word) {
+                const li = document.createElement('li');
+                li.textContent = word;
+                this.bonusWordListEl.appendChild(li);
+            }
 
             // --- LOCAL PLAYER ONLY METHODS ---
             startSelection(e) {
-                if (!gameActive || e.target.classList.contains('found')) return;
+                if (gameTimer <= 0 || !e.target.classList.contains('cell')) return;
                 this.isSelecting = true;
                 this.selectedCells = [];
                 this.addCellToSelection(e.target);
             }
 
             continueSelection(e) {
-                if (!this.isSelecting) return;
+                if (!this.isSelecting || !e.target.classList.contains('cell')) return;
                 this.addCellToSelection(e.target);
             }
             
             addCellToSelection(cellEl) {
-                if (!cellEl.classList.contains('cell') || this.selectedCells.includes(cellEl)) return;
+                if (this.selectedCells.includes(cellEl)) return;
                 this.selectedCells.push(cellEl);
                 cellEl.classList.add('selected');
+                conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
             }
 
             endSelection() {
                 if (!this.isSelecting) return;
                 this.isSelecting = false;
+                conn.send({ type: 'selection_end' });
 
                 const selectedWord = this.selectedCells.map(c => c.textContent).join('');
                 this.selectedCells.forEach(cell => cell.classList.remove('selected'));
-                this.selectedCells = [];
-
-                const wordData = this.checkWord(selectedWord);
-                if (wordData.found) {
-                    conn.send({ type: 'word_found', word: selectedWord });
-                    this.revealWord(selectedWord, wordData.isSpangram);
-                    this.checkWinCondition();
-                }
-            }
-            
-            checkWord(word) {
-                if (this.foundWords.includes(word)) return { found: false };
                 
-                const isSpangram = word === this.currentTheme.spangram;
-                const isThemeWord = this.currentTheme.words.includes(word);
-
-                return { found: isSpangram || isThemeWord, isSpangram: isSpangram };
+                this.validateAndScoreWord(selectedWord);
+                this.validateAndScoreWord(selectedWord.split('').reverse().join(''));
             }
 
-            revealWord(word, isSpangram) {
-                this.foundWords.push(word);
-                // The actual cells on board that make up the word need to be found to be highlighted
-                // This is a complex task. For now, we'll just update the UI list.
-                 if (isSpangram) {
-                    this.spangramFound = true;
-                    this.themeEl.textContent = this.currentTheme.theme; // Reveal theme
-                } else {
-                    const li = document.createElement('li');
-                    li.textContent = word;
-                    this.foundWordsEl.appendChild(li);
+            validateAndScoreWord(word) {
+                if (word.length < 3 || this.foundWords.has(word) || !FULL_DICTIONARY.has(word.toUpperCase())) {
+                    return;
                 }
+
+                this.foundWords.add(word);
+                let points = word.length;
+                let isBonus = this.targetWords.has(word.toUpperCase());
+
+                if (isBonus) {
+                    points += 10; // Bonus points!
+                    this.addBonusWord(word.toUpperCase());
+                }
+
+                this.updateScore(this.score + points);
+                conn.send({ type: 'word_found', word: word.toUpperCase(), newScore: this.score, isBonus });
             }
             
-            checkWinCondition() {
-                 const allThemeWordsFound = this.currentTheme.words.every(w => this.foundWords.includes(w));
-                 if (this.spangramFound && allThemeWordsFound) {
-                    conn.send({ type: 'win' });
-                    endGame(true); // I won
-                 }
+            // --- OPPONENT ONLY METHODS ---
+            updateOpponentSelection(path) {
+                this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
+                path.forEach(pos => {
+                    const cell = this.boardEl.querySelector(`[data-r='${pos.r}'][data-c='${pos.c}']`);
+                    if (cell) cell.classList.add('opponent-selecting');
+                });
+            }
+
+            clearOpponentSelection() {
+                this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
             }
         }
         
-        // --- WEBRTC LOGIC ---
+        // --- WEBRTC LOGIC (omitted for brevity, same as before) ---
         function initializePeer(host, roomName) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
 
             peer.on('open', (id) => {
-                console.log('My peer ID is: ' + id);
-                if (!isHost) {
-                    connectToHost(roomName);
-                } else {
-                    mainStatusEl.textContent = `Room "${roomName}" created. Waiting for opponent...`;
-                }
+                if (!isHost) connectToHost(roomName);
+                else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`;
             });
 
             peer.on('connection', (connection) => {
-                console.log('Opponent connected!');
                 conn = connection;
                 setupConnection();
             });
-
-            peer.on('error', (err) => {
-                mainStatusEl.textContent = `Error: ${err.message}`;
-                createRoomBtn.disabled = false;
-                joinRoomBtn.disabled = false;
-            });
+            peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
         }
 
         function connectToHost(roomName) {
@@ -369,8 +272,8 @@
 
         function setupConnection() {
             conn.on('open', () => {
-                connectionSetupEl.classList.add('hidden');
-                gameContainerEl.classList.remove('hidden');
+                connectionSetupEl.style.display = 'none';
+                gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
 
                 myPlayer = new Player(isHost ? 1 : 2, true);
@@ -388,69 +291,72 @@
             conn.on('data', (data) => {
                 switch (data.type) {
                     case 'start_game':
-                        startNewGame(data.theme, data.grid);
+                        startNewGame(data.targetWords, data.grid);
+                        break;
+                    case 'selection_update':
+                        opponentPlayer.updateOpponentSelection(data.path);
+                        break;
+                    case 'selection_end':
+                        opponentPlayer.clearOpponentSelection();
                         break;
                     case 'word_found':
-                        const wordData = opponentPlayer.checkWord(data.word);
-                        if (wordData.found) {
-                            opponentPlayer.revealWord(data.word, wordData.isSpangram);
+                        opponentPlayer.updateScore(data.newScore);
+                        if (data.isBonus) {
+                            opponentPlayer.addBonusWord(data.word);
                         }
-                        break;
-                    case 'win':
-                        endGame(false); // Opponent won
-                        break;
-                    case 'reset':
-                        startNewGame(data.theme, data.grid);
                         break;
                 }
             });
             
             conn.on('close', () => {
                 mainStatusEl.textContent = "Opponent disconnected.";
-                endGame(null); // No winner
+                if(gameTimer) clearInterval(gameTimer);
             });
         }
         
         // --- GAME LOGIC ---
         function generateNewBoard() {
-            const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+            const targetWords = [...TARGET_WORDS_POOL].sort(() => 0.5 - Math.random()).slice(0, 10);
+            targetWords.sort((a,b) => b.length - a.length);
+
             let grid = Array(GRID_SIZE.rows).fill(null).map(() => Array(GRID_SIZE.cols).fill(''));
             
-            const allWords = [...theme.words, theme.spangram].sort((a,b) => b.length - a.length);
-
-            for (const word of allWords) {
+            for (const word of targetWords) {
                 let placed = false;
-                for (let i = 0; i < 100 && !placed; i++) {
-                    const dir = Math.random() < 0.5 ? 'h' : 'v';
-                    let r, c;
-                    if (dir === 'h') {
-                        r = Math.floor(Math.random() * GRID_SIZE.rows);
-                        c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1));
-                    } else {
-                        r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
-                        c = Math.floor(Math.random() * GRID_SIZE.cols);
-                    }
+                for (let i = 0; i < 200 && !placed; i++) {
+                    const dir = Math.floor(Math.random() * 4); // 0:h, 1:v, 2:d-down-right, 3:d-down-left
+                    const wordToPlace = word;
                     
-                    let canPlace = true;
-                    for (let j = 0; j < word.length; j++) {
-                        const checkR = r + (dir === 'v' ? j : 0);
-                        const checkC = c + (dir === 'h' ? j : 0);
-                        if (grid[checkR][checkC] !== '' && grid[checkR][checkC] !== word[j]) {
-                            canPlace = false;
-                            break;
-                        }
+                    let r, c, canPlace = true;
+
+                    switch(dir) {
+                        case 0: // horizontal
+                           r = Math.floor(Math.random() * GRID_SIZE.rows);
+                           c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1));
+                           for (let j = 0; j < word.length; j++) if(grid[r][c+j] !== '') canPlace = false;
+                           if(canPlace) for (let j = 0; j < word.length; j++) grid[r][c+j] = wordToPlace[j];
+                           break;
+                        case 1: // vertical
+                           r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
+                           c = Math.floor(Math.random() * GRID_SIZE.cols);
+                           for (let j = 0; j < word.length; j++) if(grid[r+j][c] !== '') canPlace = false;
+                           if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c] = wordToPlace[j];
+                           break;
+                        case 2: // diagonal down-right
+                           r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
+                           c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1));
+                           for (let j = 0; j < word.length; j++) if(grid[r+j][c+j] !== '') canPlace = false;
+                           if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c+j] = wordToPlace[j];
+                           break;
+                        case 3: // diagonal down-left
+                           r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
+                           c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)) + (word.length -1);
+                           for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false;
+                           if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j];
+                           break;
                     }
-                    
-                    if(canPlace) {
-                        for (let j = 0; j < word.length; j++) {
-                            const placeR = r + (dir === 'v' ? j : 0);
-                            const placeC = c + (dir === 'h' ? j : 0);
-                            grid[placeR][placeC] = word[j];
-                        }
-                        placed = true;
-                    }
+                    if(canPlace) placed = true;
                 }
-                 if (!placed) console.error("Failed to place: " + word);
             }
             
             for (let r = 0; r < GRID_SIZE.rows; r++) {
@@ -460,59 +366,71 @@
                     }
                 }
             }
-            return { theme, grid };
+            return { targetWords, grid };
         }
 
-        function startNewGame(theme, grid) {
-            gameActive = true;
-            mainStatusEl.textContent = 'Race to the finish!';
+        function startNewGame(targetWords, grid) {
+            mainStatusEl.textContent = 'Find as many words as you can!';
             [myPlayer, opponentPlayer].forEach(p => p.reset());
-            myPlayer.setupBoard(theme, grid);
-            opponentPlayer.setupBoard(theme, grid);
+            myPlayer.setupBoard(targetWords, grid);
+            opponentPlayer.setupBoard(targetWords, grid);
+            
+            let timeLeft = GAME_DURATION;
+            if(gameTimer) clearInterval(gameTimer);
+            timerDisplay.textContent = `Time: 2:00`;
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
         }
 
-        function endGame(iWon) {
-            gameActive = false;
+        function endGame() {
+            clearInterval(gameTimer);
+            timerDisplay.textContent = "Time's Up!";
             myPlayer.boardEl.classList.add('disabled');
-            opponentPlayer.boardEl.classList.add('disabled');
             
-            if (iWon === true) {
-                mainStatusEl.textContent = 'You are the winner! 🎉';
-                const overlay = document.createElement('div');
-                overlay.className = 'result-overlay winner';
-                overlay.textContent = 'WINNER!';
-                myPlayer.areaEl.appendChild(overlay);
-            } else if (iWon === false) {
-                mainStatusEl.textContent = 'Your opponent won!';
-                const overlay = document.createElement('div');
-                overlay.className = 'result-overlay loser';
-                overlay.textContent = 'SO CLOSE!';
-                myPlayer.areaEl.appendChild(overlay);
-            }
+            let myResult, myText;
+            if (myPlayer.score > opponentPlayer.score) { myResult = 'winner'; myText = 'WINNER!'; } 
+            else if (myPlayer.score < opponentPlayer.score) { myResult = 'loser'; myText = 'SO CLOSE!'; } 
+            else { myResult = 'draw'; myText = 'DRAW!'; }
+            
+            const myOverlay = document.createElement('div');
+            myOverlay.className = `result-overlay ${myResult}`;
+            myOverlay.textContent = myText;
+            myPlayer.areaEl.appendChild(myOverlay);
+            
+            // Show opponent result based on my result
+            const opponentOverlay = document.createElement('div');
+            opponentOverlay.className = `result-overlay ${myResult === 'winner' ? 'loser' : myResult === 'loser' ? 'winner' : 'draw'}`;
+            opponentOverlay.textContent = `${myResult === 'winner' ? 'SO CLOSE!' : myResult === 'loser' ? 'WINNER!' : 'DRAW!'}`;
+            opponentPlayer.areaEl.appendChild(opponentOverlay);
         }
 
         // --- EVENT LISTENERS ---
         createRoomBtn.addEventListener('click', () => {
             const roomName = roomNameInput.value.trim();
             if (!roomName) return alert('Please enter a room name.');
-            createRoomBtn.disabled = true;
-            joinRoomBtn.disabled = true;
             initializePeer(true, roomName);
         });
 
         joinRoomBtn.addEventListener('click', () => {
             const roomName = roomNameInput.value.trim();
-            if (!roomName) return alert('Please enter a room name.');
-            createRoomBtn.disabled = true;
-            joinRoomBtn.disabled = true;
+            if (!roomName) return alert('Please enter a room name to join.');
             initializePeer(false, roomName);
         });
 
         newGameBtn.addEventListener('click', () => {
             if (!isHost) return;
-            const { theme, grid } = generateNewBoard();
-            conn.send({ type: 'start_game', theme, grid });
-            startNewGame(theme, grid);
+            const { targetWords, grid } = generateNewBoard();
+            conn.send({ type: 'start_game', targetWords, grid });
+            startNewGame(targetWords, grid);
         });
     </script>
 </body>
