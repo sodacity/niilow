@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strands Battle</title>
+    <title>Word Discovery Battle</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -35,9 +35,10 @@
         h1 { font-size: 2rem; margin-bottom: 0.5rem; }
         #main-status { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; height: 25px; }
         
-        #connection-setup { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
-        #connection-setup input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
-        #connection-setup button { padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
+        #connection-setup { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; align-items: center; background-color: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .input-group { display: flex; gap: 0.5rem; width: 100%; justify-content: center; }
+        #connection-setup input { padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        #connection-setup button { padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
         #create-room-btn { background-color: #28a745; }
         #join-room-btn { background-color: #007bff; }
 
@@ -45,7 +46,7 @@
         #game-info { display: flex; justify-content: space-around; width: 100%; max-width: 800px; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
         #timer-display { color: #DC3545; }
 
-        #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1200px; }
+        #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1200px; align-items: flex-start; }
         .player-area { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
         
         .result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
@@ -58,16 +59,14 @@
         .cell.selected { background-color: var(--selected-bg) !important; color: white; }
         .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
         
-        .score-display {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-top: 1rem;
-        }
-
-        .bonus-word-area { margin-top: 1rem; width: 100%; max-width: 400px; text-align: center; }
-        .bonus-word-list { list-style: none; padding: 0; margin: 0; column-count: 2; }
-        .bonus-word-list li { padding: 4px; font-weight: 600; color: var(--bonus-word-color); }
+        .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; }
         
+        .words-display-area { margin-top: 1rem; width: 100%; max-width: 400px; text-align: center; }
+        .words-display-area h3 { margin-bottom: 0.5rem; }
+        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 100px; overflow-y: auto; background-color: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; }
+        .found-words-list li { color: #333; }
+        .bonus-word-list li { font-weight: 600; color: var(--bonus-word-color); }
+
         #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 600; color: white; background-color: #6A5ACD; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; display: none; }
         #new-game-btn:disabled { background-color: #a9a1e4; cursor: not-allowed; }
     </style>
@@ -76,13 +75,16 @@
 
     <div id="game-header">
         <h1>Word Discovery Battle</h1>
-        <div id="main-status">Create or join a room to start!</div>
+        <div id="main-status">Enter your name to begin!</div>
     </div>
 
     <div id="connection-setup">
-        <input type="text" id="room-name-input" placeholder="Enter Room Name">
-        <button id="create-room-btn">Create Room</button>
-        <button id="join-room-btn">Join Room</button>
+        <input type="text" id="player-name-input" placeholder="Your Name">
+        <div class="input-group">
+            <input type="text" id="room-name-input" placeholder="Room Name">
+            <button id="create-room-btn">Create</button>
+            <button id="join-room-btn">Join</button>
+        </div>
     </div>
 
     <div id="game-area">
@@ -91,20 +93,24 @@
         </div>
         <div id="game-container">
             <div class="player-area" id="player1-area">
-                <h2>You</h2>
+                <h2 id="name-p1">You</h2>
                 <div class="board" id="board-p1"></div>
                 <div class="score-display" id="score-p1">Score: 0</div>
-                <div class="bonus-word-area">
+                <div class="words-display-area">
+                    <h3>Your Found Words:</h3>
+                    <ul class="found-words-list" id="found-words-p1"></ul>
+                </div>
+                <div class="words-display-area">
                     <h3>Bonus Words Found:</h3>
                     <ul class="bonus-word-list" id="bonus-words-p1"></ul>
                 </div>
             </div>
             <div class="player-area" id="player2-area">
-                <h2>Opponent</h2>
+                <h2 id="name-p2">Opponent</h2>
                 <div class="board" id="board-p2"></div>
                 <div class="score-display" id="score-p2">Score: 0</div>
-                 <div class="bonus-word-area">
-                    <h3>Bonus Words Found:</h3>
+                <div class="words-display-area">
+                    <h3>Opponent's Bonus Words:</h3>
                     <ul class="bonus-word-list" id="bonus-words-p2"></ul>
                 </div>
             </div>
@@ -114,8 +120,10 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        const TARGET_WORDS_POOL = ["WAVE", "SWIM", "BEACH", "OCEAN", "SAND", "TIDE", "SHELL", "SURF", "COAST", "WATER", "APPLE", "BANANA", "GRAPE", "ORANGE", "PEAR", "LEMON", "LIME", "PEACH", "PLUM", "CHERRY", "PYTHON", "SWIFT", "JAVA", "SCRIPT", "HTML", "CODE", "CLOUD", "SERVER", "CLIENT", "DATA", "PLANET", "STAR", "MOON", "SPACE", "GALAXY", "ROCKET", "COMET", "EARTH", "MARS", "VENUS"];
-        const FULL_DICTIONARY = new Set(["ACT", "ADD", "AGE", "AGO", "AID", "AIM", "AIR", "ALL", "AND", "ANY", "APE", "APP", "APT", "ARC", "ARE", "ARM", "ART", "ASH", "ASK", "ATE", "AWL", "AXE", "BAD", "BAG", "BAN", "BAT", "BED", "BEE", "BEG", "BET", "BID", "BIG", "BIN", "BIT", "BOB", "BOG", "BOX", "BOY", "BUD", "BUG", "BUM", "BUN", "BUS", "BUT", "BUY", "BYE", "CAB", "CAD", "CAM", "CAN", "CAP", "CAR", "CAT", "CAW", "CHI", "COD", "COG", "CON", "COO", "COP", "COT", "COW", "CRY", "CUB", "CUD", "CUE", "CUP", "CUR", "CUT", "DAB", "DAD", "DAM", "DAY", "DEW", "DID", "DIE", "DIG", "DIM", "DIN", "DIP", "DOE", "DOG", "DON", "DOT", "DRY", "DUB", "DUD", "DUE", "DUG", "DUH", "DYE", "EAR", "EAT", "EBB", "EEL", "EGG", "EGO", "ELK", "ERA", "ETA", "EVE", "EYE", "FAD", "FAN", "FAR", "FAT", "FED", "FEE", "FEW", "FIG", "FIN", "FIR", "FIT", "FIX", "FLY", "FOB", "FOE", "FOG", "FOR", "FRY", "FUD", "FUG", "FUN", "FUR", "GAG", "GAL", "GAP", "GAS", "GEL", "GEM", "GET", "GIG", "GIN", "GOD", "GOO", "GOT", "GUM", "GUN", "GUT", "GUY", "GYM", "HAD", "HAG", "HAM", "HAS", "HAT", "HAY", "HEM", "HEN", "HER", "HEW", "HEX", "HEY", "HID", "HIM", "HIP", "HIS", "HIT", "HOG", "HOP", "HOT", "HOW", "HUB", "HUE", "HUG", "HUH", "HUM", "HUT", "ICE", "ICY", "IGG", "ILL", "IMP", "INK", "INN", "ION", "IRE", "IRK", "IVY", "JAB", "JAG", "JAM", "JAR", "JAW", "JAY", "JET", "JIG", "JOB", "JOG", "JOT", "JOY", "JUG", "JUT", "KEG", "KEY", "KID", "KIN", "KIT", "LAB", "LAD", "LAG", "LAP", "LAW", "LAY", "LEA", "LED", "LEE", "LEG", "LET", "LID", "LIE", "LIP", "LIT", "LOG", "LOP", "LOT", "LOW", "LUG", "LYE", "MAD", "MAN", "MAP", "MAR", "MAT", "MAW", "MAY", "MEN", "MET", "Mew", "MID", "MIG", "MIL", "MOB", "MOD", "MOL", "MOM", "MOP", "MOW", "MUD", "MUG", "MUM", "NAB", "NAG", "NAP", "NAY", "NET", "NEW", "NIB", "NIL", "NIP", "NIT", "NOB", "NOD", "NOR", "NOT", "NOW", "NUN", "NUT", "OAF", "OAK", "OAR", "OAT", "ODD", "ODE", "OFF", "OFT", "OHM", "OHO", "OIL", "OLD", "ONE", "ORB", "ORE", "OWL", "OWN", "PAD", "PAL", "PAN", "PAP", "PAR", "PAT", "PAW", "PAY", "PEA", "PEG", "PEN", "PEP", "PER", "PET", "PEW", "PHI", "PIE", "PIG", "PIN", "PIT", "PLY", "POD", "POI", "POP", "POT", "PRO", "PRY", "PUB", "PUD", "PUG", "PUN", "PUP", "PUT", "QUO", "RAD", "RAG", "RAM", "RAN", "RAP", "RAT", "RAW", "RAY", "RED", "REP", "RIB", "RID", "RIG", "RIM", "RIP", "ROB", "ROD", "ROE", "ROT", "ROW", "RUB", "RUE", "RUG", "RUM", "RUN", "RUT", "RYE", "SAD", "SAG", "SAP", "SAT", "SAW", "SAY", "SEA", "SEC", "SEE", "SET", "SEW", "SEX", "SHY", "SIN", "SIP", "SIR", "SIS", "SIT", "SKI", "SLY", "SOB", "SOD", "SON", "SOP", "SOW", "SOY", "SPY", "STY", "SUB", "SUE", "SUM", "SUN", "SUP", "TAB", "TAD", "TAG", "TAN", "TAP", "TAR", "TEA", "TED", "TEE", "TEN", "THE", "THY", "TIC", "TIE", "TIL", "TIN", "TIP", "TOE", "TOG", "TOM", "TON", "TOO", "TOP", "TOW", "TOY", "TRY", "TUB", "TUG", "TUI", "TUM", "TUN", "TWO", "USE", "VAN", "VAT", "VET", "VIE", "VOW", "WAB", "WAD", "WAG", "WAR", "WAS", "WAX", "WAY", "WEB", "WED", "WEE", "WET", "WHO", "WHY", "WIG", "WIN", "WIT", "WOE", "WOK", "WON", "WOO", "WOW", "WRY", "YAK", "YAM", "YAP", "YAW", "YEA", "YEN", "YEP", "YES", "YET", "YIN", "YIP", "YOU", "YUK", "YUM", "ZAP", "ZED", "ZEE", "ZEN", "ZIG", "ZIP", "ZOO", ...TARGET_WORDS_POOL]);
+        // NOTE: This dictionary is greatly expanded, but not exhaustive.
+        const DICTIONARY_WORDS = ["a", "able", "about", "above", "act", "add", "afraid", "after", "again", "age", "ago", "agree", "air", "all", "allow", "also", "always", "am", "among", "an", "and", "anger", "animal", "answer", "any", "appear", "apple", "are", "area", "arm", "arrange", "arrive", "art", "as", "ask", "at", "atom", "baby", "back", "bad", "ball", "banana", "band", "bank", "bar", "base", "basic", "bat", "be", "bear", "beat", "beauty", "bed", "been", "before", "began", "begin", "behind", "believe", "bell", "best", "better", "between", "big", "bird", "bit", "black", "block", "blood", "blow", "blue", "board", "boat", "body", "bone", "book", "born", "both", "bottom", "bought", "box", "boy", "branch", "bread", "break", "bright", "bring", "broad", "broke", "brother", "brought", "brown", "build", "burn", "bus", "busy", "but", "buy", "by", "call", "came", "camp", "can", "capital", "captain", "car", "card", "care", "carry", "case", "cat", "catch", "caught", "cause", "cell", "cent", "center", "century", "certain", "chair", "chance", "change", "character", "charge", "chart", "check", "cherry", "chick", "chief", "child", "children", "choose", "chord", "circle", "city", "claim", "class", "clean", "clear", "climb", "clock", "close", "clothe", "cloud", "coast", "coat", "code", "cold", "collect", "colony", "color", "column", "come", "comet", "common", "company", "compare", "complete", "condition", "connect", "consider", "consonant", "contain", "continent", "continue", "control", "cook", "cool", "copy", "corn", "corner", "correct", "cost", "cot", "cotton", "could", "count", "country", "course", "cover", "cow", "crease", "create", "crop", "cross", "crowd", "cry", "current", "cut", "dad", "dance", "danger", "dark", "data", "day", "dead", "deal", "dear", "death", "decide", "decimal", "deep", "degree", "depend", "describe", "desert", "design", "determine", "develop", "dictionary", "did", "die", "differ", "difficult", "direct", "discover", "discuss", "distant", "divide", "division", "do", "doctor", "doe", "dog", "dollar", "done", "door", "dot", "double", "down", "draw", "dream", "dress", "drink", "drive", "drop", "drove", "dry", "duck", "during", "each", "ear", "early", "earth", "ease", "east", "eat", "edge", "effect", "egg", "eight", "either", "electric", "element", "else", "end", "enemy", "energy", "engine", "enough", "enter", "equal", "equate", "especially", "even", "evening", "event", "ever", "every", "exact", "example", "except", "excite", "exercise", "expect", "experience", "experiment", "eye", "face", "fact", "fair", "fall", "family", "famous", "far", "farm", "fast", "fat", "father", "favor", "fear", "feed", "feel", "feet", "fell", "felt", "few", "field", "fig", "fight", "figure", "fill", "final", "find", "fine", "finger", "finish", "fire", "first", "fish", "fit", "five", "flat", "floor", "flow", "flower", "fly", "follow", "food", "foot", "for", "force", "forest", "form", "forward", "found", "four", "fraction", "free", "fresh", "friend", "from", "front", "fruit", "fry", "full", "fun", "game", "galaxy", "garden", "gas", "gather", "gave", "general", "gentle", "get", "girl", "give", "glad", "glass", "go", "gold", "gone", "good", "got", "govern", "grand", "grape", "grass", "gray", "great", "green", "grew", "ground", "group", "grow", "guess", "guide", "gun", "had", "hair", "half", "hand", "happen", "happy", "hard", "has", "hat", "have", "he", "head", "hear", "heard", "heart", "heat", "heavy", "held", "help", "her", "here", "high", "hill", "him", "his", "history", "hit", "hold", "hole", "home", "hope", "horse", "hot", "hour", "house", "how", "html", "huge", "human", "hundred", "hunt", "hurry", "i", "ice", "idea", "if", "imagine", "in", "inch", "include", "indicate", "industry", "insect", "instant", "instrument", "interest", "invent", "iron", "is", "island", "it", "its", "java", "jet", "job", "join", "joy", "jump", "just", "keep", "kept", "key", "kid", "kill", "kind", "king", "knew", "know", "lad", "lady", "lake", "land", "language", "large", "last", "late", "laugh", "law", "lay", "lead", "learn", "least", "leave", "led", "left", "leg", "lemon", "length", "less", "let", "letter", "level", "lie", "life", "lift", "light", "like", "lime", "line", "liquid", "list", "listen", "little", "live", "locate", "log", "lone", "long", "look", "loop", "lost", "lot", "loud", "love", "low", "luck", "machine", "made", "magnet", "main", "major", "make", "man", "many", "map", "mark", "market", "mars", "mass", "master", "match", "material", "matter", "may", "me", "mean", "meant", "measure", "meat", "meet", "melody", "men", "metal", "method", "middle", "might", "mile", "milk", "million", "mind", "mine", "minute", "miss", "mix", "modern", "molecule", "moment", "money", "month", "moon", "more", "morning", "most", "mother", "motion", "mount", "mouse", "mouth", "move", "much", "multiply", "music", "must", "my", "name", "nation", "natural", "nature", "near", "necessary", "neck", "need", "neighbor", "never", "new", "next", "night", "nine", "no", "noise", "noon", "nor", "north", "nose", "not", "note", "nothing", "notice", "noun", "now", "number", "object", "observe", "occur", "ocean", "of", "off", "offer", "office", "often", "oh", "oil", "old", "on", "once", "one", "only", "open", "operate", "opposite", "or", "orange", "order", "organ", "original", "other", "our", "out", "over", "own", "oxygen", "pack", "pad", "page", "paid", "paint", "pair", "paper", "paragraph", "parent", "park", "part", "particular", "party", "pass", "past", "path", "pattern", "pay", "peach", "pear", "pen", "pencil", "people", "per", "perhaps", "period", "person", "phrase", "pick", "picture", "piece", "pig", "pine", "pink", "pipe", "pitch", "place", "plain", "plan", "plane", "planet", "plant", "plate", "play", "please", "plural", "plum", "poem", "point", "pole", "populate", "port", "pose", "position", "possible", "post", "pound", "power", "practice", "prepare", "present", "press", "pretty", "print", "probable", "problem", "process", "produce", "product", "program", "proof", "proper", "protect", "provide", "pull", "punish", "push", "put", "python", "quart", "queen", "question", "quick", "quiet", "quite", "quotient", "race", "radio", "rail", "rain", "raise", "ran", "range", "rather", "reach", "read", "ready", "real", "reason", "receive", "record", "red", "region", "remember", "repeat", "reply", "represent", "require", "rest", "result", "rich", "ride", "right", "ring", "rise", "river", "road", "rock", "rocket", "roll", "room", "root", "rope", "rose", "round", "row", "rub", "rule", "run", "safe", "said", "sail", "salt", "same", "sand", "sat", "save", "saw", "say", "scale", "school", "science", "score", "script", "sea", "search", "season", "seat", "second", "secret", "section", "see", "seed", "seem", "segment", "select", "self", "sell", "send", "sense", "sent", "sentence", "separate", "serve", "server", "set", "settle", "seven", "several", "shall", "shape", "share", "sharp", "she", "sheet", "shell", "shine", "ship", "shoe", "shop", "shore", "short", "should", "shoulder", "shout", "show", "side", "sight", "sign", "signal", "silent", "similar", "simple", "since", "sing", "single", "sit", "six", "size", "skill", "skin", "sky", "slave", "sleep", "slip", "slow", "small", "smell", "smile", "snow", "so", "soft", "soil", "solar", "soldier", "solution", "solve", "some", "son", "song", "soon", "sort", "sound", "south", "space", "speak", "special", "speech", "speed", "spell", "spend", "spoke", "spot", "spread", "spring", "square", "stand", "star", "start", "state", "station", "stay", "stead", "steam", "steel", "step", "stick", "still", "stone", "stood", "stop", "store", "story", "straight", "strange", "stream", "street", "stretch", "string", "strong", "student", "study", "subject", "substance", "subtract", "such", "sudden", "suffix", "sugar", "suggest", "suit", "summer", "sun", "supply", "support", "sure", "surface", "surprise", "swim", "swift", "syllable", "symbol", "system", "table", "tail", "take", "talk", "tall", "teach", "team", "tell", "temperature", "ten", "term", "test", "than", "thank", "that", "the", "their", "them", "then", "there", "these", "they", "thick", "thin", "thing", "think", "third", "this", "those", "though", "thought", "thousand", "three", "through", "throw", "thus", "tide", "tie", "time", "tin", "tiny", "tip", "tire", "to", "together", "told", "tone", "too", "took", "tool", "top", "total", "touch", "town", "track", "trade", "train", "transport", "travel", "tree", "triangle", "trip", "trouble", "truck", "true", "try", "tube", "turn", "twenty", "two", "type", "under", "unit", "until", "up", "us", "use", "usual", "valley", "valuable", "value", "vapor", "variety", "various", "verb", "venus", "very", "view", "village", "visit", "voice", "vowel", "wait", "walk", "wall", "want", "war", "warm", "was", "wash", "watch", "water", "wave", "way", "we", "wear", "weather", "week", "weight", "well", "went", "were", "west", "wet", "what", "wheel", "when", "where", "whether", "which", "while", "white", "who", "whole", "whose", "why", "wide", "wife", "wild", "will", "win", "wind", "window", "wing", "winter", "wire", "wish", "with", "woman", "women", "won", "wonder", "wood", "word", "work", "world", "would", "write", "written", "wrong", "wrote", "yard", "year", "yellow", "yes", "yet", "you", "young", "your", "zoo"];
+        const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
+        
         const GRID_SIZE = { rows: 12, cols: 10 };
         const GAME_DURATION = 120; // 2 minutes in seconds
 
@@ -125,6 +133,7 @@
         // --- DOM ELEMENTS ---
         const mainStatusEl = document.getElementById('main-status');
         const connectionSetupEl = document.getElementById('connection-setup');
+        const playerNameInput = document.getElementById('player-name-input');
         const roomNameInput = document.getElementById('room-name-input');
         const createRoomBtn = document.getElementById('create-room-btn');
         const joinRoomBtn = document.getElementById('join-room-btn');
@@ -133,14 +142,18 @@
         const timerDisplay = document.getElementById('timer-display');
         
         class Player {
-            constructor(id, isLocal) {
+            constructor(id, name, isLocal) {
                 this.id = id;
+                this.name = name;
                 this.isLocal = isLocal;
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
+                this.nameEl = document.getElementById(`name-p${id}`);
                 this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
+                this.foundWordsListEl = this.isLocal ? document.getElementById(`found-words-p${id}`) : null;
                 this.areaEl = document.getElementById(`player${id}-area`);
                 
+                this.nameEl.textContent = this.name;
                 this.score = 0;
                 this.foundWords = new Set();
                 this.isDragging = false;
@@ -149,7 +162,6 @@
                 if (isLocal) {
                     this.boardEl.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                     this.boardEl.addEventListener('mouseover', (e) => this.handleMouseOver(e));
-                    // Add global mouseup to handle ending a drag anywhere
                     document.addEventListener('mouseup', () => this.handleMouseUp());
                 }
             }
@@ -158,6 +170,7 @@
                 this.score = 0;
                 this.foundWords.clear();
                 this.bonusWordListEl.innerHTML = '';
+                if(this.foundWordsListEl) this.foundWordsListEl.innerHTML = '';
                 this.boardEl.classList.remove('disabled');
                 const overlay = this.areaEl.querySelector('.result-overlay');
                 if (overlay) overlay.remove();
@@ -195,18 +208,25 @@
                 this.bonusWordListEl.appendChild(li);
             }
 
+            addFoundWord(word) {
+                if (!this.foundWordsListEl) return;
+                const li = document.createElement('li');
+                li.textContent = word;
+                this.foundWordsListEl.appendChild(li);
+                this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight;
+            }
+
             // --- LOCAL PLAYER ONLY METHODS ---
             handleMouseDown(e) {
                 if (gameTimer <= 0 || !e.target.classList.contains('cell')) return;
                 this.isDragging = true;
-                // A new mousedown always starts a new word.
                 this.clearSelection(); 
-                this.toggleCellSelection(e.target);
+                this.addCellToSelection(e.target);
             }
 
             handleMouseOver(e) {
                 if (!this.isDragging || !e.target.classList.contains('cell')) return;
-                this.toggleCellSelection(e.target);
+                this.addCellToSelection(e.target);
             }
 
             handleMouseUp() {
@@ -215,8 +235,8 @@
                 this.submitWord();
             }
             
-            toggleCellSelection(cellEl) {
-                if (this.selectedCells.includes(cellEl)) return; // Don't re-select
+            addCellToSelection(cellEl) {
+                if (this.selectedCells.includes(cellEl)) return;
                 this.selectedCells.push(cellEl);
                 cellEl.classList.add('selected');
                 this.sendSelectionUpdate();
@@ -239,26 +259,28 @@
                 this.validateAndScoreWord(selectedWord);
                 this.validateAndScoreWord(selectedWord.split('').reverse().join(''));
                 
-                // Clear selection after submitting
                 this.clearSelection();
             }
 
             validateAndScoreWord(word) {
-                if (word.length < 3 || this.foundWords.has(word) || !FULL_DICTIONARY.has(word.toUpperCase())) {
+                const upperWord = word.toUpperCase();
+                if (word.length < 3 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
                     return;
                 }
 
-                this.foundWords.add(word);
+                this.foundWords.add(upperWord);
+                this.addFoundWord(word); // Add to local player's list
+
                 let points = word.length;
-                let isBonus = this.targetWords.has(word.toUpperCase());
+                let isBonus = this.targetWords.has(upperWord);
 
                 if (isBonus) {
-                    points += 10; // Bonus points!
-                    this.addBonusWord(word.toUpperCase());
+                    points += 10;
+                    this.addBonusWord(upperWord);
                 }
 
                 this.updateScore(this.score + points);
-                conn.send({ type: 'word_found', word: word.toUpperCase(), newScore: this.score, isBonus });
+                conn.send({ type: 'word_found', word: upperWord, newScore: this.score, isBonus });
             }
             
             // --- OPPONENT ONLY METHODS ---
@@ -272,57 +294,63 @@
         }
         
         // --- WEBRTC LOGIC ---
-        function initializePeer(host, roomName) {
+        function initializePeer(host, roomName, playerName) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
 
             peer.on('open', (id) => {
-                if (!isHost) connectToHost(roomName);
+                if (!isHost) connectToHost(roomName, playerName);
                 else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`;
             });
 
             peer.on('connection', (connection) => {
                 conn = connection;
-                setupConnection();
+                setupConnection(playerName);
             });
             peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
         }
 
-        function connectToHost(roomName) {
+        function connectToHost(roomName, playerName) {
             conn = peer.connect(roomName);
-            setupConnection();
+            setupConnection(playerName);
         }
 
-        function setupConnection() {
+        function setupConnection(myName) {
             conn.on('open', () => {
+                // Exchange names
+                conn.send({ type: 'name_sync', name: myName });
+                
                 connectionSetupEl.style.display = 'none';
                 gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
 
-                myPlayer = new Player(isHost ? 1 : 2, true);
-                opponentPlayer = new Player(isHost ? 2 : 1, false);
-
-                if (isHost) {
-                    newGameBtn.disabled = false;
-                    mainStatusEl.textContent = "Connected! Click 'New Game' to start.";
-                } else {
-                    newGameBtn.disabled = true;
-                    mainStatusEl.textContent = "Connected! Waiting for host to start.";
-                }
+                myPlayer = new Player(isHost ? 1 : 2, myName, true);
             });
 
             conn.on('data', (data) => {
                 switch (data.type) {
+                    case 'name_sync':
+                        opponentPlayer = new Player(isHost ? 2 : 1, data.name, false);
+                         if (isHost) {
+                            newGameBtn.disabled = false;
+                            mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`;
+                        } else {
+                            newGameBtn.disabled = true;
+                            mainStatusEl.textContent = `Connected to ${data.name}! Waiting for them to start.`;
+                        }
+                        break;
                     case 'start_game':
                         startNewGame(data.targetWords, data.grid);
                         break;
                     case 'selection_update':
-                        opponentPlayer.updateOpponentSelection(data.path);
+                        if(opponentPlayer) opponentPlayer.updateOpponentSelection(data.path);
                         break;
                     case 'word_found':
-                        opponentPlayer.updateScore(data.newScore);
-                        if (data.isBonus) {
-                            opponentPlayer.addBonusWord(data.word);
+                        if(opponentPlayer) {
+                            opponentPlayer.updateScore(data.newScore);
+                            if (data.isBonus) {
+                                opponentPlayer.addBonusWord(data.word);
+                            }
                         }
                         break;
                 }
@@ -336,7 +364,7 @@
         
         // --- GAME LOGIC ---
         function generateNewBoard() {
-            const targetWords = [...TARGET_WORDS_POOL].sort(() => 0.5 - Math.random()).slice(0, 10);
+             const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length > 4))].sort(() => 0.5 - Math.random()).slice(0, 10);
             targetWords.sort((a,b) => b.length - a.length);
 
             let grid = Array(GRID_SIZE.rows).fill(null).map(() => Array(GRID_SIZE.cols).fill(''));
@@ -345,7 +373,7 @@
                 let placed = false;
                 for (let i = 0; i < 200 && !placed; i++) {
                     const dir = Math.floor(Math.random() * 4);
-                    const wordToPlace = word;
+                    const wordToPlace = word.toUpperCase();
                     
                     let r, c, canPlace = true;
 
@@ -370,7 +398,7 @@
                            break;
                         case 3: // diagonal down-left
                            r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1));
-                           c = Math.floor(Math.random() * (word.length -1));
+                           c = Math.floor(Math.random() * (GRID_SIZE.cols - (word.length -1))) + (word.length-1);
                            for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false;
                            if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j];
                            break;
@@ -386,7 +414,7 @@
                     }
                 }
             }
-            return { targetWords, grid };
+            return { targetWords: targetWords.map(w=>w.toUpperCase()), grid };
         }
 
         function startNewGame(targetWords, grid) {
@@ -433,17 +461,16 @@
         }
 
         // --- EVENT LISTENERS ---
-        createRoomBtn.addEventListener('click', () => {
+        function handleConnection(isHost) {
+            const playerName = playerNameInput.value.trim();
             const roomName = roomNameInput.value.trim();
+            if (!playerName) return alert('Please enter your name.');
             if (!roomName) return alert('Please enter a room name.');
-            initializePeer(true, roomName);
-        });
+            initializePeer(isHost, roomName, playerName);
+        }
 
-        joinRoomBtn.addEventListener('click', () => {
-            const roomName = roomNameInput.value.trim();
-            if (!roomName) return alert('Please enter a room name to join.');
-            initializePeer(false, roomName);
-        });
+        createRoomBtn.addEventListener('click', () => handleConnection(true));
+        joinRoomBtn.addEventListener('click', () => handleConnection(false));
 
         newGameBtn.addEventListener('click', () => {
             if (!isHost) return;
