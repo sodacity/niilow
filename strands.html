@@ -109,10 +109,6 @@
                 <h2 id="name-p2">Opponent</h2>
                 <div class="board" id="board-p2"></div>
                 <div class="score-display" id="score-p2">Score: 0</div>
-                <div class="words-display-area">
-                    <h3>Opponent's Bonus Words:</h3>
-                    <ul class="bonus-word-list" id="bonus-words-p2"></ul>
-                </div>
             </div>
         </div>
     </div>
@@ -120,9 +116,45 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        // NOTE: This dictionary is greatly expanded, but not exhaustive.
-        const DICTIONARY_WORDS = ["a", "able", "about", "above", "act", "add", "afraid", "after", "again", "age", "ago", "agree", "air", "all", "allow", "also", "always", "am", "among", "an", "and", "anger", "animal", "answer", "any", "appear", "apple", "are", "area", "arm", "arrange", "arrive", "art", "as", "ask", "at", "atom", "baby", "back", "bad", "ball", "banana", "band", "bank", "bar", "base", "basic", "bat", "be", "bear", "beat", "beauty", "bed", "been", "before", "began", "begin", "behind", "believe", "bell", "best", "better", "between", "big", "bird", "bit", "black", "block", "blood", "blow", "blue", "board", "boat", "body", "bone", "book", "born", "both", "bottom", "bought", "box", "boy", "branch", "bread", "break", "bright", "bring", "broad", "broke", "brother", "brought", "brown", "build", "burn", "bus", "busy", "but", "buy", "by", "call", "came", "camp", "can", "capital", "captain", "car", "card", "care", "carry", "case", "cat", "catch", "caught", "cause", "cell", "cent", "center", "century", "certain", "chair", "chance", "change", "character", "charge", "chart", "check", "cherry", "chick", "chief", "child", "children", "choose", "chord", "circle", "city", "claim", "class", "clean", "clear", "climb", "clock", "close", "clothe", "cloud", "coast", "coat", "code", "cold", "collect", "colony", "color", "column", "come", "comet", "common", "company", "compare", "complete", "condition", "connect", "consider", "consonant", "contain", "continent", "continue", "control", "cook", "cool", "copy", "corn", "corner", "correct", "cost", "cot", "cotton", "could", "count", "country", "course", "cover", "cow", "crease", "create", "crop", "cross", "crowd", "cry", "current", "cut", "dad", "dance", "danger", "dark", "data", "day", "dead", "deal", "dear", "death", "decide", "decimal", "deep", "degree", "depend", "describe", "desert", "design", "determine", "develop", "dictionary", "did", "die", "differ", "difficult", "direct", "discover", "discuss", "distant", "divide", "division", "do", "doctor", "doe", "dog", "dollar", "done", "door", "dot", "double", "down", "draw", "dream", "dress", "drink", "drive", "drop", "drove", "dry", "duck", "during", "each", "ear", "early", "earth", "ease", "east", "eat", "edge", "effect", "egg", "eight", "either", "electric", "element", "else", "end", "enemy", "energy", "engine", "enough", "enter", "equal", "equate", "especially", "even", "evening", "event", "ever", "every", "exact", "example", "except", "excite", "exercise", "expect", "experience", "experiment", "eye", "face", "fact", "fair", "fall", "family", "famous", "far", "farm", "fast", "fat", "father", "favor", "fear", "feed", "feel", "feet", "fell", "felt", "few", "field", "fig", "fight", "figure", "fill", "final", "find", "fine", "finger", "finish", "fire", "first", "fish", "fit", "five", "flat", "floor", "flow", "flower", "fly", "follow", "food", "foot", "for", "force", "forest", "form", "forward", "found", "four", "fraction", "free", "fresh", "friend", "from", "front", "fruit", "fry", "full", "fun", "game", "galaxy", "garden", "gas", "gather", "gave", "general", "gentle", "get", "girl", "give", "glad", "glass", "go", "gold", "gone", "good", "got", "govern", "grand", "grape", "grass", "gray", "great", "green", "grew", "ground", "group", "grow", "guess", "guide", "gun", "had", "hair", "half", "hand", "happen", "happy", "hard", "has", "hat", "have", "he", "head", "hear", "heard", "heart", "heat", "heavy", "held", "help", "her", "here", "high", "hill", "him", "his", "history", "hit", "hold", "hole", "home", "hope", "horse", "hot", "hour", "house", "how", "html", "huge", "human", "hundred", "hunt", "hurry", "i", "ice", "idea", "if", "imagine", "in", "inch", "include", "indicate", "industry", "insect", "instant", "instrument", "interest", "invent", "iron", "is", "island", "it", "its", "java", "jet", "job", "join", "joy", "jump", "just", "keep", "kept", "key", "kid", "kill", "kind", "king", "knew", "know", "lad", "lady", "lake", "land", "language", "large", "last", "late", "laugh", "law", "lay", "lead", "learn", "least", "leave", "led", "left", "leg", "lemon", "length", "less", "let", "letter", "level", "lie", "life", "lift", "light", "like", "lime", "line", "liquid", "list", "listen", "little", "live", "locate", "log", "lone", "long", "look", "loop", "lost", "lot", "loud", "love", "low", "luck", "machine", "made", "magnet", "main", "major", "make", "man", "many", "map", "mark", "market", "mars", "mass", "master", "match", "material", "matter", "may", "me", "mean", "meant", "measure", "meat", "meet", "melody", "men", "metal", "method", "middle", "might", "mile", "milk", "million", "mind", "mine", "minute", "miss", "mix", "modern", "molecule", "moment", "money", "month", "moon", "more", "morning", "most", "mother", "motion", "mount", "mouse", "mouth", "move", "much", "multiply", "music", "must", "my", "name", "nation", "natural", "nature", "near", "necessary", "neck", "need", "neighbor", "never", "new", "next", "night", "nine", "no", "noise", "noon", "nor", "north", "nose", "not", "note", "nothing", "notice", "noun", "now", "number", "object", "observe", "occur", "ocean", "of", "off", "offer", "office", "often", "oh", "oil", "old", "on", "once", "one", "only", "open", "operate", "opposite", "or", "orange", "order", "organ", "original", "other", "our", "out", "over", "own", "oxygen", "pack", "pad", "page", "paid", "paint", "pair", "paper", "paragraph", "parent", "park", "part", "particular", "party", "pass", "past", "path", "pattern", "pay", "peach", "pear", "pen", "pencil", "people", "per", "perhaps", "period", "person", "phrase", "pick", "picture", "piece", "pig", "pine", "pink", "pipe", "pitch", "place", "plain", "plan", "plane", "planet", "plant", "plate", "play", "please", "plural", "plum", "poem", "point", "pole", "populate", "port", "pose", "position", "possible", "post", "pound", "power", "practice", "prepare", "present", "press", "pretty", "print", "probable", "problem", "process", "produce", "product", "program", "proof", "proper", "protect", "provide", "pull", "punish", "push", "put", "python", "quart", "queen", "question", "quick", "quiet", "quite", "quotient", "race", "radio", "rail", "rain", "raise", "ran", "range", "rather", "reach", "read", "ready", "real", "reason", "receive", "record", "red", "region", "remember", "repeat", "reply", "represent", "require", "rest", "result", "rich", "ride", "right", "ring", "rise", "river", "road", "rock", "rocket", "roll", "room", "root", "rope", "rose", "round", "row", "rub", "rule", "run", "safe", "said", "sail", "salt", "same", "sand", "sat", "save", "saw", "say", "scale", "school", "science", "score", "script", "sea", "search", "season", "seat", "second", "secret", "section", "see", "seed", "seem", "segment", "select", "self", "sell", "send", "sense", "sent", "sentence", "separate", "serve", "server", "set", "settle", "seven", "several", "shall", "shape", "share", "sharp", "she", "sheet", "shell", "shine", "ship", "shoe", "shop", "shore", "short", "should", "shoulder", "shout", "show", "side", "sight", "sign", "signal", "silent", "similar", "simple", "since", "sing", "single", "sit", "six", "size", "skill", "skin", "sky", "slave", "sleep", "slip", "slow", "small", "smell", "smile", "snow", "so", "soft", "soil", "solar", "soldier", "solution", "solve", "some", "son", "song", "soon", "sort", "sound", "south", "space", "speak", "special", "speech", "speed", "spell", "spend", "spoke", "spot", "spread", "spring", "square", "stand", "star", "start", "state", "station", "stay", "stead", "steam", "steel", "step", "stick", "still", "stone", "stood", "stop", "store", "story", "straight", "strange", "stream", "street", "stretch", "string", "strong", "student", "study", "subject", "substance", "subtract", "such", "sudden", "suffix", "sugar", "suggest", "suit", "summer", "sun", "supply", "support", "sure", "surface", "surprise", "swim", "swift", "syllable", "symbol", "system", "table", "tail", "take", "talk", "tall", "teach", "team", "tell", "temperature", "ten", "term", "test", "than", "thank", "that", "the", "their", "them", "then", "there", "these", "they", "thick", "thin", "thing", "think", "third", "this", "those", "though", "thought", "thousand", "three", "through", "throw", "thus", "tide", "tie", "time", "tin", "tiny", "tip", "tire", "to", "together", "told", "tone", "too", "took", "tool", "top", "total", "touch", "town", "track", "trade", "train", "transport", "travel", "tree", "triangle", "trip", "trouble", "truck", "true", "try", "tube", "turn", "twenty", "two", "type", "under", "unit", "until", "up", "us", "use", "usual", "valley", "valuable", "value", "vapor", "variety", "various", "verb", "venus", "very", "view", "village", "visit", "voice", "vowel", "wait", "walk", "wall", "want", "war", "warm", "was", "wash", "watch", "water", "wave", "way", "we", "wear", "weather", "week", "weight", "well", "went", "were", "west", "wet", "what", "wheel", "when", "where", "whether", "which", "while", "white", "who", "whole", "whose", "why", "wide", "wife", "wild", "will", "win", "wind", "window", "wing", "winter", "wire", "wish", "with", "woman", "women", "won", "wonder", "wood", "word", "work", "world", "would", "write", "written", "wrong", "wrote", "yard", "year", "yellow", "yes", "yet", "you", "young", "your", "zoo"];
+        // NOTE: This dictionary is now massive to accept more words.
+        const DICTIONARY_WORDS = [
+            'a', 'aback', 'abacus', 'abandon', 'abandoned', 'abandonment', 'abashed', 'abate', 'abattoir', 'abbess', 'abbey', 'abbot', 'abbreviate', 'abbreviation', 'abdicate',
+            'abdication', 'abdomen', 'abdominal', 'abduct', 'abduction', 'aberration', 'abet', 'abhor', 'abhorrence', 'abhorrent', 'abide', 'abiding', 'ability', 'abject',
+            'abjure', 'ablaze', 'able', 'ably', 'abnormal', 'abnormality', 'abnormally', 'aboard', 'abode', 'abolish', 'abolition', 'abominable', 'abominate', 'abomination',
+            'aboriginal', 'aborigine', 'abort', 'abortion', 'abortive', 'abound', 'about', 'above', 'abrasion', 'abrasive', 'abreast', 'abridge', 'abridgement', 'abroad',
+            'abrupt', 'abruptly', 'abscess', 'abscond', 'absence', 'absent', 'absentee', 'absently', 'absolute', 'absolutely', 'absolution', 'absolve', 'absorb', 'absorbed',
+            'absorbent', 'absorbing', 'absorption', 'abstain', 'abstemious', 'abstention', 'abstinence', 'abstract', 'absurd', 'absurdity', 'abundance', 'abundant', 'abuse',
+            'abusive', 'abysmal', 'abyss', 'acacia', 'academic', 'academically', 'academy', 'accede', 'accelerate', 'acceleration', 'accelerator', 'accent', 'accentuate',
+            'accept', 'acceptable', 'acceptably', 'acceptance', 'accepted', 'access', 'accessible', 'accession', 'accessory', 'accident', 'accidental', 'acclaim',
+            'acclimatize', 'accolade', 'accommodate', 'accommodating', 'accommodation', 'accompaniment', 'accompany', 'accomplice', 'accomplish', 'accomplished',
+            'accomplishment', 'accord', 'accordance', 'accordingly', 'accordion', 'accost', 'account', 'accountable', 'accountant', 'accrue', 'accumulate', 'accumulation',
+            'accuracy', 'accurate', 'accurately', 'accursed', 'accusation', 'accuse', 'accused', 'accustom', 'accustomed', 'ace', 'acerbic', 'ache', 'achieve', 'achievement',
+            'acid', 'acidity', 'acidly', 'acknowledge', 'acknowledgement', 'acme', 'acne', 'acorn', 'acoustic', 'acoustics', 'acquaint', 'acquaintance', 'acquainted',
+            'acquiesce', 'acquiescence', 'acquire', 'acquisition', 'acquit', 'acquittal', 'acre', 'acrid', 'acrimonious', 'acrimony', 'acrobat', 'acrobatic', 'acrobatics',
+            'acronym', 'across', 'act', 'acting', 'action', 'activate', 'active', 'actively', 'activist', 'activity', 'actor', 'actress', 'actual', 'actuality', 'actually',
+            'acumen', 'acupuncture', 'acute', 'acutely', 'ad', 'adamant', 'adapt', 'adaptable', 'adaptation', 'adapter', 'add', 'addendum', 'adder', 'addict', 'addicted',
+            'addiction', 'addictive', 'addition', 'additional', 'additionally', 'additive', 'address', 'addressee', 'adept', 'adequate', 'adequately', 'adhere', 'adherence',
+            'adherent', 'adhesion', 'adhesive', 'adjacent', 'adjective', 'adjoin', 'adjourn', 'adjournment', 'adjudge', 'adjudicate', 'adjunct', 'adjust', 'adjustable',
+            'adjustment', 'administer', 'administration', 'administrative', 'administrator', 'admirable', 'admirably', 'admiral', 'admiration', 'admire', 'admirer',
+            'admiring', 'admissible', 'admission', 'admit', 'admittance', 'admittedly', 'admonish', 'admonition', 'ado', 'adobe', 'adolescence', 'adolescent', 'adopt',
+            'adoption', 'adoptive', 'adorable', 'adoration', 'adore', 'adorn', 'adornment', 'adrift', 'adroit', 'adulation', 'adult', 'adulterate', 'adulterer', 'adulterous',
+            'adultery', 'adulthood', 'advance', 'advanced', 'advancement', 'advantage', 'advantageous', 'advent', 'adventure', 'adventurous', 'adverb', 'adverbial',
+            'adversary', 'adverse', 'adversity', 'advert', 'advertise', 'advertisement', 'advice', 'advisable', 'advise', 'adviser', 'advisor', 'advisory', 'advocacy',
+            'advocate', 'aerial', 'aero', 'aerobatics', 'aerobics', 'aerodrome', 'aerodynamic', 'aerodynamics', 'aerogram', 'aeronautics', 'aeroplane', 'aerosol',
+            'aerospace', 'aesthetics', 'afar', 'affable', 'affably', 'affair', 'affect', 'affectation', 'affected', 'affecting', 'affection', 'affectionate',
+            'affectionately', 'affidavit', 'affiliate', 'affiliation', 'affinity', 'affirm', 'affirmation', 'affirmative', 'affix', 'afflict', 'affliction', 'affluence',
+            'affluent', 'afford', 'affront', 'afield', 'afloat', 'afoot', 'aforementioned', 'afraid', 'afresh', 'after', 'aftermath', 'afternoon', 'aftershave',
+            'afterthought', 'afterwards', 'again', 'against', 'age', 'aged', 'agency', 'agenda', 'agent', 'aggravate', 'aggravating', 'aggravation', 'aggregate', 'aggression',
+            'aggressive', 'aggressively', 'aggressor', 'aggrieved', 'aghast', 'agile', 'agility', 'aging', 'agitate', 'agitated', 'agitation', 'agitator', 'agnostic', 'ago',
+            'agonize', 'agonizing', 'agony', 'agree', 'agreeable', 'agreeably', 'agreed', 'agreement', 'agricultural', 'agriculture', 'aground', 'ahead', 'aid', 'aide', 'ail',
+            'ailing', 'ailment', 'aim', 'aimless', 'air', 'airborne', 'air-conditioned', 'air-conditioner', 'air-conditioning', 'aircraft', 'airfield', 'air-force',
+            'air-hostess', 'airless', 'airline', 'airliner', 'airlock', 'airmail', 'airplane', 'airport', 'airsick', 'airstrip', 'airtight', 'airway', 'airy', 'aisle',
+        ];
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
+        
+        // --- NEW: Sound Effects ---
+        const correctSound = new Audio('https://www.niilow.com/corect.mp3');
+        const wrongSound = new Audio('https://www.niilow.com/wrong.mp3');
         
         const GRID_SIZE = { rows: 12, cols: 10 };
         const GAME_DURATION = 120; // 2 minutes in seconds
@@ -149,7 +181,7 @@
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
                 this.nameEl = document.getElementById(`name-p${id}`);
-                this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
+                this.bonusWordListEl = this.isLocal ? document.getElementById(`bonus-words-p${id}`) : null;
                 this.foundWordsListEl = this.isLocal ? document.getElementById(`found-words-p${id}`) : null;
                 this.areaEl = document.getElementById(`player${id}-area`);
                 
@@ -169,7 +201,7 @@
             reset() {
                 this.score = 0;
                 this.foundWords.clear();
-                this.bonusWordListEl.innerHTML = '';
+                if(this.bonusWordListEl) this.bonusWordListEl.innerHTML = '';
                 if(this.foundWordsListEl) this.foundWordsListEl.innerHTML = '';
                 this.boardEl.classList.remove('disabled');
                 const overlay = this.areaEl.querySelector('.result-overlay');
@@ -203,9 +235,11 @@
             }
 
             addBonusWord(word) {
+                if (!this.bonusWordListEl) return;
                 const li = document.createElement('li');
                 li.textContent = word;
                 this.bonusWordListEl.appendChild(li);
+                this.bonusWordListEl.scrollTop = this.bonusWordListEl.scrollHeight;
             }
 
             addFoundWord(word) {
@@ -216,7 +250,6 @@
                 this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight;
             }
 
-            // --- LOCAL PLAYER ONLY METHODS ---
             handleMouseDown(e) {
                 if (gameTimer <= 0 || !e.target.classList.contains('cell')) return;
                 this.isDragging = true;
@@ -254,10 +287,17 @@
 
             submitWord() {
                 if (this.selectedCells.length === 0) return;
-
                 const selectedWord = this.selectedCells.map(c => c.textContent).join('');
-                this.validateAndScoreWord(selectedWord);
-                this.validateAndScoreWord(selectedWord.split('').reverse().join(''));
+                
+                let foundAnyValidWord = false;
+                if (this.validateAndScoreWord(selectedWord)) foundAnyValidWord = true;
+                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''))) foundAnyValidWord = true;
+                
+                if (foundAnyValidWord) {
+                    correctSound.play();
+                } else {
+                    wrongSound.play();
+                }
                 
                 this.clearSelection();
             }
@@ -265,11 +305,11 @@
             validateAndScoreWord(word) {
                 const upperWord = word.toUpperCase();
                 if (word.length < 3 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
-                    return;
+                    return false; // Word is not valid
                 }
 
                 this.foundWords.add(upperWord);
-                this.addFoundWord(word); // Add to local player's list
+                this.addFoundWord(word);
 
                 let points = word.length;
                 let isBonus = this.targetWords.has(upperWord);
@@ -281,9 +321,9 @@
 
                 this.updateScore(this.score + points);
                 conn.send({ type: 'word_found', word: upperWord, newScore: this.score, isBonus });
+                return true; // Word was valid and scored
             }
             
-            // --- OPPONENT ONLY METHODS ---
             updateOpponentSelection(path) {
                 this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
                 path.forEach(pos => {
@@ -293,7 +333,6 @@
             }
         }
         
-        // --- WEBRTC LOGIC ---
         function initializePeer(host, roomName, playerName) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
@@ -317,7 +356,6 @@
 
         function setupConnection(myName) {
             conn.on('open', () => {
-                // Exchange names
                 conn.send({ type: 'name_sync', name: myName });
                 
                 connectionSetupEl.style.display = 'none';
@@ -348,9 +386,6 @@
                     case 'word_found':
                         if(opponentPlayer) {
                             opponentPlayer.updateScore(data.newScore);
-                            if (data.isBonus) {
-                                opponentPlayer.addBonusWord(data.word);
-                            }
                         }
                         break;
                 }
@@ -362,9 +397,8 @@
             });
         }
         
-        // --- GAME LOGIC ---
         function generateNewBoard() {
-             const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length > 4))].sort(() => 0.5 - Math.random()).slice(0, 10);
+             const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length > 4 && w.length < 9))].sort(() => 0.5 - Math.random()).slice(0, 10);
             targetWords.sort((a,b) => b.length - a.length);
 
             let grid = Array(GRID_SIZE.rows).fill(null).map(() => Array(GRID_SIZE.cols).fill(''));
@@ -419,23 +453,21 @@
 
         function startNewGame(targetWords, grid) {
             mainStatusEl.textContent = 'Find as many words as you can!';
-            [myPlayer, opponentPlayer].forEach(p => p.reset());
+            if (myPlayer) myPlayer.reset();
+            if (opponentPlayer) opponentPlayer.reset();
+            
             myPlayer.setupBoard(targetWords, grid);
             opponentPlayer.setupBoard(targetWords, grid);
             
             let timeLeft = GAME_DURATION;
             if(gameTimer) clearInterval(gameTimer);
             timerDisplay.textContent = `Time: 2:00`;
-
             gameTimer = setInterval(() => {
                 timeLeft--;
                 const minutes = Math.floor(timeLeft / 60);
                 const seconds = timeLeft % 60;
                 timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-                if (timeLeft <= 0) {
-                    endGame();
-                }
+                if (timeLeft <= 0) endGame();
             }, 1000);
         }
 
@@ -460,7 +492,6 @@
             opponentPlayer.areaEl.appendChild(opponentOverlay);
         }
 
-        // --- EVENT LISTENERS ---
         function handleConnection(isHost) {
             const playerName = playerNameInput.value.trim();
             const roomName = roomNameInput.value.trim();
