@@ -13,13 +13,38 @@
             --text-color: #333;
             --subtle-text: #666;
             --cell-border: #E0E0E0;
-            --selected-bg: #2196F3; /* A nice Material blue */
-            --opponent-selected-bg: #FFC107; /* A contrasting amber */
+            --cell-bg: #fafafa;
+            --selected-bg: #2196F3;
+            --opponent-selected-bg: #FFC107;
+            --bonus-word-color: #4CAF50;
             --winner-overlay: rgba(76, 175, 80, 0.85);
             --loser-overlay: rgba(244, 67, 54, 0.85);
             --draw-overlay: rgba(158, 158, 158, 0.85);
             --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        /* Hacker Theme */
+        body.theme-hacker {
+            --background-color: #0d1117;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --subtle-text: #8b949e;
+            --cell-border: #30363d;
+            --cell-bg: #010409;
+            --bonus-word-color: #58a6ff;
+        }
+
+        /* Cosmic Theme */
+        body.theme-cosmic {
+            --background-color: #1a202c;
+            --card-bg: #2d3748;
+            --text-color: #e2e8f0;
+            --subtle-text: #a0aec0;
+            --cell-border: #4a5568;
+            --cell-bg: #171923;
+            --bonus-word-color: #faf089;
+        }
+
 
         body {
             font-family: 'Roboto', sans-serif;
@@ -32,13 +57,14 @@
             align-items: center;
             justify-content: flex-start;
             min-height: 100vh;
+            transition: background-color 0.3s;
         }
 
         #game-header { text-align: center; margin-bottom: 2rem; }
         h1 { 
             font-family: 'Fredoka One', cursive;
             font-size: 3rem; 
-            color: #333;
+            color: var(--text-color);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
         #main-status { font-size: 1.2rem; font-weight: 500; color: var(--subtle-text); height: 25px; }
@@ -58,12 +84,14 @@
         }
         .input-group { display: flex; flex-direction: column; gap: 1rem; width: 100%; }
         .input-row { display: flex; gap: 1rem; align-items: center; }
-        #connection-setup input[type="text"] { 
+        #connection-setup input[type="text"], #theme-select { 
             padding: 0.75rem; 
             border: 1px solid #ccc; 
             border-radius: 8px; 
             font-size: 1rem;
             flex-grow: 1;
+            background-color: var(--background-color);
+            color: var(--text-color);
         }
         #connection-setup input[type="color"] {
             -webkit-appearance: none;
@@ -105,7 +133,8 @@
 
         #game-area { display: none; flex-direction: column; align-items: center; width: 100%; }
         #game-info { display: flex; justify-content: center; width: 100%; max-width: 900px; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
-        #timer-display { color: #f44336; font-family: 'Fredoka One', cursive; font-size: 2rem; }
+        #timer-display { color: #f44336; font-family: 'Fredoka One', cursive; font-size: 2rem; transition: transform 0.2s; }
+        #timer-display.shake { animation: shake 0.5s infinite; }
 
         #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1200px; align-items: flex-start; }
         
@@ -132,30 +161,72 @@
         #player-content-1 { flex-direction: row-reverse; }
         #player-content-2 { flex-direction: row; }
         
-        .board-container { display: flex; flex-direction: column; align-items: center; }
+        .board-container { display: flex; flex-direction: column; align-items: center; position: relative; }
+
+        .point-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Fredoka One', cursive;
+            font-size: 2rem;
+            color: var(--bonus-word-color);
+            opacity: 0;
+            animation: floatUp 1.5s ease-out;
+            pointer-events: none;
+        }
+        
         .lists-container { display: flex; flex-direction: column; width: 200px; }
         
-        .result-overlay { position: absolute; top: 2.5rem; /* Adjust to not cover name */ left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Fredoka One', cursive; font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
+        .result-overlay { position: absolute; top: 2.5rem; left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Fredoka One', cursive; font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
         .result-overlay.winner { background: var(--winner-overlay); }
         .result-overlay.loser { background: var(--loser-overlay); }
         .result-overlay.draw { background: var(--draw-overlay); }
 
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
-        .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; background-color: #fafafa; border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; }
-        .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
+        .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; background-color: var(--cell-bg); color: var(--text-color); border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; }
+        .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); animation: pop 0.2s; }
         .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
-        
-        .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; font-family: 'Fredoka One', cursive; }
+        .cell.sparkle::after {
+            content: '✨';
+            position: absolute;
+            font-size: 1.5rem;
+            animation: sparkle 0.8s ease-out;
+            opacity: 0;
+        }
+
+        .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; font-family: 'Fredoka One', cursive; color: var(--text-color); }
         
         .words-display-area { margin-top: 1rem; width: 100%; text-align: center; }
         .words-display-area h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--subtle-text); font-weight: 500; }
-        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; }
-        .found-words-list li { color: #333; font-size: 0.9rem; }
-        .bonus-word-list li { font-weight: 600; color: #4CAF50; font-size: 0.9rem; }
+        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: var(--background-color); border-radius: 8px; border: 1px solid var(--cell-border); }
+        .found-words-list li { color: var(--text-color); font-size: 0.9rem; }
+        .bonus-word-list li { font-weight: 600; color: var(--bonus-word-color); font-size: 0.9rem; }
 
         #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 700; color: white; background-color: #673AB7; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         #new-game-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         #new-game-btn:disabled { background-color: #b39ddb; cursor: not-allowed; transform: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1.05); }
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); }
+        }
+        @keyframes sparkle {
+            0% { opacity: 1; transform: scale(0.5); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
     </style>
 </head>
 <body>
@@ -172,6 +243,11 @@
                 <input type="text" id="room-name-input" placeholder="Room Name">
                 <input type="color" id="player-color-input" value="#2196F3">
             </div>
+             <select id="theme-select">
+                <option value="default">Default Theme</option>
+                <option value="hacker">Hacker Theme</option>
+                <option value="cosmic">Cosmic Theme</option>
+            </select>
         </div>
         <div class="button-group">
             <button id="create-room-btn">Create</button>
@@ -187,7 +263,7 @@
             <div class="player-area" id="player1-area">
                 <h2 class="player-name" id="name-p1">Player 1</h2>
                 <div class="player-content-wrapper" id="player-content-1">
-                    <div class="board-container">
+                    <div class="board-container" id="board-container-p1">
                         <div class="board" id="board-p1"></div>
                         <div class="score-display" id="score-p1">Score: 0</div>
                     </div>
@@ -206,7 +282,7 @@
             <div class="player-area" id="player2-area">
                 <h2 class="player-name" id="name-p2">Player 2</h2>
                  <div class="player-content-wrapper" id="player-content-2">
-                    <div class="board-container">
+                    <div class="board-container" id="board-container-p2">
                         <div class="board" id="board-p2"></div>
                         <div class="score-display" id="score-p2">Score: 0</div>
                     </div>
@@ -243,12 +319,17 @@
         const connectionSetupEl = document.getElementById('connection-setup');
         const playerNameInput = document.getElementById('player-name-input');
         const playerColorInput = document.getElementById('player-color-input');
+        const themeSelect = document.getElementById('theme-select');
         const roomNameInput = document.getElementById('room-name-input');
         const createRoomBtn = document.getElementById('create-room-btn');
         const joinRoomBtn = document.getElementById('join-room-btn');
         const gameAreaEl = document.getElementById('game-area');
         const newGameBtn = document.getElementById('new-game-btn');
         const timerDisplay = document.getElementById('timer-display');
+
+        themeSelect.addEventListener('change', (e) => {
+            document.body.className = `theme-${e.target.value}`;
+        });
 
         function getContrastingTextColor(hexcolor){
             if (hexcolor.startsWith('#')) { hexcolor = hexcolor.slice(1); }
@@ -266,6 +347,7 @@
                 this.color = color;
                 this.isLocal = isLocal;
                 
+                this.boardContainerEl = document.getElementById(`board-container-p${id}`);
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
                 this.nameEl = document.getElementById(`name-p${id}`);
@@ -282,6 +364,7 @@
                 }
                 
                 this.score = 0;
+                this.currentDisplayScore = 0;
                 this.foundWords = new Set();
                 this.isDragging = false;
                 this.selectedCells = [];
@@ -295,13 +378,13 @@
 
             reset() {
                 this.score = 0;
+                this.updateScore(0, true);
                 this.foundWords.clear();
                 this.bonusWordListEl.innerHTML = '';
                 this.foundWordsListEl.innerHTML = '';
                 this.boardEl.classList.remove('disabled');
                 const overlay = this.areaEl.querySelector('.result-overlay');
                 if (overlay) overlay.remove();
-                this.updateScore(0);
             }
 
             setupBoard(targetWords, grid) {
@@ -324,9 +407,41 @@
                 }
             }
             
-            updateScore(newScore) {
+            updateScore(newScore, immediate = false) {
                 this.score = newScore;
-                this.scoreEl.textContent = `Score: ${this.score}`;
+                if (immediate) {
+                    this.currentDisplayScore = newScore;
+                    this.scoreEl.textContent = `Score: ${this.score}`;
+                    return;
+                }
+                
+                const tick = () => {
+                    if (this.currentDisplayScore < this.score) {
+                        this.currentDisplayScore++;
+                        this.scoreEl.textContent = `Score: ${this.currentDisplayScore}`;
+                        requestAnimationFrame(tick);
+                    }
+                };
+                tick();
+            }
+
+            triggerPointAnimation(points, isBonus) {
+                if (!this.isLocal) return;
+                const pointEl = document.createElement('div');
+                pointEl.className = 'point-animation';
+                pointEl.textContent = `+${points}`;
+                if (isBonus) pointEl.style.color = 'gold';
+
+                this.boardContainerEl.appendChild(pointEl);
+                setTimeout(() => pointEl.remove(), 1500);
+            }
+
+            triggerSparkleAnimation(cells) {
+                 if (!this.isLocal) return;
+                 cells.forEach(cell => {
+                    cell.classList.add('sparkle');
+                    setTimeout(() => cell.classList.remove('sparkle'), 800);
+                 });
             }
 
             addBonusWord(word) {
@@ -387,11 +502,12 @@
                     return;
                 };
 
-                const selectedWord = this.selectedCells.map(c => c.textContent).join('');
+                const selectedCellsCopy = [...this.selectedCells];
+                const selectedWord = selectedCellsCopy.map(c => c.textContent).join('');
                 
                 let foundAnyValidWord = false;
-                if (this.validateAndScoreWord(selectedWord)) foundAnyValidWord = true;
-                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''))) foundAnyValidWord = true;
+                if (this.validateAndScoreWord(selectedWord, selectedCellsCopy)) foundAnyValidWord = true;
+                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''), selectedCellsCopy.reverse())) foundAnyValidWord = true;
                 
                 if (foundAnyValidWord) {
                     correctSound.play();
@@ -402,7 +518,7 @@
                 this.clearSelection();
             }
 
-            validateAndScoreWord(word) {
+            validateAndScoreWord(word, cells) {
                 const upperWord = word.toUpperCase();
                 if (word.length < 4 || word.length > 6 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
                     return false;
@@ -417,9 +533,11 @@
                 if (isBonus) {
                     points += 10;
                     this.addBonusWord(upperWord);
+                    this.triggerSparkleAnimation(cells);
                 }
 
                 this.updateScore(this.score + points);
+                this.triggerPointAnimation(points, isBonus);
                 conn.send({ type: 'word_found', word: upperWord, newScore: this.score, isBonus });
                 return true;
             }
@@ -433,47 +551,50 @@
             }
         }
         
-        function initializePeer(host, roomName, playerName, playerColor) {
+        function initializePeer(host, roomName, playerName, playerColor, theme) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
 
             peer.on('open', (id) => {
-                if (!isHost) connectToHost(roomName, playerName, playerColor);
+                if (!isHost) connectToHost(roomName, playerName, playerColor, theme);
                 else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`;
             });
 
             peer.on('connection', (connection) => {
                 conn = connection;
-                setupConnection(playerName, playerColor);
+                setupConnection(playerName, playerColor, theme);
             });
             peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
         }
 
-        function connectToHost(roomName, playerName, playerColor) {
+        function connectToHost(roomName, playerName, playerColor, theme) {
             conn = peer.connect(roomName);
-            setupConnection(playerName, playerColor);
+            setupConnection(playerName, playerColor, theme);
         }
 
-        function setupConnection(myName, myColor) {
+        function setupConnection(myName, myColor, myTheme) {
             conn.on('open', () => {
-                conn.send({ type: 'name_sync', name: myName, color: myColor });
+                conn.send({ type: 'player_sync', name: myName, color: myColor, theme: myTheme });
                 
                 connectionSetupEl.style.display = 'none';
                 gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
+                document.body.className = `theme-${myTheme}`;
 
-                // The local player is ALWAYS Player 1 (left) for the host
-                // and ALWAYS Player 2 (right) for the guest
                 const myPlayerId = isHost ? 1 : 2;
                 myPlayer = new Player(myPlayerId, myName, myColor, true);
             });
 
             conn.on('data', (data) => {
                 switch (data.type) {
-                    case 'name_sync':
+                    case 'player_sync':
                         const opponentId = isHost ? 2 : 1;
                         opponentPlayer = new Player(opponentId, data.name, data.color, false);
                         
+                        if (isHost) {
+                            conn.send({ type: 'theme_sync', theme: myTheme });
+                        }
+
                          if (isHost) {
                             newGameBtn.disabled = false;
                             mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`;
@@ -481,6 +602,9 @@
                             newGameBtn.disabled = true;
                             mainStatusEl.textContent = `Connected to ${data.name}! Waiting for them to start.`;
                         }
+                        break;
+                    case 'theme_sync':
+                        document.body.className = `theme-${data.theme}`;
                         break;
                     case 'start_game':
                         startNewGame(data.targetWords, data.grid);
@@ -491,7 +615,8 @@
                     case 'word_found':
                         if(opponentPlayer) {
                             opponentPlayer.updateScore(data.newScore);
-                            // Opponent's private lists are not updated here. That's correct.
+                            if (data.isBonus) opponentPlayer.triggerPointAnimation(data.word.length + 10, true);
+                            else opponentPlayer.triggerPointAnimation(data.word.length, false);
                         }
                         break;
                 }
@@ -567,12 +692,21 @@
             let timeLeft = GAME_DURATION;
             if(gameTimer) clearInterval(gameTimer);
             timerDisplay.textContent = `Time: 2:00`;
+            timerDisplay.classList.remove('shake');
+
             gameTimer = setInterval(() => {
                 timeLeft--;
                 const minutes = Math.floor(timeLeft / 60);
                 const seconds = timeLeft % 60;
                 timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                if (timeLeft <= 0) endGame();
+                
+                if (timeLeft === 10) {
+                    timerDisplay.classList.add('shake');
+                }
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
             }, 1000);
         }
 
@@ -580,6 +714,7 @@
             clearInterval(gameTimer);
             timerDisplay.textContent = "Time's Up!";
             myPlayer.boardEl.classList.add('disabled');
+            timerDisplay.classList.remove('shake');
             
             let myResult, myText;
             if (myPlayer.score > opponentPlayer.score) { myResult = 'winner'; myText = 'WINNER!'; } 
@@ -600,10 +735,11 @@
         function handleConnection(isHost) {
             const playerName = playerNameInput.value.trim();
             const playerColor = playerColorInput.value;
+            const theme = themeSelect.value;
             const roomName = roomNameInput.value.trim();
             if (!playerName) return alert('Please enter your name.');
             if (!roomName) return alert('Please enter a room name.');
-            initializePeer(isHost, roomName, playerName, playerColor);
+            initializePeer(isHost, roomName, playerName, playerColor, theme);
         }
 
         createRoomBtn.addEventListener('click', () => handleConnection(true));
