@@ -5,22 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Too Many Words</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="dictionary.js"></script> <style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
         :root {
-            --board-bg: #FFFFFF;
-            --cell-border: #E0E0E0;
+            --background-color: #f0f2f5;
+            --card-bg: #FFFFFF;
             --text-color: #333;
-            --selected-bg: #4A90E2;
-            --opponent-selected-bg: #FFB6C1;
-            --bonus-word-color: #28a745;
-            --winner-overlay: rgba(40, 167, 69, 0.8);
-            --loser-overlay: rgba(220, 53, 69, 0.8);
-            --draw-overlay: rgba(108, 117, 125, 0.8);
+            --subtle-text: #666;
+            --cell-border: #E0E0E0;
+            --selected-bg: #2196F3; /* A nice Material blue */
+            --opponent-selected-bg: #FFC107; /* A contrasting amber */
+            --winner-overlay: rgba(76, 175, 80, 0.85);
+            --loser-overlay: rgba(244, 67, 54, 0.85);
+            --draw-overlay: rgba(158, 158, 158, 0.85);
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #F4F4F9;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
             color: var(--text-color);
             margin: 0;
             padding: 1rem;
@@ -31,44 +34,126 @@
             min-height: 100vh;
         }
 
-        #game-header { text-align: center; }
-        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-        #main-status { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; height: 25px; }
+        #game-header { text-align: center; margin-bottom: 2rem; }
+        h1 { 
+            font-family: 'Fredoka One', cursive;
+            font-size: 3rem; 
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        #main-status { font-size: 1.2rem; font-weight: 500; color: var(--subtle-text); height: 25px; }
         
-        #connection-setup { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; align-items: center; background-color: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .input-group { display: flex; gap: 0.5rem; width: 100%; justify-content: center; }
-        #connection-setup input { padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
-        #connection-setup button { padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
-        #create-room-btn { background-color: #28a745; }
-        #join-room-btn { background-color: #007bff; }
+        #connection-setup { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 1rem; 
+            margin-bottom: 1rem; 
+            align-items: center; 
+            background-color: var(--card-bg); 
+            padding: 2rem; 
+            border-radius: 16px; 
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            max-width: 400px;
+        }
+        .input-group { display: flex; flex-direction: column; gap: 1rem; width: 100%; }
+        .input-row { display: flex; gap: 1rem; align-items: center; }
+        #connection-setup input[type="text"] { 
+            padding: 0.75rem; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            font-size: 1rem;
+            flex-grow: 1;
+        }
+        #connection-setup input[type="color"] {
+            -webkit-appearance: none;
+            width: 48px;
+            height: 48px;
+            border: none;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+        #connection-setup input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+        #connection-setup input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+
+        .button-group { display: flex; gap: 1rem; }
+        #connection-setup button { 
+            padding: 0.75rem 1.5rem; 
+            font-size: 1rem; 
+            font-weight: 700; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        #connection-setup button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #create-room-btn { background-color: #4CAF50; }
+        #join-room-btn { background-color: #03A9F4; }
 
         #game-area { display: none; flex-direction: column; align-items: center; width: 100%; }
-        #game-info { display: flex; justify-content: space-around; width: 100%; max-width: 800px; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
-        #timer-display { color: #DC3545; }
+        #game-info { display: flex; justify-content: center; width: 100%; max-width: 900px; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
+        #timer-display { color: #f44336; font-family: 'Fredoka One', cursive; font-size: 2rem; }
 
         #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1200px; align-items: flex-start; }
-        .player-area { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+        
+        .player-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .player-name {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.5rem;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .player-content-wrapper { display: flex; gap: 1.5rem; width: 100%; justify-content: center; }
+        #player-content-1 { flex-direction: row-reverse; }
+        #player-content-2 { flex-direction: row; }
+        
+        .board-container { display: flex; flex-direction: column; align-items: center; }
+        .lists-container { display: flex; flex-direction: column; width: 200px; }
         
         .result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
         .result-overlay.winner { background: var(--winner-overlay); }
         .result-overlay.loser { background: var(--loser-overlay); }
         .result-overlay.draw { background: var(--draw-overlay); }
 
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; background-color: var(--board-bg); border: 2px solid var(--cell-border); border-radius: 12px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; user-select: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; background-color: var(--board-bg); border-radius: 8px; cursor: pointer; transition: background-color 0.1s; aspect-ratio: 1 / 1; }
-        .cell.selected { background-color: var(--selected-bg) !important; color: white; }
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border: 2px solid var(--cell-border); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 500px; min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
+        .cell { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; background-color: #fafafa; border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; }
+        .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
         .cell.opponent-selecting { background-color: var(--opponent-selected-bg) !important; }
         
-        .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; }
+        .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; font-family: 'Fredoka One', cursive; }
         
-        .words-display-area { margin-top: 1rem; width: 100%; max-width: 400px; text-align: center; }
-        .words-display-area h3 { margin-bottom: 0.5rem; }
-        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 100px; overflow-y: auto; background-color: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; }
-        .found-words-list li { color: #333; }
-        .bonus-word-list li { font-weight: 600; color: var(--bonus-word-color); }
+        .words-display-area { margin-top: 1rem; width: 100%; text-align: center; }
+        .words-display-area h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--subtle-text); }
+        .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: #f0f0f0; border-radius: 8px; border: 1px solid #ddd; }
+        .found-words-list li { color: #333; font-size: 0.9rem; }
+        .bonus-word-list li { font-weight: 600; color: #4CAF50; font-size: 0.9rem; }
 
-        #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 600; color: white; background-color: #6A5ACD; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; display: none; }
-        #new-game-btn:disabled { background-color: #a9a1e4; cursor: not-allowed; }
+        #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 700; color: white; background-color: #673AB7; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #new-game-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        #new-game-btn:disabled { background-color: #b39ddb; cursor: not-allowed; transform: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -79,9 +164,14 @@
     </div>
 
     <div id="connection-setup">
-        <input type="text" id="player-name-input" placeholder="Your Name">
         <div class="input-group">
-            <input type="text" id="room-name-input" placeholder="Room Name">
+            <input type="text" id="player-name-input" placeholder="Your Name">
+            <div class="input-row">
+                <input type="text" id="room-name-input" placeholder="Room Name">
+                <input type="color" id="player-color-input" value="#2196F3">
+            </div>
+        </div>
+        <div class="button-group">
             <button id="create-room-btn">Create</button>
             <button id="join-room-btn">Join</button>
         </div>
@@ -93,22 +183,42 @@
         </div>
         <div id="game-container">
             <div class="player-area" id="player1-area">
-                <h2 id="name-p1">You</h2>
-                <div class="board" id="board-p1"></div>
-                <div class="score-display" id="score-p1">Score: 0</div>
-                <div class="words-display-area">
-                    <h3>Your Found Words:</h3>
-                    <ul class="found-words-list" id="found-words-p1"></ul>
-                </div>
-                <div class="words-display-area">
-                    <h3>Bonus Words Found:</h3>
-                    <ul class="bonus-word-list" id="bonus-words-p1"></ul>
+                <h2 class="player-name" id="name-p1">Player 1</h2>
+                <div class="player-content-wrapper" id="player-content-1">
+                    <div class="board-container">
+                        <div class="board" id="board-p1"></div>
+                        <div class="score-display" id="score-p1">Score: 0</div>
+                    </div>
+                    <div class="lists-container">
+                        <div class="words-display-area">
+                            <h3>Your Found Words:</h3>
+                            <ul class="found-words-list" id="found-words-p1"></ul>
+                        </div>
+                        <div class="words-display-area">
+                            <h3>Bonus Words:</h3>
+                            <ul class="bonus-word-list" id="bonus-words-p1"></ul>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="player-area" id="player2-area">
-                <h2 id="name-p2">Opponent</h2>
-                <div class="board" id="board-p2"></div>
-                <div class="score-display" id="score-p2">Score: 0</div>
+                <h2 class="player-name" id="name-p2">Player 2</h2>
+                 <div class="player-content-wrapper" id="player-content-2">
+                    <div class="board-container">
+                        <div class="board" id="board-p2"></div>
+                        <div class="score-display" id="score-p2">Score: 0</div>
+                    </div>
+                    <div class="lists-container">
+                        <div class="words-display-area">
+                            <h3>Your Found Words:</h3>
+                            <ul class="found-words-list" id="found-words-p2"></ul>
+                        </div>
+                        <div class="words-display-area">
+                            <h3>Bonus Words:</h3>
+                            <ul class="bonus-word-list" id="bonus-words-p2"></ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -116,47 +226,62 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        // The DICTIONARY_WORDS array is now loaded from dictionary.js
+        // The DICTIONARY_WORDS array will be loaded from dictionary.js
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
         
-        // --- Sound Effects ---
         const correctSound = new Audio('https://www.niilow.com/corect.mp3');
         const wrongSound = new Audio('https://www.niilow.com/wrong.mp3');
         
         const GRID_SIZE = { rows: 12, cols: 10 };
-        const GAME_DURATION = 120; // 2 minutes in seconds
+        const GAME_DURATION = 120;
 
         let peer, conn, isHost, gameTimer;
         let myPlayer, opponentPlayer;
 
-        // --- DOM ELEMENTS ---
         const mainStatusEl = document.getElementById('main-status');
         const connectionSetupEl = document.getElementById('connection-setup');
         const playerNameInput = document.getElementById('player-name-input');
+        const playerColorInput = document.getElementById('player-color-input');
         const roomNameInput = document.getElementById('room-name-input');
         const createRoomBtn = document.getElementById('create-room-btn');
         const joinRoomBtn = document.getElementById('join-room-btn');
         const gameAreaEl = document.getElementById('game-area');
         const newGameBtn = document.getElementById('new-game-btn');
         const timerDisplay = document.getElementById('timer-display');
+
+        // Function to determine text color (black or white) based on background color
+        function getContrastingTextColor(hexcolor){
+            hexcolor = hexcolor.replace("#", "");
+            const r = parseInt(hexcolor.substr(0,2),16);
+            const g = parseInt(hexcolor.substr(2,2),16);
+            const b = parseInt(hexcolor.substr(4,2),16);
+            const yiq = ((r*299)+(g*587)+(b*114))/1000;
+            return (yiq >= 128) ? 'black' : 'white';
+        }
         
         class Player {
-            constructor(name, isLocal) {
+            constructor(id, name, color, isLocal) {
+                this.id = id;
                 this.name = name;
+                this.color = color;
                 this.isLocal = isLocal;
                 
-                const localId = 1;
-                const remoteId = 2;
-                const id = isLocal ? localId : remoteId;
-
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
                 this.nameEl = document.getElementById(`name-p${id}`);
-                this.bonusWordListEl = isLocal ? document.getElementById(`bonus-words-p${id}`) : null;
-                this.foundWordsListEl = isLocal ? document.getElementById(`found-words-p${id}`) : null;
                 this.areaEl = document.getElementById(`player${id}-area`);
+                this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
+                this.foundWordsListEl = document.getElementById(`found-words-p${id}`);
                 
                 this.nameEl.textContent = this.name;
+                this.nameEl.style.backgroundColor = this.color;
+                this.nameEl.style.color = getContrastingTextColor(this.color);
+
+                // If local player, also theme their board selection color
+                if (this.isLocal) {
+                    document.documentElement.style.setProperty('--selected-bg', this.color);
+                }
+                
                 this.score = 0;
                 this.foundWords = new Set();
                 this.isDragging = false;
@@ -172,8 +297,8 @@
             reset() {
                 this.score = 0;
                 this.foundWords.clear();
-                if(this.bonusWordListEl) this.bonusWordListEl.innerHTML = '';
-                if(this.foundWordsListEl) this.foundWordsListEl.innerHTML = '';
+                this.bonusWordListEl.innerHTML = '';
+                this.foundWordsListEl.innerHTML = '';
                 this.boardEl.classList.remove('disabled');
                 const overlay = this.areaEl.querySelector('.result-overlay');
                 if (overlay) overlay.remove();
@@ -206,7 +331,6 @@
             }
 
             addBonusWord(word) {
-                if (!this.bonusWordListEl) return;
                 const li = document.createElement('li');
                 li.textContent = word;
                 this.bonusWordListEl.appendChild(li);
@@ -214,7 +338,6 @@
             }
 
             addFoundWord(word) {
-                if (!this.foundWordsListEl) return;
                 const li = document.createElement('li');
                 li.textContent = word;
                 this.foundWordsListEl.appendChild(li);
@@ -257,7 +380,7 @@
             }
 
             submitWord() {
-                if (this.selectedCells.length < 3) {
+                if (this.selectedCells.length < 4) { // Updated to 4-letter minimum
                     if (this.selectedCells.length > 0) wrongSound.play();
                     this.clearSelection();
                     return;
@@ -280,7 +403,7 @@
 
             validateAndScoreWord(word) {
                 const upperWord = word.toUpperCase();
-                if (this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
+                if (word.length < 4 || word.length > 6 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) {
                     return false;
                 }
 
@@ -309,42 +432,51 @@
             }
         }
         
-        function initializePeer(host, roomName, playerName) {
+        function initializePeer(host, roomName, playerName, playerColor) {
             isHost = host;
             peer = isHost ? new Peer(roomName) : new Peer();
 
             peer.on('open', (id) => {
-                if (!isHost) connectToHost(roomName, playerName);
+                if (!isHost) connectToHost(roomName, playerName, playerColor);
                 else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`;
             });
 
             peer.on('connection', (connection) => {
                 conn = connection;
-                setupConnection(playerName);
+                setupConnection(playerName, playerColor);
             });
             peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
         }
 
-        function connectToHost(roomName, playerName) {
+        function connectToHost(roomName, playerName, playerColor) {
             conn = peer.connect(roomName);
-            setupConnection(playerName);
+            setupConnection(playerName, playerColor);
         }
 
-        function setupConnection(myName) {
+        function setupConnection(myName, myColor) {
             conn.on('open', () => {
-                conn.send({ type: 'name_sync', name: myName });
+                conn.send({ type: 'name_sync', name: myName, color: myColor });
                 
                 connectionSetupEl.style.display = 'none';
                 gameAreaEl.style.display = 'flex';
                 newGameBtn.style.display = 'block';
 
-                myPlayer = new Player(myName, true);
+                const myPlayerId = isHost ? 1 : 2;
+                myPlayer = new Player(myPlayerId, myName, myColor, true);
             });
 
             conn.on('data', (data) => {
                 switch (data.type) {
                     case 'name_sync':
-                        opponentPlayer = new Player(data.name, false);
+                        const opponentId = isHost ? 2 : 1;
+                        opponentPlayer = new Player(opponentId, data.name, data.color, false);
+                        
+                        if (!isHost) {
+                            const p1Area = document.getElementById('player1-area');
+                            const p2Area = document.getElementById('player2-area');
+                            gameAreaEl.querySelector('#game-container').insertBefore(p2Area, p1Area);
+                        }
+
                          if (isHost) {
                             newGameBtn.disabled = false;
                             mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`;
@@ -362,6 +494,7 @@
                     case 'word_found':
                         if(opponentPlayer) {
                             opponentPlayer.updateScore(data.newScore);
+                            if(data.isBonus) opponentPlayer.addBonusWord(data.word);
                         }
                         break;
                 }
@@ -374,7 +507,7 @@
         }
         
         function generateNewBoard() {
-             const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length > 4 && w.length < 9))].sort(() => 0.5 - Math.random()).slice(0, 10);
+             const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length >= 4 && w.length <= 6))].sort(() => 0.5 - Math.random()).slice(0, 10);
             targetWords.sort((a,b) => b.length - a.length);
 
             let grid = Array(GRID_SIZE.rows).fill(null).map(() => Array(GRID_SIZE.cols).fill(''));
@@ -427,7 +560,7 @@
         }
 
         function startNewGame(targetWords, grid) {
-            mainStatusEl.textContent = 'Find as many words as you can!';
+            mainStatusEl.textContent = 'Find words from 4 to 6 letters!';
             if (myPlayer) myPlayer.reset();
             if (opponentPlayer) opponentPlayer.reset();
             
@@ -469,10 +602,11 @@
 
         function handleConnection(isHost) {
             const playerName = playerNameInput.value.trim();
+            const playerColor = playerColorInput.value;
             const roomName = roomNameInput.value.trim();
             if (!playerName) return alert('Please enter your name.');
             if (!roomName) return alert('Please enter a room name.');
-            initializePeer(isHost, roomName, playerName);
+            initializePeer(isHost, roomName, playerName, playerColor);
         }
 
         createRoomBtn.addEventListener('click', () => handleConnection(true));
