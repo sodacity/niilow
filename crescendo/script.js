@@ -193,13 +193,6 @@ function setupUIListeners() {
         resetGame();
     });
     window.addEventListener('keydown', handleKeyPress);
-    
-    // --- Touch Controls ---
-    const p1Grid = document.getElementById('grid-p1');
-    p1Grid.addEventListener('touchstart', handleTouchStart, false);
-    p1Grid.addEventListener('touchmove', handleTouchMove, false);
-    p1Grid.addEventListener('touchend', handleTouchEnd, false);
-    
     handleGameModeChange();
 }
 
@@ -226,6 +219,10 @@ function onStartGameClick() {
     
     if (gameState.mode === 'solo') {
         localPlayer = new Player(1, playerName, true);
+        localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
+        localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
+        localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
+        
         DOMElements.player2Container.style.display = 'none';
         if (gameState.bossMode) initBoss();
         
@@ -234,7 +231,12 @@ function onStartGameClick() {
     } else { // Multiplayer
         const roomName = DOMElements.roomNameInput.value;
         if (!roomName) return alert('Please enter a room name.');
+        
         localPlayer = new Player(1, playerName, true);
+        localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
+        localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
+        localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
+
         if (gameState.bossMode) initBoss();
         
         peer = new Peer(roomName);
@@ -252,6 +254,10 @@ function onJoinGameClick() {
     if (!roomName) return alert('Please enter a room name to join.');
 
     localPlayer = new Player(2, playerName, true);
+    localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
+    localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
+    localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
+
     peer = new Peer();
     peer.on('open', () => { conn = peer.connect(roomName); setupConnection(); });
     peer.on('error', err => alert('PeerJS Error: ' + err.type));
@@ -287,6 +293,7 @@ function setupConnection() {
                         localPlayer.startNewSequence();
                         sendData({ type: 'new_sequence', sequence: localPlayer.currentSequence, combo: localPlayer.combo });
                         
+                        // Always send a starting sequence to the guest in multiplayer
                         const guestSequence = Array.from({ length: 3 }, () => ARROW_KEYS[Math.floor(Math.random() * 4)]);
                         remotePlayer.startNewSequence(guestSequence);
                         sendData({ type: 'start_game', sequence: guestSequence });
@@ -313,6 +320,7 @@ function setupConnection() {
                     remotePlayer.startNewSequence(data.sequence);
                     remotePlayer.updateCombo(data.combo);
                 }
+                hostCheckBossTrigger(); // Host counts guest's turns
                 break;
             case 'key_press_update':
                 if (remotePlayer) handleRemoteKeyPress(data.progress);
@@ -374,9 +382,15 @@ function initBoss(bossState = null) {
     updateBossHealth(gameState.bossCurrentHealth);
 }
 
-function triggerBossAction() {
-    if (!gameState.isHost || gameState.status !== 'playing') return;
+function hostCheckBossTrigger() {
+    if (!gameState.isHost || !gameState.bossMode || gameState.status !== 'playing') return;
+    gameState.sequenceTurnCounter++;
+    if(gameState.sequenceTurnCounter > 0 && gameState.sequenceTurnCounter % 3 === 0) {
+        triggerBossAction();
+    }
+}
 
+function triggerBossAction() {
     const action = BOSS_ACTIONS[Math.floor(Math.random() * BOSS_ACTIONS.length)];
     
     if (action === 'heal') {
@@ -472,14 +486,6 @@ function transitionToGameArea() {
     }
 }
 
-function afterSequence() {
-    if (!gameState.bossMode) return;
-    gameState.sequenceTurnCounter++;
-    if(gameState.sequenceTurnCounter > 0 && gameState.sequenceTurnCounter % 3 === 0) {
-        triggerBossAction();
-    }
-}
-
 function handleKeyPress(e) {
     if (gameState.status === 'gameover') return;
     const key = e.key || e; // Allow string to be passed directly
@@ -524,8 +530,9 @@ function handleCorrectKeyPress(player) {
             player.startNewSequence();
             if (gameState.mode === 'multi') {
                 sendData({ type: 'new_sequence', sequence: player.currentSequence, combo: player.combo });
+            } else {
+                hostCheckBossTrigger(); // Call for solo player
             }
-            afterSequence();
         }, 300);
     }
 }
@@ -558,8 +565,9 @@ function handleFailure(player) {
             player.startNewSequence();
             if (gameState.mode === 'multi') {
                 sendData({ type: 'new_sequence', sequence: player.currentSequence, combo: player.combo });
+            } else {
+                hostCheckBossTrigger(); // Call for solo player
             }
-            afterSequence();
         }, 300);
     }
 }
@@ -685,7 +693,7 @@ function setVideoBackground() {
     if (youtubeIdMatch && youtubeIdMatch[1]) {
         const videoId = youtubeIdMatch[1];
         const muteParam = gameState.videoMuted ? 1 : 0;
-        const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muteParam}&loop=1&playlist=${videoId}&controls=0&showinfo=0&autohide=1&modestbranding=1&iv_load_policy=3`;
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=${muteParam}&loop=1&playlist=${videoId}&controls=0&showinfo=0&autohide=1&modestbranding=1&iv_load_policy=3`;
         const iframe = document.createElement('iframe');
         iframe.src = embedUrl;
         iframe.setAttribute('frameborder', '0');
@@ -738,6 +746,3 @@ function addChatMessage(message, type) {
 }
 
 init();
-</script>
-</body>
-</html>
