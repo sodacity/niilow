@@ -12,6 +12,7 @@ const DOMElements = {
     gameModeToggle: document.getElementById('game-mode-toggle'),
     bossModeToggle: document.getElementById('boss-mode-toggle'),
     bossModeContainer: document.getElementById('boss-mode-container'),
+    player1Container: document.getElementById('player1-container'),
     player2Container: document.getElementById('player2-container'),
     playerNameInput: document.getElementById('player-name-input'),
     roomNameInput: document.getElementById('room-name-input'),
@@ -219,6 +220,7 @@ function onStartGameClick() {
     
     if (gameState.mode === 'solo') {
         localPlayer = new Player(1, playerName, true);
+        localPlayer.dom.playerArea.classList.add('is-local-player');
         localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
         localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
         localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
@@ -233,6 +235,7 @@ function onStartGameClick() {
         if (!roomName) return alert('Please enter a room name.');
         
         localPlayer = new Player(1, playerName, true);
+        localPlayer.dom.playerArea.classList.add('is-local-player');
         localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
         localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
         localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
@@ -254,6 +257,7 @@ function onJoinGameClick() {
     if (!roomName) return alert('Please enter a room name to join.');
 
     localPlayer = new Player(2, playerName, true);
+    localPlayer.dom.playerArea.classList.add('is-local-player');
     localPlayer.dom.grid.addEventListener('touchstart', handleTouchStart, false);
     localPlayer.dom.grid.addEventListener('touchmove', handleTouchMove, false);
     localPlayer.dom.grid.addEventListener('touchend', handleTouchEnd, false);
@@ -276,6 +280,7 @@ function setupConnection() {
             case 'player_join':
                 if (gameState.isHost) {
                     remotePlayer = new Player(2, data.name, false);
+                    remotePlayer.dom.playerArea.classList.add('is-remote-player');
                     sendData({
                         type: 'initial_state',
                         hostName: localPlayer.name,
@@ -306,6 +311,7 @@ function setupConnection() {
                     initBoss(data.bossState);
                 }
                 remotePlayer = new Player(1, data.hostName, false);
+                remotePlayer.dom.playerArea.classList.add('is-remote-player');
                 gameState.videoUrl = data.videoUrl;
                 gameState.videoMuted = data.videoMuted;
                 setVideoBackground();
@@ -584,6 +590,9 @@ function handleRemoteKeyPress(progress) {
 function resetGame() {
     if (!localPlayer) return;
     DOMElements.gameOverScreen.classList.remove('visible');
+    DOMElements.player1Container.classList.remove('is-local-player', 'is-remote-player');
+    DOMElements.player2Container.classList.remove('is-local-player', 'is-remote-player');
+
 
     gameState.status = 'playing';
     gameState.sequenceTurnCounter = 0;
@@ -641,8 +650,8 @@ function gameOver(winnerName) {
 // --- Touch Input Functions ---
 function handleTouchStart(evt) {
     const firstTouch = evt.touches[0];
-    touchStartX = firstTouch.clientX;
-    touchStartY = firstTouch.clientY;
+    touchStartX = firstTouch.pageX;
+    touchStartY = firstTouch.pageY;
 }
 
 function handleTouchMove(evt) {
@@ -651,8 +660,8 @@ function handleTouchMove(evt) {
 
 function handleTouchEnd(evt) {
     if (!touchStartX || !touchStartY) return;
-    const touchEndX = evt.changedTouches[0].clientX;
-    const touchEndY = evt.changedTouches[0].clientY;
+    const touchEndX = evt.changedTouches[0].pageX;
+    const touchEndY = evt.changedTouches[0].pageY;
 
     const diffX = touchEndX - touchStartX;
     const diffY = touchEndY - touchStartY;
