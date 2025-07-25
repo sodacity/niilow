@@ -66,34 +66,9 @@
         body {
             font-family: var(--font-main); background-color: var(--background-color); color: var(--text-color); margin: 0;
             padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            min-height: 100vh; transition: background-color 0.3s; overflow: hidden;
+            min-height: 100vh; transition: background-color 0.3s;
         }
         
-        .scan-lines {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%;
-            animation: scan 10s linear infinite;
-            pointer-events: none; z-index: 9999;
-        }
-        body.theme-cyberpunk .scan-lines { display: block; }
-        
-        .bubbles { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
-        .bubble{ position: absolute; bottom:-100px; width:40px; height:40px; background:rgba(225,245,254,0.2); border-radius:50%; opacity:0.5; animation: rise 10s infinite ease-in; }
-        .bubble:nth-child(1){ width:40px; height:40px; left:10%; animation-duration:8s; }
-        .bubble:nth-child(2){ width:20px; height:20px; left:20%; animation-duration:5s; animation-delay:1s; }
-        .bubble:nth-child(3){ width:50px; height:50px; left:35%; animation-duration:7s; animation-delay:2s; }
-        .bubble:nth-child(4){ width:80px; height:80px; left:50%; animation-duration:11s; animation-delay:0s; }
-        .bubble:nth-child(5){ width:35px; height:35px; left:55%; animation-duration:6s; animation-delay:1s; }
-        .bubble:nth-child(6){ width:45px; height:45px; left:65%; animation-duration:8s; animation-delay:3s; }
-        .bubble:nth-child(7){ width:90px; height:90px; left:70%; animation-duration:12s; animation-delay:2s; }
-        .bubble:nth-child(8){ width:25px; height:25px; left:80%; animation-duration:6s; animation-delay:2s; }
-        .bubble:nth-child(9){ width:15px; height:15px; left:70%; animation-duration:5s; animation-delay:1s; }
-        .bubble:nth-child(10){ width:90px; height:90px; left:25%; animation-duration:10s; animation-delay:4s; }
-        body.theme-ocean .bubbles { display: block; }
-
-
         #game-header { text-align: center; margin-bottom: 1rem; }
         h1 { font-family: var(--font-display); font-size: 3rem; color: var(--text-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.1); margin: 0; }
         #main-status { font-size: 1.2rem; font-weight: 500; color: var(--subtle-text); height: 25px; }
@@ -129,7 +104,6 @@
         .combo-meter.active { transform: scale(1) rotate(-5deg); opacity: 1; animation: combo-powerup 0.3s; }
         .result-overlay { position: absolute; top: 2.5rem; left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; animation: result-bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 700px; min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
-        body.theme-ocean .board { animation: wobble 15s infinite ease-in-out; }
         .board.shake-wrong { animation: shake-board 0.4s; }
         .cell { display: flex; align-items: center; justify-content: center; font-size: clamp(0.5rem, 2.5vmin, 1.5rem); font-weight: 700; background-color: var(--cell-bg); color: var(--text-color); border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; opacity: 0; animation: cardFlip 0.5s forwards; }
         .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
@@ -147,20 +121,12 @@
         @keyframes shake-board { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
         @keyframes result-bounce-in { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
         @keyframes combo-powerup { 0% { transform: scale(1) rotate(-5deg); } 50% { transform: scale(1.2) rotate(5deg); } 100% { transform: scale(1) rotate(-5deg); } }
-        @keyframes rise { 0%{ transform: translateY(0) rotate(0deg); opacity: 1; } 100%{ transform: translateY(-1000px) rotate(720deg); opacity: 0; } }
-        @keyframes scan { to { background-position: 0 -4px, -3px 0; } }
-        @keyframes wobble { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-5px) rotate(-1deg); } 75% { transform: translateX(5px) rotate(1deg); } }
         @keyframes countdown-pop { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div id="countdown-overlay"><div id="countdown-text">3</div></div>
-    <div class="scan-lines"></div>
-    <div class="bubbles">
-        <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-        <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-    </div>
 
     <div id="game-header">
         <h1>Too Many Words</h1>
@@ -245,7 +211,6 @@
     <button id="new-game-btn">New Game</button>
 
     <script>
-        // --- Code is minimized for brevity. All functionality from the previous version is retained. ---
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
         const correctSound = new Audio('https://www.niilow.com/correct.mp3');
         const wrongSound = new Audio('https://www.niilow.com/wrong.mp3');
@@ -281,46 +246,127 @@
         class Player {
             constructor(id, name, color, isLocal) {
                 this.id = id; this.name = name; this.color = color; this.isLocal = isLocal;
-                this.boardEl = document.getElementById(`board-p${id}`); this.scoreEl = document.getElementById(`score-p${id}`); this.nameEl = document.getElementById(`name-p${id}`);
-                this.areaEl = document.getElementById(`player${id}-area`); this.comboEl = document.getElementById(`combo-p${id}`); this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`); this.foundWordsListEl = document.getElementById(`found-words-p${id}`);
-                this.nameEl.textContent = this.name; this.nameEl.style.backgroundColor = this.color; this.nameEl.style.color = getContrastingTextColor(this.color);
+                this.boardEl = document.getElementById(`board-p${id}`);
+                this.scoreEl = document.getElementById(`score-p${id}`);
+                this.nameEl = document.getElementById(`name-p${id}`);
+                this.areaEl = document.getElementById(`player${id}-area`);
+                this.comboEl = document.getElementById(`combo-p${id}`);
+                this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
+                this.foundWordsListEl = document.getElementById(`found-words-p${id}`);
+                this.nameEl.textContent = this.name;
+                this.nameEl.style.backgroundColor = this.color;
+                this.nameEl.style.color = getContrastingTextColor(this.color);
                 if (this.isLocal) { document.documentElement.style.setProperty('--selected-bg', this.color); }
-                this.score = 0; this.combo = 0; this.lastWordTimestamp = 0; this.currentDisplayScore = 0; this.foundWords = new Set(); this.isDragging = false; this.selectedCells = [];
+                this.score = 0; this.combo = 0; this.lastWordTimestamp = 0;
+                this.foundWords = new Set(); this.isDragging = false; this.selectedCells = [];
                 if (this.isLocal) {
                     this.boardEl.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                     this.boardEl.addEventListener('mouseover', (e) => this.handleMouseOver(e));
                     document.addEventListener('mouseup', () => this.handleMouseUp());
                 }
             }
-            reset() { this.score = 0; this.combo = 0; this.updateComboMeter(); this.updateScore(0, true); this.foundWords.clear(); this.bonusWordListEl.innerHTML = ''; this.foundWordsListEl.innerHTML = ''; this.boardEl.classList.remove('disabled'); const overlay = this.areaEl.querySelector('.result-overlay'); if (overlay) overlay.remove(); }
+            reset() { this.score = 0; this.combo = 0; this.updateComboMeter(); this.updateScore(0); this.foundWords.clear(); this.bonusWordListEl.innerHTML = ''; this.foundWordsListEl.innerHTML = ''; this.boardEl.classList.remove('disabled'); const overlay = this.areaEl.querySelector('.result-overlay'); if (overlay) overlay.remove(); }
             setupBoard(targetWords, grid) { this.targetWords = new Set(targetWords); this.grid = grid; this.drawBoard(); }
-            drawBoard() { this.boardEl.innerHTML = ''; for (let r = 0; r < GRID_SIZE.rows; r++) { for (let c = 0; c < GRID_SIZE.cols; c++) { const cell = document.createElement('div'); cell.classList.add('cell'); cell.dataset.r = r; cell.dataset.c = c; cell.textContent = this.grid[r][c]; cell.style.animationDelay = `${(r * GRID_SIZE.cols + c) * 0.02}s`; this.boardEl.appendChild(cell); } } }
-            updateScore(newScore, immediate = false) { this.score = newScore; if(immediate) { this.currentDisplayScore = newScore; this.scoreEl.textContent = `Score: ${this.score}`; return; } const tick = () => { if (this.currentDisplayScore < this.score) { this.currentDisplayScore++; this.scoreEl.textContent = `Score: ${this.currentDisplayScore}`; requestAnimationFrame(tick); }}; tick(); }
-            addBonusWord(word) { const li = document.createElement('li'); li.textContent = word; this.bonusWordListEl.appendChild(li); this.bonusWordListEl.scrollTop = this.bonusWordListEl.scrollHeight; }
-            addFoundWord(word) { const li = document.createElement('li'); li.textContent = word; this.foundWordsListEl.appendChild(li); this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight; }
+            drawBoard() {
+                this.boardEl.innerHTML = '';
+                for (let r = 0; r < GRID_SIZE.rows; r++) {
+                    for (let c = 0; c < GRID_SIZE.cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('cell'); cell.dataset.r = r; cell.dataset.c = c; cell.textContent = this.grid[r][c];
+                        cell.style.animationDelay = `${(r * GRID_SIZE.cols + c) * 0.02}s`;
+                        this.boardEl.appendChild(cell);
+                    }
+                }
+            }
+            updateScore(newScore) { this.score = newScore; this.scoreEl.textContent = `Score: ${this.score}`; }
+            addBonusWord(word) {
+                const li = document.createElement('li'); li.textContent = word; this.bonusWordListEl.appendChild(li); this.bonusWordListEl.scrollTop = this.bonusWordListEl.scrollHeight;
+            }
+            addFoundWord(word) {
+                const li = document.createElement('li'); li.textContent = word; this.foundWordsListEl.appendChild(li); this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight;
+            }
             handleMouseDown(e) { if (gameTimer <= 0 || !e.target.classList.contains('cell')) return; this.isDragging = true; this.clearSelection(); this.addCellToSelection(e.target); }
             handleMouseOver(e) { if (!this.isDragging || !e.target.classList.contains('cell')) return; this.addCellToSelection(e.target); }
             handleMouseUp() { if (!this.isDragging) return; this.isDragging = false; this.submitWord(); }
             addCellToSelection(cellEl) { if (this.selectedCells.includes(cellEl)) return; this.selectedCells.push(cellEl); cellEl.classList.add('selected'); this.sendSelectionUpdate(); }
             clearSelection() { this.selectedCells.forEach(cell => cell.classList.remove('selected')); this.selectedCells = []; this.sendSelectionUpdate(); }
             sendSelectionUpdate() { if(conn && conn.open) conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) }); }
-            updateOpponentSelection(path) { this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting')); path.forEach(pos => { const cell = this.boardEl.querySelector(`[data-r='${pos.r}'][data-c='${pos.c}']`); if (cell) cell.classList.add('opponent-selecting'); }); }
+            updateOpponentSelection(path) {
+                this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
+                path.forEach(pos => { const cell = this.boardEl.querySelector(`[data-r='${pos.r}'][data-c='${pos.c}']`); if (cell) cell.classList.add('opponent-selecting'); });
+            }
             updateComboMeter() { if (this.combo > 1) { this.comboEl.textContent = `COMBO x${this.combo}!`; this.comboEl.classList.add('active'); } else { this.comboEl.classList.remove('active'); } }
-            animateWordFlyOff(cells, isBonus) { if (!this.isLocal) return; const listEl = isBonus ? this.bonusWordListEl : this.foundWordsListEl; const listRect = listEl.getBoundingClientRect(); const endX = listRect.left + listRect.width / 2; const endY = listRect.top + listRect.height / 2; cells.forEach((cell) => { const rect = cell.getBoundingClientRect(); const letter = document.createElement('div'); letter.className = 'flying-letter'; letter.textContent = cell.textContent; letter.style.color = isBonus ? 'var(--bonus-word-color)' : 'var(--text-color)'; letter.style.left = `${rect.left + rect.width / 2}px`; letter.style.top = `${rect.top + rect.height / 2}px`; document.body.appendChild(letter); setTimeout(() => { letter.style.transform = `translate(${endX - rect.left - 10}px, ${endY - rect.top - 10}px) scale(0.5)`; letter.style.opacity = '0'; }, 50); setTimeout(() => { letter.remove(); }, 550); }); }
-            submitWord() { if (this.selectedCells.length < 3) { if (this.selectedCells.length > 0) wrongSound.play(); this.clearSelection(); return; }; const selectedCellsCopy = [...this.selectedCells]; const selectedWord = selectedCellsCopy.map(c => c.textContent).join(''); let foundAnyValidWord = false; if (this.validateAndScoreWord(selectedWord, selectedCellsCopy)) foundAnyValidWord = true; if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''), selectedCellsCopy.reverse())) foundAnyValidWord = true; if (foundAnyValidWord) { correctSound.play(); } else { wrongSound.play(); this.combo = 0; this.updateComboMeter(); if (this.isLocal) { this.boardEl.classList.add('shake-wrong'); setTimeout(()=>this.boardEl.classList.remove('shake-wrong'), 400); } } this.clearSelection(); }
-            validateAndScoreWord(word, cells) { const upperWord = word.toUpperCase(); if (word.length < 3 || word.length > 6 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) { return false; } const now = Date.now(); if (now - this.lastWordTimestamp < COMBO_WINDOW) { this.combo++; } else { this.combo = 1; } this.lastWordTimestamp = now; this.updateComboMeter(); const comboMultiplier = this.combo > 1 ? this.combo : 0; this.foundWords.add(upperWord); let points = word.length; let isBonus = this.targetWords.has(upperWord); if (isBonus) { points += 10; } points += comboMultiplier; this.updateScore(this.score + points); this.animateWordFlyOff(cells, isBonus); setTimeout(() => { isBonus ? this.addBonusWord(upperWord) : this.addFoundWord(word); }, 500); conn.send({ type: 'word_found', newScore: this.score, combo: this.combo, word: upperWord, isBonus: isBonus }); return true; }
+            animateWordFlyOff(cells, isBonus) {
+                if (!this.isLocal) return;
+                const listEl = isBonus ? this.bonusWordListEl : this.foundWordsListEl;
+                const listRect = listEl.getBoundingClientRect();
+                const endX = listRect.left + listRect.width / 2;
+                const endY = listRect.top + listRect.height / 2;
+                cells.forEach((cell) => {
+                    const rect = cell.getBoundingClientRect();
+                    const letter = document.createElement('div');
+                    letter.className = 'flying-letter';
+                    letter.textContent = cell.textContent;
+                    letter.style.color = isBonus ? 'var(--bonus-word-color)' : 'var(--text-color)';
+                    letter.style.left = `${rect.left + rect.width / 2}px`;
+                    letter.style.top = `${rect.top + rect.height / 2}px`;
+                    document.body.appendChild(letter);
+                    setTimeout(() => {
+                        letter.style.transform = `translate(${endX - rect.left - 10}px, ${endY - rect.top - 10}px) scale(0.5)`;
+                        letter.style.opacity = '0';
+                    }, 50);
+                    setTimeout(() => { letter.remove(); }, 550);
+                });
+            }
+            submitWord() {
+                if (this.selectedCells.length < 3) { if (this.selectedCells.length > 0) wrongSound.play(); this.clearSelection(); return; };
+                const selectedCellsCopy = [...this.selectedCells];
+                const selectedWord = selectedCellsCopy.map(c => c.textContent).join('');
+                let foundAnyValidWord = false;
+                if (this.validateAndScoreWord(selectedWord, selectedCellsCopy)) foundAnyValidWord = true;
+                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''), selectedCellsCopy.reverse())) foundAnyValidWord = true;
+                if (foundAnyValidWord) { correctSound.play(); } else { wrongSound.play(); this.combo = 0; this.updateComboMeter(); if (this.isLocal) { this.boardEl.classList.add('shake-wrong'); setTimeout(()=>this.boardEl.classList.remove('shake-wrong'), 400); } }
+                this.clearSelection();
+            }
+            validateAndScoreWord(word, cells) {
+                const upperWord = word.toUpperCase();
+                if (word.length < 3 || word.length > 6 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) { return false; }
+                const now = Date.now();
+                if (now - this.lastWordTimestamp < COMBO_WINDOW) { this.combo++; } else { this.combo = 1; }
+                this.lastWordTimestamp = now; this.updateComboMeter();
+                const comboMultiplier = this.combo > 1 ? this.combo : 0;
+                this.foundWords.add(upperWord);
+                let points = word.length; let isBonus = this.targetWords.has(upperWord);
+                if (isBonus) { points += 10; }
+                points += comboMultiplier;
+                this.updateScore(this.score + points);
+                this.animateWordFlyOff(cells, isBonus);
+                setTimeout(() => { isBonus ? this.addBonusWord(upperWord) : this.addFoundWord(word); }, 500);
+                conn.send({ type: 'word_found', newScore: this.score, combo: this.combo, word: upperWord, isBonus: isBonus });
+                return true;
+            }
         }
-        function initializePeer(host, roomName, playerName, playerColor) { isHost = host; peer = isHost ? new Peer(roomName) : new Peer(); peer.on('open', () => { if (!isHost) connectToHost(roomName, playerName, playerColor); else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`; }); peer.on('connection', (connection) => { conn = connection; setupConnection(playerName, playerColor); }); peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; }); }
-        function connectToHost(roomName, playerName, playerColor) { conn = peer.connect(roomName); setupConnection(playerName, playerColor); }
-        function setupConnection(myName, myColor) {
+        function initializePeer(host, roomName, playerName, playerColor, theme) {
+            isHost = host; peer = isHost ? new Peer(roomName) : new Peer();
+            peer.on('open', () => { if (!isHost) connectToHost(roomName, playerName, playerColor, theme); else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`; });
+            peer.on('connection', (connection) => { conn = connection; setupConnection(playerName, playerColor, theme); });
+            peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
+        }
+        function connectToHost(roomName, playerName, playerColor, theme) { conn = peer.connect(roomName); setupConnection(playerName, playerColor, theme); }
+        function setupConnection(myName, myColor, myTheme) {
             conn.on('open', () => {
-                conn.send({ type: 'player_sync', name: myName, color: myColor });
+                conn.send({ type: 'player_sync', name: myName, color: myColor, theme: myTheme });
                 connectionSetupEl.style.display = 'none'; gameAreaEl.style.display = 'flex'; newGameBtn.style.display = 'block';
+                document.body.className = `theme-${myTheme}`;
                 const myPlayerId = isHost ? 1 : 2; myPlayer = new Player(myPlayerId, myName, myColor, true);
             });
             conn.on('data', (data) => {
                 switch (data.type) {
-                    case 'player_sync': opponentPlayer = new Player(isHost ? 2 : 1, data.name, data.color, false); if (isHost) { newGameBtn.disabled = false; mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`; } else { newGameBtn.disabled = true; mainStatusEl.textContent = `Connected to ${data.name}! Waiting for them to start.`; } break;
+                    case 'player_sync':
+                        const opponentId = isHost ? 2 : 1; opponentPlayer = new Player(opponentId, data.name, data.color, false);
+                        if (isHost) { newGameBtn.disabled = false; mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`; } 
+                        else { newGameBtn.disabled = true; mainStatusEl.textContent = `Connected to ${data.name}! Waiting for them to start.`; }
+                        break;
                     case 'start_game': startNewGame(data.targetWords, data.grid); break;
                     case 'selection_update': if(opponentPlayer) opponentPlayer.updateOpponentSelection(data.path); break;
                     case 'word_found': if(opponentPlayer) { opponentPlayer.updateScore(data.newScore); opponentPlayer.combo = data.combo; opponentPlayer.updateComboMeter(); if(data.isBonus) opponentPlayer.addBonusWord(data.word); else opponentPlayer.addFoundWord(data.word); } break;
@@ -335,31 +381,49 @@
             for (let r = 0; r < GRID_SIZE.rows; r++) { for (let c = 0; c < GRID_SIZE.cols; c++) { if (grid[r][c] === '') { grid[r][c] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; } } }
             return { targetWords: targetWords.map(w=>w.toUpperCase()), grid };
         }
-        function startNewGame(targetWords, grid) { mainStatusEl.textContent = 'Find words from 3 to 6 letters!'; if (myPlayer) myPlayer.reset(); if (opponentPlayer) opponentPlayer.reset(); myPlayer.setupBoard(targetWords, grid); opponentPlayer.setupBoard(targetWords, grid); let timeLeft = GAME_DURATION; if(gameTimer) clearInterval(gameTimer); timerDisplay.textContent = `Time: 2:00`; timerDisplay.classList.remove('shake'); gameTimer = setInterval(() => { timeLeft--; const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60; timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`; if (timeLeft === 10) { timerDisplay.classList.add('shake'); } if (timeLeft <= 0) endGame(); }, 1000); }
+        function startNewGame(targetWords, grid) {
+            mainStatusEl.textContent = 'Find words from 3 to 6 letters!';
+            if (myPlayer) myPlayer.reset(); if (opponentPlayer) opponentPlayer.reset();
+            myPlayer.setupBoard(targetWords, grid); opponentPlayer.setupBoard(targetWords, grid);
+            let timeLeft = GAME_DURATION; if(gameTimer) clearInterval(gameTimer);
+            timerDisplay.textContent = `Time: 2:00`; timerDisplay.classList.remove('shake');
+            gameTimer = setInterval(() => {
+                timeLeft--; const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+                timerDisplay.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                if (timeLeft === 10) { timerDisplay.classList.add('shake'); }
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
         function endGame() {
             clearInterval(gameTimer); timerDisplay.textContent = "Time's Up!"; myPlayer.boardEl.classList.add('disabled'); timerDisplay.classList.remove('shake');
-            let myResult, myText; if (myPlayer.score > opponentPlayer.score) { myResult = 'winner'; myText = 'WINNER!'; } else if (myPlayer.score < opponentPlayer.score) { myResult = 'loser'; myText = 'SO CLOSE!'; } else { myResult = 'draw'; myText = 'DRAW!'; }
+            let myResult, myText;
+            if (myPlayer.score > opponentPlayer.score) { myResult = 'winner'; myText = 'WINNER!'; } 
+            else if (myPlayer.score < opponentPlayer.score) { myResult = 'loser'; myText = 'SO CLOSE!'; } 
+            else { myResult = 'draw'; myText = 'DRAW!'; }
             const myOverlay = document.createElement('div'); myOverlay.className = `result-overlay ${myResult}`; myOverlay.textContent = myText; myPlayer.areaEl.appendChild(myOverlay);
             const opponentOverlay = document.createElement('div'); opponentOverlay.className = `result-overlay ${myResult === 'winner' ? 'loser' : myResult === 'loser' ? 'winner' : 'draw'}`; opponentOverlay.textContent = `${myResult === 'winner' ? 'SO CLOSE!' : myResult === 'loser' ? 'WINNER!' : 'DRAW!'}`; opponentPlayer.areaEl.appendChild(opponentOverlay);
         }
-        function toggleFullScreen() { const elem = document.getElementById('game-area'); if (!document.fullscreenElement) { elem.requestFullscreen().catch(err => { alert(`Error: ${err.message}`); }); } else { if (document.exitFullscreen) { document.exitFullscreen(); } } }
+        function toggleFullScreen() {
+            const elem = document.getElementById('game-area');
+            if (!document.fullscreenElement) { elem.requestFullscreen().catch(err => { alert(`Error: ${err.message}`); }); } 
+            else { if (document.exitFullscreen) { document.exitFullscreen(); } }
+        }
         function updateFullscreenButton() { if (document.fullscreenElement) { fullscreenBtn.textContent = 'Exit'; } else { fullscreenBtn.textContent = 'Fullscreen'; } }
         function handleConnection(isHost) {
             const playerName = playerNameInput.value.trim(); const playerColor = playerColorInput.value; const theme = themeSelect.value; const roomName = roomNameInput.value.trim();
             if (!playerName || !roomName) { alert('Please enter your name and a room name.'); return; }
-            initializePeer(isHost, roomName, playerName, playerColor);
+            initializePeer(isHost, roomName, playerName, playerColor, theme);
         }
         document.getElementById('create-room-btn').addEventListener('click', () => handleConnection(true));
         document.getElementById('join-room-btn').addEventListener('click', () => handleConnection(false));
         newGameBtn.addEventListener('click', () => {
              if (!isHost) return;
-             // Game Start Countdown
              countdownOverlay.style.display = 'flex';
              let count = 3;
              const countdownInterval = setInterval(() => {
                 countdownText.textContent = count;
                 countdownText.style.animation = 'none';
-                void countdownText.offsetWidth; // Trigger reflow
+                void countdownText.offsetWidth;
                 countdownText.style.animation = 'countdown-pop 1s forwards';
                 count--;
                 if (count < 0) {
