@@ -136,8 +136,14 @@ body {
 .life-heart { width: 24px; height: 24px; color: var(--danger-color); filter: drop-shadow(0 0 5px var(--danger-color)); }
 .game-grid { width: 100%; height: 200px; position: relative; overflow: hidden; transition: box-shadow 0.3s, filter 0.2s; -webkit-tap-highlight-color: transparent; }
 .sequence-container {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    display: flex; gap: 1rem; transition: transform 0.2s ease-in-out;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 1rem;
+    transition: transform 0.2s ease-in-out;
+    pointer-events: none; /* FIX IS HERE */
 }
 
 .arrow-icon {
