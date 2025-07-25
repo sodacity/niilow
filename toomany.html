@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Too Many Words</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="dictionary.js"></script> <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fredoka+One&family=Press+Start+2P&family=MedievalSharp&display=swap" rel="stylesheet">
+    <script src="dictionary.js"></script> <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Fredoka+One&family=Press+Start+2P&family=MedievalSharp&family=Orbitron:wght@700&family=Exo+2:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
             --background-color: #f0f2f5;
@@ -25,94 +25,50 @@
             --font-display: 'Fredoka One', cursive;
         }
 
-        /* Hacker Theme */
+        /* ----- THEMES ----- */
         body.theme-hacker {
-            --background-color: #0d1117;
-            --card-bg: #161b22;
-            --text-color: #c9d1d9;
-            --subtle-text: #8b949e;
-            --cell-border: #30363d;
-            --cell-bg: #010409;
-            --bonus-word-color: #58a6ff;
+            --background-color: #0d1117; --card-bg: #161b22; --text-color: #c9d1d9; --subtle-text: #8b949e;
+            --cell-border: #30363d; --cell-bg: #010409; --bonus-word-color: #58a6ff;
         }
-
-        /* Cosmic Theme */
         body.theme-cosmic {
-            --background-color: #1a202c;
-            --card-bg: #2d3748;
-            --text-color: #e2e8f0;
-            --subtle-text: #a0aec0;
-            --cell-border: #4a5568;
-            --cell-bg: #171923;
-            --bonus-word-color: #faf089;
+            --background-color: #1a202c; --card-bg: #2d3748; --text-color: #e2e8f0; --subtle-text: #a0aec0;
+            --cell-border: #4a5568; --cell-bg: #171923; --bonus-word-color: #faf089;
         }
-
-        /* Retro Arcade Theme */
         body.theme-arcade {
-            --font-main: 'Press Start 2P', cursive;
-            --font-display: 'Press Start 2P', cursive;
-            --background-color: #000000;
-            --card-bg: #111111;
-            --text-color: #FFFFFF;
-            --subtle-text: #AAAAAA;
-            --cell-border: #333333;
-            --cell-bg: #050505;
-            --selected-bg: #FF00FF;
-            --opponent-selected-bg: #00FFFF;
-            --bonus-word-color: #00FF00;
+            --font-main: 'Press Start 2P', cursive; --font-display: 'Press Start 2P', cursive; --background-color: #000000;
+            --card-bg: #111111; --text-color: #FFFFFF; --subtle-text: #AAAAAA; --cell-border: #333333;
+            --cell-bg: #050505; --selected-bg: #FF00FF; --opponent-selected-bg: #00FFFF; --bonus-word-color: #00FF00;
         }
-        
-        /* Ancient Library Theme */
         body.theme-library {
-            --font-main: 'MedievalSharp', cursive;
-            --font-display: 'MedievalSharp', cursive;
-            --background-color: #fdf6e3;
-            --card-bg: #f3e9d2;
-            --text-color: #654321;
-            --subtle-text: #8b6b4a;
-            --cell-border: #c8bda9;
-            --cell-bg: #faf3e0;
-            --selected-bg: #8B4513;
-            --opponent-selected-bg: #DAA520;
-            --bonus-word-color: #006400;
+            --font-main: 'MedievalSharp', cursive; --font-display: 'MedievalSharp', cursive; --background-color: #fdf6e3;
+            --card-bg: #f3e9d2; --text-color: #654321; --subtle-text: #8b6b4a; --cell-border: #c8bda9;
+            --cell-bg: #faf3e0; --selected-bg: #8B4513; --opponent-selected-bg: #DAA520; --bonus-word-color: #006400;
         }
-        
-        /* Soothing Nature Theme */
         body.theme-nature {
-            --background-color: #edf6f9;
-            --card-bg: #ffffff;
-            --text-color: #2d6a4f;
-            --subtle-text: #40916c;
-            --cell-border: #b7e4c7;
-            --cell-bg: #d8f3dc;
-            --selected-bg: #52b788;
-            --opponent-selected-bg: #ffb703;
+            --background-color: #edf6f9; --card-bg: #ffffff; --text-color: #2d6a4f; --subtle-text: #40916c;
+            --cell-border: #b7e4c7; --cell-bg: #d8f3dc; --selected-bg: #52b788; --opponent-selected-bg: #ffb703;
             --bonus-word-color: #081c15;
+        }
+        body.theme-ocean {
+            --font-display: 'Exo 2', sans-serif; --background-color: #0c1445; --card-bg: #1f2a69; --text-color: #e0fbfc;
+            --subtle-text: #98c1d9; --cell-border: #3d5a80; --cell-bg: #162052; --selected-bg: #ee6c4d;
+            --opponent-selected-bg: #f38d68; --bonus-word-color: #98f5e1;
+        }
+        body.theme-cyberpunk {
+            --font-main: 'Orbitron', sans-serif; --font-display: 'Orbitron', sans-serif; --background-color: #0c0c0c;
+            --card-bg: #1a1a1a; --text-color: #00ffea; --subtle-text: #8c8c8c; --cell-border: #ff00ff;
+            --cell-bg: #0f0f0f; --selected-bg: #ff00ff; --opponent-selected-bg: #f7ff00; --bonus-word-color: #00ffea;
+            text-shadow: 0 0 2px var(--text-color);
         }
 
         body {
-            font-family: var(--font-main);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            transition: background-color 0.3s;
+            font-family: var(--font-main); background-color: var(--background-color); color: var(--text-color); margin: 0;
+            padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            min-height: 100vh; transition: background-color 0.3s;
         }
-
         #game-header { text-align: center; margin-bottom: 2rem; }
-        h1 { 
-            font-family: var(--font-display);
-            font-size: 3rem; 
-            color: var(--text-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
+        h1 { font-family: var(--font-display); font-size: 3rem; color: var(--text-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
         #main-status { font-size: 1.2rem; font-weight: 500; color: var(--subtle-text); height: 25px; }
-        
         #connection-setup { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; align-items: center; background-color: var(--card-bg); padding: 2rem; border-radius: 16px; box-shadow: var(--box-shadow); width: 100%; max-width: 400px; }
         .input-group { display: flex; flex-direction: column; gap: 1rem; width: 100%; }
         .input-row { display: flex; gap: 1rem; align-items: center; }
@@ -120,57 +76,45 @@
         #connection-setup input[type="color"] { -webkit-appearance: none; width: 48px; height: 48px; border: none; cursor: pointer; background: none; padding: 0; }
         #connection-setup input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; border: 2px solid #ddd; }
         #connection-setup input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
-
         .button-group { display: flex; gap: 1rem; }
         #connection-setup button { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 700; color: white; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-family: var(--font-display); }
         #connection-setup button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         #create-room-btn { background-color: #4CAF50; }
         #join-room-btn { background-color: #03A9F4; }
-
         #game-area { display: none; flex-direction: column; align-items: center; width: 100%; }
         .game-top-bar { display: flex; justify-content: center; align-items: center; width: 100%; max-width: 1200px; margin-bottom: 1rem; position: relative; }
         #timer-display { color: #f44336; font-family: var(--font-display); font-size: 2rem; transition: transform 0.2s; }
-        #timer-display.shake { animation: shake 0.5s infinite; }
-        
+        #timer-display.shake { animation: shake-timer 0.5s infinite; }
         #fullscreen-btn { position: absolute; top: 0; right: 0; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--cell-border); border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-family: var(--font-main); box-shadow: var(--box-shadow); z-index: 100;}
-
-        #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1400px; align-items: flex-start; }
-        
+        #game-container { display: flex; justify-content: center; gap: 2rem; width: 100%; max-width: 1500px; align-items: flex-start; }
         .player-area { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
         .player-name { font-family: var(--font-display); font-size: 1.5rem; padding: 0.5rem 1.5rem; border-radius: 20px; margin-bottom: 1rem; color: white; transition: background-color 0.3s; box-shadow: var(--box-shadow); }
         .player-content-wrapper { display: flex; gap: 1.5rem; width: 100%; justify-content: center; }
         #player-content-1 { flex-direction: row-reverse; }
         #player-content-2 { flex-direction: row; }
-        
         .board-container { display: flex; flex-direction: column; align-items: center; position: relative; }
         .lists-container { display: flex; flex-direction: column; width: 200px; }
-
         .combo-meter { font-family: var(--font-display); font-size: 1.5rem; color: var(--bonus-word-color); height: 30px; margin-top: 0.5rem; transition: transform 0.2s, opacity 0.2s; transform: scale(0); opacity: 0;}
         .combo-meter.active { transform: scale(1); opacity: 1; }
-        
-        .result-overlay { position: absolute; top: 2.5rem; left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; }
-        
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 600px; /* Made board bigger */ min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
-        .cell { display: flex; align-items: center; justify-content: center; font-size: clamp(0.5rem, 2.5vmin, 1.2rem); font-weight: 700; background-color: var(--cell-bg); color: var(--text-color); border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; opacity: 0; animation: cardFlip 0.5s forwards; }
+        .result-overlay { position: absolute; top: 2.5rem; left: 0; right: 0; bottom: 0; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 3rem; border-radius: 12px; z-index: 100; text-shadow: 2px 2px 4px #000; animation: result-bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; background-color: var(--card-bg); border-radius: 16px; padding: 10px; aspect-ratio: 10 / 12; width: 100%; max-width: 700px; /* Made board bigger */ min-width: 300px; user-select: none; box-shadow: var(--box-shadow); }
+        .board.shake-wrong { animation: shake-board 0.4s; }
+        .cell { display: flex; align-items: center; justify-content: center; font-size: clamp(0.5rem, 2.5vmin, 1.5rem); font-weight: 700; background-color: var(--cell-bg); color: var(--text-color); border-radius: 8px; cursor: pointer; transition: background-color 0.1s, transform 0.1s; aspect-ratio: 1 / 1; opacity: 0; animation: cardFlip 0.5s forwards; }
         .cell.selected { background-color: var(--selected-bg) !important; color: white; transform: scale(1.05); }
-        
         .score-display { font-size: 2.5rem; font-weight: bold; margin-top: 1rem; font-family: var(--font-display); color: var(--text-color); }
         .words-display-area { margin-top: 1rem; width: 100%; text-align: center; }
         .words-display-area h3 { margin-bottom: 0.5rem; font-size: 1rem; color: var(--subtle-text); font-weight: 500; }
         .found-words-list, .bonus-word-list { list-style: none; padding: 0.5rem; margin: 0; height: 120px; overflow-y: auto; background-color: var(--background-color); border-radius: 8px; border: 1px solid var(--cell-border); }
-        
         #new-game-btn { margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 700; color: white; background-color: #673AB7; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
-        @keyframes cardFlip {
-            from { transform: rotateY(90deg); opacity: 0; }
-            to { transform: rotateY(0deg); opacity: 1; }
-        }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-
+        .flying-letter { position: fixed; font-family: var(--font-display); font-size: 1.5rem; color: var(--bonus-word-color); z-index: 200; transition: all 0.5s cubic-bezier(0.5, -0.5, 0.5, 1.5); }
+        
+        @keyframes cardFlip { from { transform: rotateY(90deg); opacity: 0; } to { transform: rotateY(0deg); opacity: 1; } }
+        @keyframes shake-timer { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        @keyframes shake-board { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+        @keyframes result-bounce-in { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
-
     <div id="game-header">
         <h1>Too Many Words</h1>
         <div id="main-status">Enter your name to begin!</div>
@@ -190,6 +134,8 @@
                 <option value="arcade">Retro Arcade</option>
                 <option value="library">Ancient Library</option>
                 <option value="nature">Soothing Nature</option>
+                <option value="ocean">Ocean Deep</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
             </select>
         </div>
         <div class="button-group">
@@ -253,15 +199,11 @@
         const FULL_DICTIONARY = new Set(DICTIONARY_WORDS.map(w => w.toUpperCase()));
         const correctSound = new Audio('https://www.niilow.com/corect.mp3');
         const wrongSound = new Audio('https://www.niilow.com/wrong.mp3');
-        
         const GRID_SIZE = { rows: 12, cols: 10 };
         const GAME_DURATION = 120;
-        const COMBO_WINDOW = 5000; // 5 seconds
+        const COMBO_WINDOW = 5000;
+        let peer, conn, isHost, gameTimer, myPlayer, opponentPlayer;
 
-        let peer, conn, isHost, gameTimer;
-        let myPlayer, opponentPlayer;
-
-        // --- DOM Elements ---
         const mainStatusEl = document.getElementById('main-status');
         const connectionSetupEl = document.getElementById('connection-setup');
         const playerNameInput = document.getElementById('player-name-input');
@@ -288,11 +230,7 @@
         
         class Player {
             constructor(id, name, color, isLocal) {
-                this.id = id;
-                this.name = name;
-                this.color = color;
-                this.isLocal = isLocal;
-                
+                this.id = id; this.name = name; this.color = color; this.isLocal = isLocal;
                 this.boardEl = document.getElementById(`board-p${id}`);
                 this.scoreEl = document.getElementById(`score-p${id}`);
                 this.nameEl = document.getElementById(`name-p${id}`);
@@ -300,156 +238,113 @@
                 this.comboEl = document.getElementById(`combo-p${id}`);
                 this.bonusWordListEl = document.getElementById(`bonus-words-p${id}`);
                 this.foundWordsListEl = document.getElementById(`found-words-p${id}`);
-                
                 this.nameEl.textContent = this.name;
                 this.nameEl.style.backgroundColor = this.color;
                 this.nameEl.style.color = getContrastingTextColor(this.color);
-
                 if (this.isLocal) { document.documentElement.style.setProperty('--selected-bg', this.color); }
-                
-                this.score = 0;
-                this.combo = 0;
-                this.lastWordTimestamp = 0;
-                this.foundWords = new Set();
-                this.isDragging = false;
-                this.selectedCells = [];
-
+                this.score = 0; this.combo = 0; this.lastWordTimestamp = 0;
+                this.foundWords = new Set(); this.isDragging = false; this.selectedCells = [];
                 if (this.isLocal) {
                     this.boardEl.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                     this.boardEl.addEventListener('mouseover', (e) => this.handleMouseOver(e));
                     document.addEventListener('mouseup', () => this.handleMouseUp());
                 }
             }
-
-            reset() {
-                this.score = 0;
-                this.combo = 0;
-                this.updateComboMeter();
-                this.updateScore(0);
-                this.foundWords.clear();
-                this.bonusWordListEl.innerHTML = '';
-                this.foundWordsListEl.innerHTML = '';
-                this.boardEl.classList.remove('disabled');
-                const overlay = this.areaEl.querySelector('.result-overlay');
-                if (overlay) overlay.remove();
-            }
-
+            reset() { this.score = 0; this.combo = 0; this.updateComboMeter(); this.updateScore(0); this.foundWords.clear(); this.bonusWordListEl.innerHTML = ''; this.foundWordsListEl.innerHTML = ''; this.boardEl.classList.remove('disabled'); const overlay = this.areaEl.querySelector('.result-overlay'); if (overlay) overlay.remove(); }
             setupBoard(targetWords, grid) { this.targetWords = new Set(targetWords); this.grid = grid; this.drawBoard(); }
-            
             drawBoard() {
                 this.boardEl.innerHTML = '';
                 for (let r = 0; r < GRID_SIZE.rows; r++) {
                     for (let c = 0; c < GRID_SIZE.cols; c++) {
                         const cell = document.createElement('div');
-                        cell.classList.add('cell');
-                        cell.dataset.r = r; cell.dataset.c = c; cell.textContent = this.grid[r][c];
+                        cell.classList.add('cell'); cell.dataset.r = r; cell.dataset.c = c; cell.textContent = this.grid[r][c];
                         cell.style.animationDelay = `${(r * GRID_SIZE.cols + c) * 0.02}s`;
                         this.boardEl.appendChild(cell);
                     }
                 }
             }
-            
             updateScore(newScore) { this.score = newScore; this.scoreEl.textContent = `Score: ${this.score}`; }
             addBonusWord(word) {
-                if (!this.isLocal) return;
-                const li = document.createElement('li'); li.textContent = word; this.bonusWordListEl.appendChild(li); this.bonusWordListEl.scrollTop = this.bonusWordListEl.scrollHeight;
+                if (!this.isLocal) return; const li = document.createElement('li'); li.textContent = word; this.bonusWordListEl.appendChild(li); this.bonusWordListEl.scrollTop = this.bonusWordListEl.scrollHeight;
             }
             addFoundWord(word) {
-                if (!this.isLocal) return;
-                const li = document.createElement('li'); li.textContent = word; this.foundWordsListEl.appendChild(li); this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight;
+                if (!this.isLocal) return; const li = document.createElement('li'); li.textContent = word; this.foundWordsListEl.appendChild(li); this.foundWordsListEl.scrollTop = this.foundWordsListEl.scrollHeight;
             }
-            handleMouseDown(e) {
-                if (gameTimer <= 0 || !e.target.classList.contains('cell')) return;
-                this.isDragging = true; this.clearSelection(); this.addCellToSelection(e.target);
-            }
-            handleMouseOver(e) {
-                if (!this.isDragging || !e.target.classList.contains('cell')) return;
-                this.addCellToSelection(e.target);
-            }
-            handleMouseUp() {
-                if (!this.isDragging) return;
-                this.isDragging = false; this.submitWord();
-            }
-            addCellToSelection(cellEl) {
-                if (this.selectedCells.includes(cellEl)) return;
-                this.selectedCells.push(cellEl); cellEl.classList.add('selected'); this.sendSelectionUpdate();
-            }
-            clearSelection() {
-                this.selectedCells.forEach(cell => cell.classList.remove('selected')); this.selectedCells = []; this.sendSelectionUpdate();
-            }
-            sendSelectionUpdate() {
-                 if(conn && conn.open) conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) });
-            }
+            handleMouseDown(e) { if (gameTimer <= 0 || !e.target.classList.contains('cell')) return; this.isDragging = true; this.clearSelection(); this.addCellToSelection(e.target); }
+            handleMouseOver(e) { if (!this.isDragging || !e.target.classList.contains('cell')) return; this.addCellToSelection(e.target); }
+            handleMouseUp() { if (!this.isDragging) return; this.isDragging = false; this.submitWord(); }
+            addCellToSelection(cellEl) { if (this.selectedCells.includes(cellEl)) return; this.selectedCells.push(cellEl); cellEl.classList.add('selected'); this.sendSelectionUpdate(); }
+            clearSelection() { this.selectedCells.forEach(cell => cell.classList.remove('selected')); this.selectedCells = []; this.sendSelectionUpdate(); }
+            sendSelectionUpdate() { if(conn && conn.open) conn.send({ type: 'selection_update', path: this.selectedCells.map(c => ({ r: c.dataset.r, c: c.dataset.c })) }); }
             updateOpponentSelection(path) {
                 this.boardEl.querySelectorAll('.opponent-selecting').forEach(c => c.classList.remove('opponent-selecting'));
-                path.forEach(pos => {
-                    const cell = this.boardEl.querySelector(`[data-r='${pos.r}'][data-c='${pos.c}']`);
-                    if (cell) cell.classList.add('opponent-selecting');
+                path.forEach(pos => { const cell = this.boardEl.querySelector(`[data-r='${pos.r}'][data-c='${pos.c}']`); if (cell) cell.classList.add('opponent-selecting'); });
+            }
+            updateComboMeter() { if (this.combo > 1) { this.comboEl.textContent = `COMBO x${this.combo}!`; this.comboEl.classList.add('active'); } else { this.comboEl.classList.remove('active'); } }
+            animateBonusWord(cells, word) {
+                if (!this.isLocal) return;
+                const bonusListRect = this.bonusWordListEl.getBoundingClientRect();
+                const endX = bonusListRect.left + bonusListRect.width / 2;
+                const endY = bonusListRect.top + bonusListRect.height / 2;
+                cells.forEach((cell, index) => {
+                    const rect = cell.getBoundingClientRect();
+                    const letter = document.createElement('div');
+                    letter.className = 'flying-letter';
+                    letter.textContent = cell.textContent;
+                    letter.style.left = `${rect.left + rect.width / 2}px`;
+                    letter.style.top = `${rect.top + rect.height / 2}px`;
+                    document.body.appendChild(letter);
+                    setTimeout(() => {
+                        letter.style.transform = `translate(${endX - rect.left - 10}px, ${endY - rect.top - 10}px) scale(0.5)`;
+                        letter.style.opacity = '0';
+                    }, 50);
+                    setTimeout(() => { letter.remove(); if(index === cells.length - 1) this.addBonusWord(word); }, 550);
                 });
             }
-
-            updateComboMeter() {
-                if (this.combo > 1) {
-                    this.comboEl.textContent = `COMBO x${this.combo}!`;
-                    this.comboEl.classList.add('active');
-                } else {
-                    this.comboEl.classList.remove('active');
-                }
-            }
-
             submitWord() {
                 if (this.selectedCells.length < 3) { if (this.selectedCells.length > 0) wrongSound.play(); this.clearSelection(); return; };
-                const selectedWord = this.selectedCells.map(c => c.textContent).join('');
+                const selectedCellsCopy = [...this.selectedCells];
+                const selectedWord = selectedCellsCopy.map(c => c.textContent).join('');
                 let foundAnyValidWord = false;
-                if (this.validateAndScoreWord(selectedWord)) foundAnyValidWord = true;
-                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''))) foundAnyValidWord = true;
-                if (foundAnyValidWord) { correctSound.play(); } else { wrongSound.play(); this.combo = 0; this.updateComboMeter(); }
+                if (this.validateAndScoreWord(selectedWord, selectedCellsCopy)) foundAnyValidWord = true;
+                if (this.validateAndScoreWord(selectedWord.split('').reverse().join(''), selectedCellsCopy.reverse())) foundAnyValidWord = true;
+                if (foundAnyValidWord) { correctSound.play(); } else { wrongSound.play(); this.combo = 0; this.updateComboMeter(); if (this.isLocal) { this.boardEl.classList.add('shake-wrong'); setTimeout(()=>this.boardEl.classList.remove('shake-wrong'), 400); } }
                 this.clearSelection();
             }
-
-            validateAndScoreWord(word) {
+            validateAndScoreWord(word, cells) {
                 const upperWord = word.toUpperCase();
                 if (word.length < 3 || word.length > 6 || this.foundWords.has(upperWord) || !FULL_DICTIONARY.has(upperWord)) { return false; }
                 const now = Date.now();
                 if (now - this.lastWordTimestamp < COMBO_WINDOW) { this.combo++; } else { this.combo = 1; }
-                this.lastWordTimestamp = now;
-                this.updateComboMeter();
+                this.lastWordTimestamp = now; this.updateComboMeter();
                 const comboMultiplier = this.combo > 1 ? this.combo : 0;
-                this.foundWords.add(upperWord);
-                this.addFoundWord(word);
-                let points = word.length;
-                let isBonus = this.targetWords.has(upperWord);
-                if (isBonus) { points += 10; }
+                this.foundWords.add(upperWord); this.addFoundWord(word);
+                let points = word.length; let isBonus = this.targetWords.has(upperWord);
+                if (isBonus) { points += 10; this.animateBonusWord(cells, upperWord); }
                 points += comboMultiplier;
                 this.updateScore(this.score + points);
-                conn.send({ type: 'word_found', newScore: this.score, isBonus: isBonus, combo: this.combo });
+                conn.send({ type: 'word_found', newScore: this.score, combo: this.combo });
                 return true;
             }
         }
-        
         function initializePeer(host, roomName, playerName, playerColor, theme) {
             isHost = host; peer = isHost ? new Peer(roomName) : new Peer();
             peer.on('open', () => { if (!isHost) connectToHost(roomName, playerName, playerColor, theme); else mainStatusEl.textContent = `Room "${roomName}" created. Waiting...`; });
             peer.on('connection', (connection) => { conn = connection; setupConnection(playerName, playerColor, theme); });
             peer.on('error', (err) => { mainStatusEl.textContent = `Error: ${err.message}`; });
         }
-
         function connectToHost(roomName, playerName, playerColor, theme) { conn = peer.connect(roomName); setupConnection(playerName, playerColor, theme); }
-
         function setupConnection(myName, myColor, myTheme) {
             conn.on('open', () => {
                 conn.send({ type: 'player_sync', name: myName, color: myColor, theme: myTheme });
                 connectionSetupEl.style.display = 'none'; gameAreaEl.style.display = 'flex'; newGameBtn.style.display = 'block';
                 document.body.className = `theme-${myTheme}`;
-                const myPlayerId = isHost ? 1 : 2;
-                myPlayer = new Player(myPlayerId, myName, myColor, true);
+                myPlayer = new Player(isHost ? 1 : 2, myName, myColor, true);
             });
-
             conn.on('data', (data) => {
                 switch (data.type) {
                     case 'player_sync':
-                        const opponentId = isHost ? 2 : 1;
-                        opponentPlayer = new Player(opponentId, data.name, data.color, false);
+                        opponentPlayer = new Player(isHost ? 2 : 1, data.name, data.color, false);
                         if (isHost) { conn.send({ type: 'theme_sync', theme: myTheme }); }
                         if (isHost) { newGameBtn.disabled = false; mainStatusEl.textContent = `Connected to ${data.name}! Click 'New Game' to start.`; } 
                         else { newGameBtn.disabled = true; mainStatusEl.textContent = `Connected to ${data.name}! Waiting for them to start.`; }
@@ -457,39 +352,18 @@
                     case 'theme_sync': document.body.className = `theme-${data.theme}`; break;
                     case 'start_game': startNewGame(data.targetWords, data.grid); break;
                     case 'selection_update': if(opponentPlayer) opponentPlayer.updateOpponentSelection(data.path); break;
-                    case 'word_found':
-                        if(opponentPlayer) {
-                            opponentPlayer.updateScore(data.newScore);
-                            opponentPlayer.combo = data.combo;
-                            opponentPlayer.updateComboMeter();
-                        }
-                        break;
+                    case 'word_found': if(opponentPlayer) { opponentPlayer.updateScore(data.newScore); opponentPlayer.combo = data.combo; opponentPlayer.updateComboMeter(); } break;
                 }
             });
             conn.on('close', () => { mainStatusEl.textContent = "Opponent disconnected."; if(gameTimer) clearInterval(gameTimer); });
         }
-        
         function generateNewBoard() {
              const targetWords = [...new Set(DICTIONARY_WORDS.filter(w=>w.length >= 4 && w.length <= 6))].sort(() => 0.5 - Math.random()).slice(0, 10);
             let grid = Array(GRID_SIZE.rows).fill(null).map(() => Array(GRID_SIZE.cols).fill(''));
-            for (const word of targetWords) {
-                let placed = false;
-                for (let i = 0; i < 200 && !placed; i++) {
-                    const dir = Math.floor(Math.random() * 4); const wordToPlace = word.toUpperCase();
-                    let r, c, canPlace = true;
-                    switch(dir) {
-                        case 0: r = Math.floor(Math.random() * GRID_SIZE.rows); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)); for (let j = 0; j < word.length; j++) if(grid[r][c+j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r][c+j] = wordToPlace[j]; break;
-                        case 1: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * GRID_SIZE.cols); for (let j = 0; j < word.length; j++) if(grid[r+j][c] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c] = wordToPlace[j]; break;
-                        case 2: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)); for (let j = 0; j < word.length; j++) if(grid[r+j][c+j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c+j] = wordToPlace[j]; break;
-                        case 3: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)) + (word.length -1); for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j]; break;
-                    }
-                    if(canPlace) placed = true;
-                }
-            }
+            for (const word of targetWords) { let placed = false; for (let i = 0; i < 200 && !placed; i++) { const dir = Math.floor(Math.random() * 4); const wordToPlace = word.toUpperCase(); let r, c, canPlace = true; switch(dir) { case 0: r = Math.floor(Math.random() * GRID_SIZE.rows); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)); for (let j = 0; j < word.length; j++) if(grid[r][c+j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r][c+j] = wordToPlace[j]; break; case 1: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * GRID_SIZE.cols); for (let j = 0; j < word.length; j++) if(grid[r+j][c] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c] = wordToPlace[j]; break; case 2: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)); for (let j = 0; j < word.length; j++) if(grid[r+j][c+j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c+j] = wordToPlace[j]; break; case 3: r = Math.floor(Math.random() * (GRID_SIZE.rows - word.length + 1)); c = Math.floor(Math.random() * (GRID_SIZE.cols - word.length + 1)) + (word.length -1); for (let j = 0; j < word.length; j++) if(grid[r+j][c-j] !== '') canPlace = false; if(canPlace) for (let j = 0; j < word.length; j++) grid[r+j][c-j] = wordToPlace[j]; break; } if(canPlace) placed = true; } }
             for (let r = 0; r < GRID_SIZE.rows; r++) { for (let c = 0; c < GRID_SIZE.cols; c++) { if (grid[r][c] === '') { grid[r][c] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; } } }
             return { targetWords: targetWords.map(w=>w.toUpperCase()), grid };
         }
-
         function startNewGame(targetWords, grid) {
             mainStatusEl.textContent = 'Find words from 3 to 6 letters!';
             if (myPlayer) myPlayer.reset(); if (opponentPlayer) opponentPlayer.reset();
@@ -503,7 +377,6 @@
                 if (timeLeft <= 0) endGame();
             }, 1000);
         }
-
         function endGame() {
             clearInterval(gameTimer); timerDisplay.textContent = "Time's Up!"; myPlayer.boardEl.classList.add('disabled'); timerDisplay.classList.remove('shake');
             let myResult, myText;
@@ -513,14 +386,12 @@
             const myOverlay = document.createElement('div'); myOverlay.className = `result-overlay ${myResult}`; myOverlay.textContent = myText; myPlayer.areaEl.appendChild(myOverlay);
             const opponentOverlay = document.createElement('div'); opponentOverlay.className = `result-overlay ${myResult === 'winner' ? 'loser' : myResult === 'loser' ? 'winner' : 'draw'}`; opponentOverlay.textContent = `${myResult === 'winner' ? 'SO CLOSE!' : myResult === 'loser' ? 'WINNER!' : 'DRAW!'}`; opponentPlayer.areaEl.appendChild(opponentOverlay);
         }
-        
         function toggleFullScreen() {
             const elem = document.getElementById('game-area');
             if (!document.fullscreenElement) { elem.requestFullscreen().catch(err => { alert(`Error: ${err.message}`); }); } 
             else { if (document.exitFullscreen) { document.exitFullscreen(); } }
         }
         function updateFullscreenButton() { if (document.fullscreenElement) { fullscreenBtn.textContent = 'Exit'; } else { fullscreenBtn.textContent = 'Fullscreen'; } }
-
         function handleConnection(isHost) {
             const playerName = playerNameInput.value.trim(); const playerColor = playerColorInput.value; const theme = themeSelect.value; const roomName = roomNameInput.value.trim();
             if (!playerName || !roomName) { alert('Please enter your name and a room name.'); return; }
