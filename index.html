@@ -3,604 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Niilow</title>
-    <link rel="icon" href="https://www.niilow.com/logo.png">
-
-    <meta name="theme-color" content="#303030">
-    <link rel="apple-touch-icon" href="https://www.niilow.com/logo.png">
-    <link rel="manifest" href="manifest.json">
-
+    <title>NiiLow | Portable Console Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    
-    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* --- Custom Retro-Futuristic Styles --- */
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #050505;
+            --accent-cyan: #3ebbfa;
+            --accent-glow: rgba(62, 187, 250, 0.6);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            color: #e0e0e0;
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Rajdhani', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* --- CRT Scanline Effect --- */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0),
+                rgba(255, 255, 255, 0) 50%,
+                rgba(0, 0, 0, 0.2) 50%,
+                rgba(0, 0, 0, 0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.6;
+        }
+
+        /* Vignette to darken edges like an old screen */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(5,5,5,0.9) 100%);
+            pointer-events: none;
+            z-index: 49;
+        }
+
+        /* --- Starfield Canvas --- */
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* --- Neon Glow Utilities --- */
+        .text-glow {
+            text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
+        }
+        
+        .box-glow {
+            box-shadow: 0 0 15px rgba(62, 187, 250, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .box-glow:hover {
+            box-shadow: 0 0 25px rgba(62, 187, 250, 0.4);
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        /* --- Button Styles --- */
+        .btn-retro {
+            background: transparent;
+            border: 2px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-retro::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-cyan);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .btn-retro:hover {
+            color: #050505;
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .btn-retro:hover::before {
+            left: 0;
+        }
+
+        /* --- Feature Card Animation --- */
+        .feature-card {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Custom Scrollbar --- */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-cyan);
+        }
+        
+        /* --- Mockup Specific Styles --- */
+        .game-tile {
+            background-size: cover;
+            background-position: center;
+            transition: all 0.2s;
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white flex h-screen overflow-hidden">
+<body class="antialiased min-h-screen flex flex-col relative">
 
-    <div id="video-wall-backdrop"></div>
+    <!-- FX Layers -->
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <canvas id="starfield"></canvas>
 
-    <div id="notification" class="hidden fixed top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-green-500 text-white py-2 px-6 rounded-b-lg shadow-lg"></div>
-
-    <div id="global-drop-zone" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4 pointer-events-none">
-        <div class="text-center text-white border-4 border-dashed border-white rounded-lg p-12">
-            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-            <h2 class="text-3xl font-bold">Drop .nii file to import</h2>
+    <!-- Navigation -->
+    <nav class="w-full py-6 px-6 md:px-12 flex justify-between items-center z-10 relative">
+        <div class="text-2xl font-bold tracking-widest text-white brand-font flex items-center gap-2">
+            <i data-lucide="gamepad-2" class="text-[#3ebbfa]"></i> NiiLow
         </div>
-    </div>
+        <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-[#3ebbfa] transition-colors text-sm uppercase tracking-wide font-semibold flex items-center gap-2">
+            <i data-lucide="github" class="w-4 h-4"></i> GitHub
+        </a>
+    </nav>
 
-    <div id="sidebar" class="sidebar bg-gray-800 p-4 flex flex-col fixed h-full z-40 w-64 md:w-auto md:relative md:translate-x-0 transform -translate-x-full">
-        <div id="sidebar-resize-handle" class="hidden md:block"></div>
-        <div class="flex justify-between items-center mb-4">
-            <h1 id="app-title" class="text-2xl font-bold">Collections</h1>
-            <div class="flex items-center">
-                 <button id="calendar-btn" class="sidebar-icon-btn" title="Calendar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                </button>
-                 <button id="settings-btn" class="sidebar-icon-btn ml-2" title="Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                </button>
+    <!-- Hero Section -->
+    <header class="flex-grow flex flex-col justify-center items-center text-center px-4 pt-10 pb-20 z-10 relative">
+        <div class="animate-fade-in-up space-y-6 max-w-4xl mx-auto">
+            <div class="inline-block px-3 py-1 border border-[#3ebbfa]/30 rounded-full bg-[#3ebbfa]/10 text-[#3ebbfa] text-xs font-bold tracking-widest uppercase mb-4">
+                v1.0 Release
             </div>
-        </div>
-        <div class="flex flex-col flex-grow overflow-hidden">
-             <div class="mb-4 search-container">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="filter" placeholder="Search" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-             <div class="mb-4">
-                 <a href="#" id="dashboard-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                    Home
-                 </a>
-                 <a href="#" id="all-notes-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    Collections
-                 </a>
-                 <a href="#" id="collaboration-link" class="flex items-center p-2 rounded hover:bg-gray-700 font-semibold">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    Collaboration
-                 </a>
-            </div>
-            <div class="flex-grow overflow-y-auto custom-scrollbar">
-                <div id="labels-container"></div>
-                <details class="mt-4" id="archive-section">
-                    <summary class="cursor-pointer text-lg font-semibold">Archived</summary>
-                    <div id="archive-list" class="pt-2"></div>
-                </details>
-            </div>
-            <div class="mt-auto"> <div class="p-2 text-center">
-                    <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto w-20 h-auto transition-transform hover:scale-110" onerror="this.style.display='none'">
-                </div>
-                <div id="sidebar-footer" class="text-center text-xs text-gray-500 pt-2 pb-2"></div>
+            
+            <h1 class="text-6xl md:text-8xl font-bold text-white mb-2 leading-tight">
+                Familiar Console Feel. <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#3ebbfa] to-white">Lightweight Design.</span>
+            </h1>
+            
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto font-light">
+                A standalone, portable game launcher for Windows. The interface you know, powered by a single ultra-light EXE.
+            </p>
+
+            <div class="pt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <a href="#" class="btn-retro px-8 py-4 rounded-md font-bold uppercase tracking-wider flex items-center gap-3 group">
+                    <i data-lucide="download" class="w-5 h-5 group-hover:animate-bounce"></i>
+                    Download for Windows
+                </a>
+                <a href="#features" class="px-8 py-4 text-gray-400 hover:text-white transition-colors uppercase text-sm font-bold tracking-widest">
+                    Explore Features
+                </a>
             </div>
         </div>
-    </div>
+    </header>
 
-    <main id="main-content" class="flex-grow p-6 overflow-y-auto relative custom-scrollbar">
-         <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 bg-opacity-50 rounded-full text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
-
-        <div id="dashboard-view">
-            <div id="greeting-banner" class="p-6 rounded-lg mb-6 text-center">
-                <h1 id="greeting-text" class="text-3xl md:text-4xl font-bold"></h1>
-                <p id="time-display" class="text-md md:text-lg text-gray-300"></p>
-            </div>
-            <div>
-                <h2 class="text-xl font-semibold mb-4">Recent Notes</h2>
-                <div id="recent-notes-container" class="recent-notes-container"></div>
-            </div>
-             </div>
-        <div id="notes-view" class="hidden">
-            <div class="flex justify-end items-center mb-4 gap-4">
-                 <label class="flex items-center cursor-pointer">
-                    <span class="mr-3 font-semibold">Show Archived</span>
-                    <div class="relative">
-                        <input type="checkbox" id="archive-toggle" class="sr-only toggle-bg peer">
-                        <div class="w-14 h-8 bg-gray-600 rounded-full block peer-checked:bg-blue-500 transition-colors"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform transform peer-checked:translate-x-6"></div>
-                    </div>
-                </label>
-                <button id="select-mode-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Select</button>
-            </div>
-            <div id="notes-grid"></div>
-        </div>
-
-        <div id="collaboration-view" class="hidden h-full flex flex-col">
-            <div id="collaboration-notes-section" class="custom-scrollbar flex-grow">
-                <div id="collaboration-notes-grid"></div>
-            </div>
-            <div id="chat-container"></div>
-            <div class="flex-shrink-0 p-2 border-t border-gray-700">
-                <div class="flex items-center gap-2">
-                    <input type="text" id="chat-input" class="text-input-field flex-grow p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Say something...">
+    <!-- Dashboard Preview Section (Rebuilt based on Screenshot) -->
+    <section class="w-full px-4 md:px-12 z-10 relative -mt-10 mb-20">
+        <div class="max-w-6xl mx-auto">
+            <div class="relative group">
+                <!-- Glowing border/container for the screenshot -->
+                <div class="absolute -inset-1 bg-gradient-to-r from-[#3ebbfa] to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                
+                <!-- Mockup Container -->
+                <div class="relative rounded-lg overflow-hidden border border-gray-800 bg-[#080808] aspect-video shadow-2xl flex flex-col">
                     
-                    <div class="relative">
-                        <button id="collab-actions-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold p-2 rounded-full" title="More Actions">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        </button>
-                        <div id="collab-actions-menu" class="hidden absolute bottom-full right-0 mb-2 bg-gray-700 rounded-lg shadow-lg p-2 flex flex-col gap-2">
-                            <button id="import-local-note-btn" class="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-gray-600" title="Import Local Note">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                <span>Import</span>
-                            </button>
-                            <button id="add-game-btn" class="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-gray-600" title="Add a Game">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12M12 6v12"></path><rect x="3" y="3" width="18" height="18" rx="4"></rect></svg>
-                                <span>Game</span>
-                            </button>
-                            <button id="video-wall-btn" class="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-gray-600" title="Video Wall">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
-                                <span>Video Wall</span>
-                            </button>
-                            <button id="whiteboard-btn" class="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-gray-600" title="Open Whiteboard">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                <span>Whiteboard</span>
-                            </button>
-                            <button id="add-youtube-btn" class="flex items-center gap-2 w-full text-left p-2 rounded hover:bg-gray-600" title="Add YouTube Video">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2A29 29 0 0 0 23 11.75a29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
-                                <span>YouTube</span>
-                            </button>
+                    <!-- Internal Background Gradient -->
+                    <div class="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] to-[#020202] z-0"></div>
+                    
+                    <!-- Mockup Header -->
+                    <div class="relative z-10 flex justify-between items-start p-8">
+                        <!-- Left: Time/Date -->
+                        <div class="text-gray-200">
+                            <div class="text-4xl font-light tracking-tight">11:07 AM</div>
+                            <div class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Monday, Feb 2</div>
+                        </div>
+                        
+                        <!-- Right: Profile Pill -->
+                        <div class="flex items-center gap-3 bg-gray-900/80 border border-gray-700/50 rounded-full pl-4 pr-1 py-1">
+                            <span class="text-sm font-semibold text-gray-200">User</span>
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-green-400 to-blue-500 overflow-hidden">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" alt="Avatar" class="w-full h-full object-cover">
+                            </div>
                         </div>
                     </div>
 
-                    <button id="send-chat-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div id="batch-action-bar" class="fixed bottom-0 left-0 right-0 bg-gray-900 bg-opacity-90 p-4 transform translate-y-full z-40">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <span id="selection-count" class="font-bold"></span>
-            <div class="flex gap-2">
-                <button id="batch-export-btn" class="action-btn bg-green-500 hover:bg-green-600" title="Export Selected">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                </button>
-                <button id="batch-archive-btn" class="action-btn bg-yellow-500 hover:bg-yellow-600" title="Archive Selected">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
-                </button>
-                <button id="batch-delete-btn" class="action-btn bg-red-500 hover:bg-red-600" title="Delete Selected">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-30 transition-opacity duration-300"></div>
-
-    <div id="welcome-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg p-6 text-center">
-            <img src="https://www.niilow.com/logo.png" alt="Niilow Logo" class="mx-auto mb-6" style="max-width: 190px;">
-            <p class="text-lg mb-6">Your simple, secure note-taking application.</p>
-            <div class="text-left space-y-4 mb-8">
-                <p><strong><span class="text-blue-400">Your Personal Interpreter:</span></strong> Niilow helps you capture, organize, and interpret your thoughts and ideas effortlessly.</p>
-                <p><strong><span class="text-green-400">Secure & Private:</span></strong> Your data is stored locally on your device, not on a server. You have full control.</p>
-                <p><strong><span class="text-yellow-400">Securely Export Your Data:</span></strong> You can export all your notes and settings into a secure, encrypted `.nii` file at any time using a password you set.</p>
-            </div>
-            <button id="close-welcome-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Get Started</button>
-        </div>
-    </div>
-    
-    <div id="collaboration-start-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="rounded-lg shadow-xl w-full max-w-md p-8 text-center">
-            <h2 class="text-2xl font-bold mb-4">Channel</h2>
-            <p class="text-gray-400 mb-6">Enter a channel name to create or join a session.</p>
-            <input type="text" id="custom-room-id-input" class="text-input-field w-full p-3 rounded mb-6 text-center text-lg bg-gray-700" placeholder="e.g., GroupSession">
-            <button id="join-session-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg">Join</button>
-             <button id="cancel-collaboration-start-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
-        </div>
-    </div>
-
-    <div id="add-game-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 text-center">
-            <h2 class="text-2xl font-bold mb-4">Add a Game to the Session</h2>
-            <p class="text-gray-400 mb-6">Choose a game to add as a new card.</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button id="add-game-connectfour" class="game-btn bg-blue-500 hover:bg-blue-600">Connect 4</button>
-                <button id="add-game-tcycle" class="game-btn bg-red-500 hover:bg-red-600">Tron</button>
-                <button id="add-game-pong" class="game-btn bg-green-500 hover:bg-green-600">Pong</button>
-            </div>
-            <button id="cancel-add-game-btn" class="mt-8 text-gray-400 hover:text-white">Cancel</button>
-        </div>
-    </div>
-
-    <div id="batch-delete-confirm-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
-        <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
-            <h2 class="text-2xl font-bold mb-4 text-white">Confirm Deletion</h2>
-            <p id="batch-delete-message" class="text-white mb-6"></p>
-            <div class="flex justify-end gap-4">
-                <button id="cancel-batch-delete-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="confirm-batch-delete-action-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Delete Notes</button>
-            </div>
-        </div>
-    </div>
-    <div id="confirm-clear-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
-        <div class="bg-red-900 bg-opacity-90 rounded-lg shadow-xl w-full max-w-md p-6 text-center border border-red-500">
-            <h2 class="text-2xl font-bold mb-4 text-white">Are you sure?</h2>
-            <p class="text-white mb-4">This action is irreversible and will delete all your notes, settings, and shortcuts.</p>
-            <p class="text-gray-300 mb-4">To confirm, please type <strong class="text-red-400 font-mono">DELETE</strong> into the box below.</p>
-            <input type="text" id="delete-confirmation-input" class="text-input-field w-full p-2 rounded mb-6 text-center bg-gray-200 text-black" placeholder="Type DELETE here">
-            <div class="flex justify-end gap-4">
-                <button id="cancel-clear-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="confirm-clear-action-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded cursor-not-allowed" disabled>Confirm Deletion</button>
-            </div>
-        </div>
-    </div>
-    <div id="save-collab-notes-modal" class="hidden modal fixed inset-0 z-[10001] flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 text-center">
-            <h2 class="text-2xl font-bold mb-4 text-white">Leave Session</h2>
-            <p class="text-white mb-6">Would you like to save the notes from this collaboration session locally?</p>
-            <div class="flex justify-center gap-4">
-                <button id="decline-save-collab-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Leave Without Saving</button>
-                <button id="confirm-save-collab-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Save Notes & Leave</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="video-wall-modal" class="hidden modal fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">Set Video Wall</h2>
-            <p class="text-gray-400 mb-4">Enter a direct .mp4 URL or a YouTube video link.</p>
-            <input type="text" id="video-wall-url-input" class="text-input-field w-full p-2 rounded mb-6 text-center bg-gray-700" placeholder="https://example.com/video.mp4">
-            <div class="flex justify-end gap-4">
-                <button id="cancel-video-wall-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="remove-video-wall-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Remove</button>
-                <button id="save-video-wall-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Set Video</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="session-management-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4 text-center">Channel Info</h2>
-            <div class="mb-4">
-                <h3 class="font-semibold mb-2 border-b border-gray-600 pb-1">Participants:</h3>
-                <div id="session-modal-peer-list" class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar"></div>
-            </div>
-            <div class="flex items-center text-sm mb-6">
-                <span class="mr-2">Channel Name:</span>
-                <span id="session-modal-room-id" class="font-mono p-1 bg-gray-700 rounded"></span>
-            </div>
-            <div class="flex flex-col gap-4">
-                <button id="session-modal-copy-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Copy Invite Link</button>
-                <button id="session-modal-qr-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Show Invite QR Code</button>
-                <button id="session-modal-leave-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">Leave Channel</button>
-            </div>
-            <button id="session-modal-close-btn" class="mt-6 text-gray-400 hover:text-white w-full">Close</button>
-        </div>
-    </div>
-
-    <div id="youtube-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">Add a YouTube Video</h2>
-            <p class="text-gray-400 mb-4">Paste the YouTube URL below to create a synced video note.</p>
-            <input type="text" id="youtube-url-input" class="text-input-field w-full p-2 rounded mb-6 bg-gray-700" placeholder="https://www.youtube.com/watch?v=...">
-            <div class="flex justify-end gap-4">
-                <button id="cancel-youtube-add-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="confirm-youtube-add-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Add Video</button>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="whiteboard-modal" class="hidden modal fixed inset-0 z-[60] bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 transition-opacity">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full h-full p-2 sm:p-4 flex flex-col">
-            <div id="whiteboard-toolbar" class="flex items-center gap-4 mb-2 p-2 bg-gray-900 rounded-lg flex-shrink-0">
-                <label for="wb-color-picker" class="font-semibold">Color:</label>
-                <input type="color" id="wb-color-picker" value="#FFFFFF" class="bg-gray-700 rounded">
-                <label for="wb-brush-size" class="font-semibold">Size:</label>
-                <input type="range" id="wb-brush-size" min="1" max="50" value="5" class="w-32">
-                <span id="wb-brush-preview" class="w-8 h-8 rounded-full bg-white" style="width: 5px; height: 5px;"></span>
-                <div class="ml-auto flex gap-2">
-                    <button id="wb-clear-btn" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded font-bold">Clear All</button>
-                    <button id="wb-close-btn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded font-bold">Close</button>
-                </div>
-            </div>
-            <div class="relative flex-grow rounded-lg overflow-hidden bg-white min-h-0">
-                <canvas id="whiteboard-canvas"></canvas>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="edit-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
-        <div id="side-pane-resize-handle" class="hidden md:block"></div>
-         <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
-            <input type="text" id="edit-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full bg-gray-900 text-white placeholder-gray-300 mb-4 flex-shrink-0">
-            <div id="edit-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
-                <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
-                <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
-                <button class="toolbar-btn" data-command="underline" title="Underline"><u>U</u></button>
-                <input type="color" class="font-color" data-command="foreColor" title="Font Color">
-                 <button class="toolbar-btn" data-command="insertImage" title="Insert Image"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
-                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bulleted List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
-                <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
-                <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
-                <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                </div>
-            <div class="editor-container">
-                <div id="edit-note-editor" contenteditable="true" class="editor w-full"></div>
-                <div class="drop-zone-overlay">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
-                </div>
-            </div>
-            <div class="mt-auto pt-4 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                    <label for="edit-note-label" class="font-semibold">Tag:</label>
-                    <input type="text" id="edit-note-label" list="labels-datalist" class="text-input-field p-2 rounded text-white w-1/3 bg-white bg-opacity-20">
-                    <label for="edit-note-card-color-input" class="font-semibold" title="Note Card Color">🎨</label>
-                    <input type="color" id="edit-note-card-color-input">
-                </div>
-                <div class="flex justify-between items-center mt-6">
-                    <div>
-                        <button id="share-note-btn" class="action-btn bg-purple-600 hover:bg-purple-700 text-white" title="Collaborate on this Note">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                        </button>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="archive-note" class="action-btn bg-yellow-500 hover:bg-yellow-600 text-white" title="Archive">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
-                        </button>
-                         <button id="delete-note" class="action-btn bg-red-500 hover:bg-red-600 text-white" title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
-                        <button id="cancel-edit-note" class="action-btn bg-gray-600 hover:bg-gray-700 text-white" title="Cancel">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                        <button id="save-edit-note" class="action-btn bg-green-500 hover:bg-green-600 text-white" title="Save">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="new-note-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
-        <div id="bottom-resize-handle" class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-2 bg-gray-600 rounded-full cursor-ns-resize hidden md:block"></div>
-        <div class="p-4 md:p-6 pt-8 flex flex-col h-full w-full overflow-hidden">
-            <input type="text" id="new-note-title" placeholder="Note Title" class="text-input-field text-2xl font-bold p-3 rounded-md focus:outline-none w-full bg-gray-900 text-white placeholder-gray-300 mb-4 flex-shrink-0">
-            <div id="new-note-toolbar" class="flex items-center gap-1 p-2 bg-gray-900 bg-opacity-50 rounded-t-lg border-b border-gray-600 flex-wrap flex-shrink-0">
-                 <button class="toolbar-btn" data-command="bold" title="Bold"><b>B</b></button>
-                <button class="toolbar-btn" data-command="italic" title="Italic"><i>I</i></button>
-                <button class="toolbar-btn" data-command="underline" title="Underline"><u>U</u></button>
-                <input type="color" class="font-color" data-command="foreColor" title="Font Color">
-                 <button class="toolbar-btn" data-command="insertImage" title="Insert Image"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></button>
-                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bulleted List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
-                 <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
-                <button class="toolbar-btn" data-command="insertChecklistItem" title="Checklist Item"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></button>
-                 <button class="toolbar-btn" data-command="insertEmbed" title="Embed HTML"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
-                </div>
-            <div class="editor-container">
-                <div id="new-note-editor" contenteditable="true" class="editor w-full"></div>
-                <div class="drop-zone-overlay">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <p class="text-2xl font-bold text-white mt-2">DROP IMAGE HERE</p>
-                </div>
-            </div>
-            <div class="mt-auto pt-4 flex-shrink-0">
-                 <div class="flex items-center gap-4">
-                    <label for="new-note-label" class="font-semibold">Tag:</label>
-                    <input type="text" id="new-note-label" list="labels-datalist" class="text-input-field p-2 rounded text-white w-1/3 bg-white bg-opacity-20">
-                    <label for="new-note-card-color-input" class="font-semibold" title="Note Card Color">🎨</label>
-                    <input type="color" id="new-note-card-color-input">
-                </div>
-                <div class="flex justify-end gap-2 mt-6 items-center">
-                    <button id="cancel-new-note" class="action-btn bg-gray-600 hover:bg-gray-700 text-white" title="Cancel">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                    <button id="save-new-note" class="action-btn bg-green-500 hover:bg-green-600 text-white" title="Create Note">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="calendar-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-lg opacity-0 scale-95">
-         <div class="p-6">
-            <div class="flex justify-between items-center mb-4"><button id="prev-month" class="p-2 rounded-full hover:bg-gray-700"><</button><h2 id="month-year" class="text-xl font-bold"></h2><button id="next-month" class="p-2 rounded-full hover:bg-gray-700">></button></div>
-            <div class="grid grid-cols-7 gap-2 text-center" id="calendar-grid"></div>
-            <div class="mt-4 max-h-48 overflow-y-auto" id="calendar-notes-list"></div>
-        </div>
-    </div>
-
-    <div id="embed-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">Embed Content</h2>
-                <div class="flex gap-2">
-                    <button id="video-helper-btn" class="p-2 rounded-full hover:bg-gray-700" title="Video Builder">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2" ry="2"></rect></svg>
-                    </button>
-                    <button id="iframe-helper-btn" class="p-2 rounded-full hover:bg-gray-700" title="iFrame Builder">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <p class="text-gray-400 mb-4">Paste your HTML embed code below, or use the iFrame builder.</p>
-            <textarea id="embed-code-input" class="text-input-field w-full p-2 rounded h-32 bg-gray-700" placeholder="<iframe ...></iframe> or <video ...>...</video>"></textarea>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-embed-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="save-embed-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="iframe-helper-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">iFrame Builder</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="iframe-url" class="block mb-2 font-semibold">URL</label>
-                    <input type="url" id="iframe-url" class="text-input-field w-full p-2 rounded bg-gray-700" placeholder="https://example.com">
-                </div>
-                 <div>
-                    <label for="iframe-width" class="block mb-2 font-semibold">Width</label>
-                    <input type="number" id="iframe-width" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
-                </div>
-                 <div>
-                    <label for="iframe-height" class="block mb-2 font-semibold">Height</label>
-                    <input type="number" id="iframe-height" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
-                </div>
-            </div>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-iframe-helper-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="add-iframe-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Add</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="video-helper-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-2xl font-bold mb-4">Video Builder</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="video-url" class="block mb-2 font-semibold">Video URL (.mp4)</label>
-                    <input type="url" id="video-url" class="text-input-field w-full p-2 rounded bg-gray-700" placeholder="https://example.com/video.mp4">
-                </div>
-                 <div>
-                    <label for="video-width" class="block mb-2 font-semibold">Width</label>
-                    <input type="number" id="video-width" class="text-input-field w-full p-2 rounded bg-gray-700" value="500">
-                </div>
-                 <div>
-                    <label for="video-height" class="block mb-2 font-semibold">Height</label>
-                    <input type="number" id="video-height" class="text-input-field w-full p-2 rounded bg-gray-700" value="300">
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" id="video-controls" class="mr-2" checked>
-                    <label for="video-controls" class="font-semibold">Show Controls</label>
-                </div>
-            </div>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-video-helper-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="add-video-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Add</button>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="settings-modal" class="hidden modal fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-xl z-50 w-11/12 max-w-md opacity-0 scale-95">
-        <div class="p-6 flex flex-col max-h-[85vh]">
-            <div class="flex-shrink-0 mb-6">
-                <h2 class="text-2xl font-bold text-center mb-4">Settings</h2>
-                <div class="flex justify-center gap-2 items-start">
-                    <div class="flex flex-col gap-1">
-                        <button id="import-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import .nii</button>
+                    <!-- Mockup Grid -->
+                    <div class="relative z-10 flex-grow px-8 pb-4">
+                        <div class="grid grid-cols-4 gap-4 h-full">
+                            <!-- Row 1 -->
+                            <div class="game-tile rounded-lg bg-indigo-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-purple-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-red-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1534423861386-85a16f5d13fd?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-yellow-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&q=80')]"></div>
+                            
+                            <!-- Row 2 -->
+                            <div class="game-tile rounded-lg bg-blue-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-purple-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-green-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1558008258-3256797b43f3?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-orange-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1560253023-3ec5d502959f?w=400&q=80')]"></div>
+                            
+                            <!-- Row 3 -->
+                            <div class="game-tile rounded-lg bg-gray-800 border border-white/5 flex items-center justify-center">
+                                <span class="text-4xl font-bold text-white tracking-tighter">You<span class="text-red-500">Tube</span></span>
+                            </div>
+                            <div class="game-tile rounded-lg bg-teal-900/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=400&q=80')]"></div>
+                            <div class="game-tile rounded-lg bg-blue-800/40 border border-white/5 bg-[url('https://images.unsplash.com/photo-1509198399403-b84951666349?w=400&q=80')]"></div>
+                            
+                            <!-- Active Tile (Bottom Right) -->
+                            <div class="game-tile rounded-lg border-[3px] border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] bg-[url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80')] relative overflow-hidden">
+                                <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
+                            </div>
                         </div>
-                    <button id="export-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Export .nii</button>
-                </div>
-            </div>
-            <div class="flex-grow overflow-y-auto custom-scrollbar pr-4">
-                <div class="space-y-4">
-                    <div><label for="user-name-setting" class="block mb-2 font-semibold">User Name</label><input type="text" id="user-name-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
-                    <div><label for="title-setting" class="block mb-2 font-semibold">App Title</label><input type="text" id="title-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
-                    <div><label for="footer-text-setting" class="block mb-2 font-semibold">Footer Text</label><input type="text" id="footer-text-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white"></div>
-                    <div>
-                        <label for="video-wall-url-setting" class="block mb-2 font-semibold">Video Wall URL (.mp4 or YouTube)</label>
-                        <input type="text" id="video-wall-url-setting" class="text-input-field w-full p-2 rounded text-white bg-gray-700" placeholder="Enter video URL here">
                     </div>
-                     <div><label for="session-password-setting" class="block mb-2 font-semibold">Session Password (for secure export/import)</label><input type="password" id="session-password-setting" class="text-input-field w-full p-2 rounded bg-gray-700 text-white" placeholder="Set a password to secure backups"></div>
-                     <hr>
-                     <div>
-                        <label class="block mb-2 font-semibold">Profile Avatar</label>
-                        <div class="flex items-center gap-4">
-                            <img id="avatar-preview" src="https://www.niilow.com/logo.png" alt="Avatar Preview" class="w-16 h-16 rounded-full bg-gray-700 object-cover">
-                            <button id="avatar-upload-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Upload Image</button>
-                        </div>
-                     </div>
-                     <hr>
-                    <div class="flex justify-between items-center"><label for="bg-color-setting" class="font-semibold">Background Color</label><input type="color" id="bg-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="sidebar-color-setting" class="font-semibold">Sidebar Color</label><input type="color" id="sidebar-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="font-color-setting" class="font-semibold">App Font Color</label><input type="color" id="font-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="fab-color-setting" class="font-semibold">New Note Button Color</label><input type="color" id="fab-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="note-card-color-setting" class="font-semibold">Default Note Card Color</label><input type="color" id="note-card-color-setting"></div>
-                     <div class="flex justify-between items-center"><label for="note-card-opacity-setting" class="font-semibold">Note Card Transparency</label><input type="range" id="note-card-opacity-setting" min="0.1" max="1" step="0.05" class="w-1/2"></div>
-                    <div class="flex justify-between items-center"><label for="modal-bg-color-setting" class="font-semibold">Pop Up Windows</label><input type="color" id="modal-bg-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="modal-opacity-setting" class="font-semibold">Pop Up Transparency</label><input type="range" id="modal-opacity-setting" min="0.5" max="1" step="0.05" class="w-1/2"></div>
-                    <div class="flex justify-between items-center"><label for="text-input-bg-color-setting" class="font-semibold">Text Input Fields</label><input type="color" id="text-input-bg-color-setting"></div>
-                    <div class="flex justify-between items-center"><label for="text-input-font-color-setting" class="font-semibold">Text Input Font Color</label><input type="color" id="text-input-font-color-setting"></div>
-                     <hr>
-                    <div>
-                         <button id="clear-storage-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Clear All Local Data</button>
+
+                    <!-- Mockup Footer (Pagination) -->
+                    <div class="relative z-10 pb-6 flex justify-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-[#3ebbfa] shadow-[0_0_8px_#3ebbfa]"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-700"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-700"></div>
                     </div>
-                </div>
-            </div>
-            <div class="flex-shrink-0 pt-6">
-                <div class="flex justify-end"><button id="close-settings" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button></div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="import-local-note-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-6 flex flex-col">
-            <h2 class="text-2xl font-bold mb-4 flex-shrink-0">Import Local Notes into Session</h2>
-            <input type="text" id="import-note-search" placeholder="Search your local notes..." class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 mb-4 flex-shrink-0">
-            <div id="import-note-list" class="flex-grow overflow-y-auto custom-scrollbar border border-gray-700 rounded p-2" style="max-height: 50vh;">
-            </div>
-            <div class="flex justify-end gap-4 mt-6 flex-shrink-0">
-                <button id="cancel-import-local-note-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
-                <button id="confirm-import-local-note-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Import Selected</button>
-            </div>
-        </div>
-    </div>
 
-    <div id="collab-qr-code-modal" class="hidden modal fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
-            <h2 class="text-2xl font-bold mb-4">Share Session Invite</h2>
-            <div id="collab-qr-code-container"></div>
-            <p class="mt-4 text-sm text-gray-300 break-all hidden" id="collab-invite-link-display"></p>
-            <div class="mt-6 flex justify-center gap-4">
-                <button id="copy-link-from-modal-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Copy Link</button>
-                <button id="close-collab-qr-code-modal" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <button id="fab-add-note" title="New Note" class="fab-peek-btn bg-blue-500 hover:bg-blue-600">
-        <span>+</span>
-    </button>
-    <button id="fab-chat-log" title="Chat Log" class="fab-peek-btn bg-blue-500 hover:bg-blue-600 hidden">
-        <div class="unread-dot"></div>
-        <span>CHAT</span>
-    </button>
-
-    <div id="chat-log-pane" class="bg-gray-800 shadow-2xl flex flex-col relative">
-        <div class="p-4 md:p-6 flex flex-col h-full w-full overflow-hidden">
-            <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                <h2 class="text-2xl font-bold text-center flex-grow">Chat History</h2>
-                <button id="close-chat-log-btn" class="p-2 rounded-full hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div id="session-info-hub" class="flex-shrink-0 border-b border-gray-700 pb-2 mb-2"></div>
-            <div id="chat-log-messages" class="flex-grow overflow-y-auto custom-scrollbar">
-                </div>
-            <div class="flex-shrink-0 p-2 border-t border-gray-700">
-                <div class="flex items-center gap-2">
-                    <input type="text" id="chat-log-input" class="text-input-field w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Send a message...">
-                    <button id="send-chat-log-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Send</button>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div id="loading-overlay" class="hidden fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black bg-opacity-75">
-        <div class="loader-spinner"></div>
-        <p class="text-white text-xl font-bold mt-4">Connecting to Channel...</p>
-    </div>
+    <!-- Features Grid -->
+    <section id="features" class="py-20 px-4 md:px-12 bg-black/40 z-10 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">System Capabilities</h2>
+                <div class="h-1 w-20 bg-[#3ebbfa] mx-auto rounded-full shadow-[0_0_10px_#3ebbfa]"></div>
+            </div>
 
-    <datalist id="labels-datalist"></datalist>
-    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
-    <input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
-    <input type="file" id="import-file-input" class="hidden" accept=".nii">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Feature 1 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="usb" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">True Portability</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Runs entirely from a single EXE. Saves data locally next to the executable. Perfect for USB drives and cloud sync.
+                    </p>
+                </div>
 
-    <script src="script.js"></script>
+                <!-- Feature 2 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="gamepad" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Controller First</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Navigate the entire UI with your gamepad. Designed for couch gaming, no keyboard or mouse required.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="layout-grid" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Live Dashboard</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Real-time clock, date, and auto-detected local weather widget. Your hub for everything, not just a launcher.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="library" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Custom Library</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Add games, customize box art, and rearrange tiles with "Swap" mode. Make your collection truly yours.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="headphones" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Immersive Audio</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Full support for background music (BGM) and UI sound effects. Get into the zone before you even start playing.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card p-8 rounded-xl box-glow group">
+                    <div class="w-12 h-12 bg-[#3ebbfa]/10 rounded-lg flex items-center justify-center mb-6 group-hover:bg-[#3ebbfa]/20 transition-colors">
+                        <i data-lucide="rss" class="text-[#3ebbfa] w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Integrated News</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">
+                        Stay updated with a built-in RSS feed reader tailored for gaming news. Read the latest headlines instantly.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-10 px-4 text-center z-10 relative bg-black">
+        <div class="max-w-4xl mx-auto flex flex-col items-center">
+            <div class="text-2xl font-bold tracking-widest text-white brand-font mb-4 flex items-center gap-2">
+                <i data-lucide="gamepad-2" class="text-[#3ebbfa] w-6 h-6"></i> NiiLow
+            </div>
+            <p class="text-gray-500 text-sm mb-6">Built with Electron & React for gamers on the go.</p>
+            
+            <div class="flex gap-6 mb-8">
+                <a href="#" class="text-gray-400 hover:text-[#3ebbfa] transition-colors"><i data-lucide="github"></i></a>
+                <a href="#" class="text-gray-400 hover:text-[#3ebbfa] transition-colors"><i data-lucide="twitter"></i></a>
+                <a href="#" class="text-gray-400 hover:text-[#3ebbfa] transition-colors"><i data-lucide="disc"></i></a>
+            </div>
+            
+            <p class="text-gray-600 text-xs">
+                &copy; 2024 NiiLow Project. All rights reserved. <br>
+                <span class="opacity-50">Not affiliated with Nintendo or Sony.</span>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // --- Starfield Warp Effect Script ---
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        
+        // Star properties
+        const stars = [];
+        const STAR_COUNT = 400;
+        const SPEED = 0.5;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Star {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.x = (Math.random() - 0.5) * width; // Center is 0
+                this.y = (Math.random() - 0.5) * height;
+                this.z = Math.random() * width; // Depth
+                this.pz = this.z; // Previous Z for trail
+            }
+
+            update() {
+                this.z -= 10 * SPEED; // Move towards screen
+
+                if (this.z <= 1) {
+                    this.init();
+                    this.z = width;
+                    this.pz = this.z;
+                }
+            }
+
+            draw() {
+                // Map 3D coordinates to 2D screen
+                const sx = (this.x / this.z) * width + width / 2;
+                const sy = (this.y / this.z) * height + height / 2;
+
+                // Previous position for trail effect
+                const px = (this.x / this.pz) * width + width / 2;
+                const py = (this.y / this.pz) * height + height / 2;
+
+                this.pz = this.z;
+
+                if (sx < 0 || sx > width || sy < 0 || sy > height) return;
+
+                // Calculate size and opacity based on proximity
+                const size = (1 - this.z / width) * 2;
+                const opacity = (1 - this.z / width);
+
+                ctx.beginPath();
+                ctx.strokeStyle = `rgba(62, 187, 250, ${opacity})`;
+                ctx.lineWidth = size;
+                ctx.moveTo(px, py);
+                ctx.lineTo(sx, sy);
+                ctx.stroke();
+            }
+        }
+
+        // Initialize stars
+        for (let i = 0; i < STAR_COUNT; i++) {
+            stars.push(new Star());
+        }
+
+        function animate() {
+            // Trail effect background
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
+            ctx.fillRect(0, 0, width, height);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
 </body>
 </html>
